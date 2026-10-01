@@ -21,8 +21,11 @@ public:
 	// Sets default values for this character's properties
 	ALB_PlayerCharacter();
 
-	//ASC = GAS본체 
+	//ASC = GAS본체
 	UAbilitySystemComponent* GetAbilitySystemComponent() const ;
+
+	// ALB_PlayerController가 IA_Move의 2D Axis 값을 전달할 때 호출 (Right:+X, Up:+Y 기준)
+	void AddMoveInput(const FVector2D& Axis2D);
 
 protected:
 	// Called when the game starts or when spawned
@@ -42,11 +45,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<ULB_GasComponent> GasComp;
 
-#pragma endregion 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+#pragma endregion
+public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
