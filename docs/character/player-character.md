@@ -39,6 +39,8 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 - 캐릭터는 +X 또는 -X 방향만 바라본다.
 - 마지막 유효 수평 입력의 X 부호를 기준으로 좌우 방향을 유지한다.
 - Y축 입력만 있는 동안에는 기존 좌우 방향을 유지한다.
+- 월드 X/Y 이동축과 고정 카메라 기준을 유지하기 위해 Actor와 Capsule은 회전시키지 않고 Skeletal Mesh만 좌우로 회전한다.
+- Actor의 Forward는 항상 실제 바라보는 방향을 나타내지 않으므로 공격, 투사체와 방향성 판정은 `GetActorForwardVector()`가 아니라 `CurrentFacing`의 +X/-X 방향을 기준으로 계산한다.
 - `State.Movement.FacingLocked`가 활성화된 동안에는 이동 입력과 무관하게 좌우 방향을 변경하지 않는다.
 - 좌우 방향은 서버 권한을 기준으로 다른 클라이언트에도 일관되게 보여야 한다.
 
@@ -147,6 +149,7 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 
 - 기존 `CharacterMovementComponent` 복제 경로를 유지해 검증 범위를 줄이는 대신, 벨트스크롤 전용 이동 제약과 좌우 방향 표현은 별도로 구현해야 한다.
 - Mesh Relative Rotation으로 좌우를 표현하면 Capsule과 이동 방향을 고정할 수 있지만, 방향을 바꿀 때 네트워크 스무딩의 기준 오프셋도 함께 갱신해야 한다.
+- 방향을 사용하는 게임플레이 코드가 `CurrentFacing`에 의존하므로 방향성 컴포넌트와 Actor Forward 사용이 많아지면 Actor 전체를 회전하는 방식의 비용을 다시 비교한다.
 - 방향 잠금과 이동 잠금을 Gameplay Tag로 분리하면 Ability별 조합이 가능하지만, 각 Ability가 태그의 부여와 제거 수명을 정확히 관리해야 한다.
 - ASC와 AttributeSet을 `ALB_PlayerState`가 소유하면 리스폰 뒤에도 상태를 유지하기 쉽지만, `PossessedBy`와 `OnRep_PlayerState` 양쪽의 Actor Info 초기화가 항상 일관되어야 한다.
 - 현재 단계에서 이동과 전투 상태의 확장 지점만 남기고, Mover, Motion Matching, Iris, 범용 로드아웃 같은 선행 추상화는 도입하지 않는다.
