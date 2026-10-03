@@ -6,12 +6,32 @@
 #include "GameFramework/PlayerController.h"
 #include "LB_PlayerController.generated.h"
 
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
+
 /**
- * 
+ *
  */
 UCLASS()
 class LB_API ALB_PlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+
+protected:
+	// Enhanced Input Mapping Context 등록과 Action 바인딩 (로컬 컨트롤러에서만 호출됨)
+	virtual void SetupInputComponent() override;
+
+	void OnMoveTriggered(const FInputActionValue& Value);
+
+#pragma region INPUT_AREA
+	// 에디터에서 생성한 /Game/LB/Input/IMC_Player를 BP_PlayerController Class Defaults에서 연결
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputMappingContext> MoveMappingContext;
+
+	// 에디터에서 생성한 /Game/LB/Input/IA_Move를 BP_PlayerController Class Defaults에서 연결
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> MoveAction;
+#pragma endregion
+
 };

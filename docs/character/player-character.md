@@ -8,7 +8,7 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 
 ### 범위
 
-- 방향키/WASD 기반의 직접 이동
+- 방향키 기반의 직접 이동
 - X/Y 평면의 벨트스크롤 이동과 대각선 속도 정규화
 - +X/-X 두 방향의 캐릭터 바라보기
 - 방향 잠금과 이동 잠금의 분리
@@ -39,18 +39,27 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 - 캐릭터는 +X 또는 -X 방향만 바라본다.
 - 마지막 유효 수평 입력의 X 부호를 기준으로 좌우 방향을 유지한다.
 - Y축 입력만 있는 동안에는 기존 좌우 방향을 유지한다.
+- 월드 X/Y 이동축과 고정 카메라 기준을 유지하기 위해 Actor와 Capsule은 회전시키지 않고 Skeletal Mesh만 좌우로 회전한다.
+- Actor의 Forward는 항상 실제 바라보는 방향을 나타내지 않으므로 공격, 투사체와 방향성 판정은 `GetActorForwardVector()`가 아니라 `CurrentFacing`의 +X/-X 방향을 기준으로 계산한다.
 - `State.Movement.FacingLocked`가 활성화된 동안에는 이동 입력과 무관하게 좌우 방향을 변경하지 않는다.
 - 좌우 방향은 서버 권한을 기준으로 다른 클라이언트에도 일관되게 보여야 한다.
 
 ### 입력
 
-- 첫 입력 작업은 LB 전용 `IA_Move`와 Input Mapping Context를 만든다.
+- LB 전용 `IA_Move`와 `IMC_Player`를 사용한다.
 - `IA_Move` 값 형식은 2D Axis다.
-- 방향키와 WASD를 X/Y 입력으로 매핑한다.
+- 현재 프로토타입은 방향키만 X/Y 입력으로 매핑한다.
+- WASD는 방향키와 동시에 활성화하지 않고, 향후 입력 선택 옵션이 필요할 때 별도 매핑으로 제공한다.
 - 입력 수집은 로컬 `ALB_PlayerController`가 담당한다.
 - 캐릭터는 전달받은 입력을 X/Y 월드 이동으로 해석한다.
 - 클릭 이동용 Input Action과 Input Mapping Context에는 의존하지 않는다.
 - 이후 별도 작업에서 `IA_Attack`을 추가하고 기본 공격 Ability 1종의 활성화 입력으로 연결한다.
+
+### 카메라
+
+- `BP_PlayerCharacter`는 벨트스크롤 플레이를 위한 고정 원근 카메라를 사용한다.
+- 카메라는 캐릭터의 좌우 방향 전환과 함께 회전하지 않는다.
+- 화면 범위 조정은 카메라 붐의 `타깃 암 길이`를 우선 사용하며, 구체적인 값은 Blueprint에서 튜닝한다.
 
 ### 방향 잠금과 이동 잠금
 
@@ -95,9 +104,14 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 ### `ALB_PlayerCharacter`
 
 - X/Y 이동 입력을 실제 `CharacterMovementComponent` 이동으로 변환한다.
-- 마지막 유효 수평 입력과 현재 좌우 방향을 관리한다.
-- 방향 잠금 상태를 적용한다.
+- 마지막 유효 수평 입력으로 `ELB_FacingDirection`을 결정하고, `CurrentFacing`을 서버 권한 상태로 복제한다.
+- 소유 클라이언트는 방향을 즉시 표현하고 서버 RPC로 전달하며, 다른 클라이언트는 `OnRep_Facing`에서 같은 방향을 적용한다.
+- 좌우 방향은 Actor가 아니라 Skeletal Mesh의 Relative Rotation으로 표현한다.
+- Mesh 회전 변경 후 `CacheInitialMeshOffset()`을 호출해 네트워크 스무딩이 사용하는 기준 오프셋도 갱신한다.
+- 기본 공격 구현 시 Gameplay Tag를 기준으로 방향 잠금과 이동 잠금을 적용할 책임을 가진다.
 - `ALB_PlayerState`가 소유한 ASC의 Avatar 역할을 한다.
+
+`CacheInitialMeshOffset()`을 생략하면 `CharacterMovementComponent`의 네트워크 스무딩이 비로컬 캐릭터의 Mesh를 초기 회전으로 되돌린다. 따라서 런타임 Mesh 방향 변경과 초기 오프셋 갱신은 하나의 처리로 유지한다.
 
 ### `ALB_PlayerController`
 
@@ -119,12 +133,12 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 
 ### 검증 기준
 
-- [ ] Listen Server와 Client 1개가 각각 자신의 캐릭터를 WASD/방향키로 움직일 수 있다.
-- [ ] X 입력이 화면 좌우/주 진행 방향, Y 입력이 화면 깊이 방향으로 적용된다.
+- [x] Listen Server와 Client 1개가 각각 자신의 캐릭터를 방향키로 움직일 수 있다.
+- [x] X 입력이 화면 좌우/주 진행 방향, Y 입력이 화면 깊이 방향으로 적용된다.
 - [ ] 대각선 이동 속도가 축 단독 이동 속도보다 빨라지지 않는다.
-- [ ] +X 입력 후 캐릭터가 +X를 향하고, -X 입력 후 -X를 향한다.
-- [ ] Y축으로만 이동할 때 직전 좌우 방향이 유지된다.
-- [ ] 서버와 클라이언트에서 각 캐릭터의 좌우 방향이 동일하게 보인다.
+- [x] +X 입력 후 캐릭터가 +X를 향하고, -X 입력 후 -X를 향한다.
+- [x] Y축으로만 이동할 때 직전 좌우 방향이 유지된다.
+- [x] 서버와 클라이언트에서 각 캐릭터의 좌우 방향이 동일하게 보인다.
 - [ ] `State.Movement.FacingLocked` 중 반대 X 입력을 해도 방향이 바뀌지 않는다.
 - [ ] `State.Movement.Blocked` 중 일반 이동이 적용되지 않는다.
 - [ ] 첫 기본 공격 중 방향 전환과 일반 이동이 모두 차단된다.
@@ -134,6 +148,8 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 ## Trade-offs
 
 - 기존 `CharacterMovementComponent` 복제 경로를 유지해 검증 범위를 줄이는 대신, 벨트스크롤 전용 이동 제약과 좌우 방향 표현은 별도로 구현해야 한다.
+- Mesh Relative Rotation으로 좌우를 표현하면 Capsule과 이동 방향을 고정할 수 있지만, 방향을 바꿀 때 네트워크 스무딩의 기준 오프셋도 함께 갱신해야 한다.
+- 방향을 사용하는 게임플레이 코드가 `CurrentFacing`에 의존하므로 방향성 컴포넌트와 Actor Forward 사용이 많아지면 Actor 전체를 회전하는 방식의 비용을 다시 비교한다.
 - 방향 잠금과 이동 잠금을 Gameplay Tag로 분리하면 Ability별 조합이 가능하지만, 각 Ability가 태그의 부여와 제거 수명을 정확히 관리해야 한다.
 - ASC와 AttributeSet을 `ALB_PlayerState`가 소유하면 리스폰 뒤에도 상태를 유지하기 쉽지만, `PossessedBy`와 `OnRep_PlayerState` 양쪽의 Actor Info 초기화가 항상 일관되어야 한다.
 - 현재 단계에서 이동과 전투 상태의 확장 지점만 남기고, Mover, Motion Matching, Iris, 범용 로드아웃 같은 선행 추상화는 도입하지 않는다.
@@ -142,20 +158,20 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 
 ### 구현 순서
 
-1. LB 전용 `IA_Move`와 Input Mapping Context를 만든다.
-2. `ALB_PlayerController`에서 입력을 수집하고 `ALB_PlayerCharacter`의 X/Y 이동으로 연결한다.
-3. 입력 벡터를 정규화해 대각선 이동 속도를 보정한다.
-4. 마지막 유효 X 입력으로 정하는 좌우 방향을 복제한다.
-5. `State.Movement.FacingLocked` 활성 중 방향 변경을 차단한다.
-6. PIE Listen Server + Client 1개 환경에서 이동과 방향을 검증한다.
-7. 후속 작업으로 `IA_Attack`과 기본 공격 Ability 1종을 구현한다.
+- [x] LB 전용 `IA_Move`와 `IMC_Player`를 만든다.
+- [x] `ALB_PlayerController`에서 입력을 수집하고 `ALB_PlayerCharacter`의 X/Y 이동으로 연결한다.
+- [x] 입력 벡터를 정규화해 대각선 속도를 보정한다.
+- [x] 벨트스크롤 고정 카메라를 구성한다.
+- [x] 마지막 유효 X 입력으로 정하는 좌우 방향을 복제한다.
+- [x] PIE Listen Server + Client 1개 환경에서 이동과 방향을 검증한다.
+- [ ] `IA_Attack`을 기본 공격 Ability 활성화 요청까지 연결한다.
+- [ ] 기본 공격 Ability 1종을 구현하고 `State.Movement.FacingLocked`와 `State.Movement.Blocked`를 적용한다.
 
 각 단계는 에디터 또는 PIE에서 독립적으로 확인 가능한 수준으로 유지한다.
 
 ### 추후 결정 사항
 
-- 좌우 방향 복제 데이터의 구체적 표현: replicated bool/enum 또는 회전 복제 활용
-- 카메라 고정 방식, 이동 영역의 Y축 폭과 경계 처리
+- 이동 영역의 Y축 폭과 경계 처리
 - 점프 도입 시 Z축 이동과 깊이 판정의 충돌 규칙
 - 공격별 `FacingLocked`/`MovementBlocked` 부여 방식과 Ability 공통 정책
 - 입력 버퍼, 콤보 전환, 캔슬 가능 구간

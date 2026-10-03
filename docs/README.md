@@ -60,4 +60,4 @@
 
 ### Character
 
-- [Player Character](character/player-character.md) — `Draft` — 2.5D 벨트스크롤 플레이어의 이동, 방향, 상태와 멀티플레이 원칙
+- [Player Character](character/player-character.md) — `Accepted` — 2.5D 벨트스크롤 플레이어의 이동, 방향, 상태와 멀티플레이 원칙
