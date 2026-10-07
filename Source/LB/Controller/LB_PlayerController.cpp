@@ -3,10 +3,13 @@
 
 #include "LB_PlayerController.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Character/LB_PlayerCharacter.h"
+#include "PlayerState/LB_PlayerState.h"
 
 void ALB_PlayerController::SetupInputComponent()
 {
@@ -14,7 +17,8 @@ void ALB_PlayerController::SetupInputComponent()
 
 	if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<
+			UEnhancedInputLocalPlayerSubsystem>())
 		{
 			if (MoveMappingContext)
 			{
@@ -27,8 +31,21 @@ void ALB_PlayerController::SetupInputComponent()
 	{
 		if (MoveAction)
 		{
-			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ALB_PlayerController::OnMoveTriggered);
+			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this,
+			                                   &ALB_PlayerController::OnMoveTriggered);
 		}
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this,
+		                                   &ALB_PlayerController::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this,
+		                                   &ALB_PlayerController::StopJumping);
+		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this,
+		                                   &ALB_PlayerController::StartSprint);
+		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Completed, this,
+		                                   &ALB_PlayerController::StopSprint);
+		EnhancedInputComponent->BindAction(NormalAttackAction, ETriggerEvent::Completed, this,
+		                                   &ALB_PlayerController::NormalATK);
+		EnhancedInputComponent->BindAction(StrongAttackAction, ETriggerEvent::Completed, this,
+		                                   &ALB_PlayerController::StrongATK);
 	}
 }
 
@@ -38,4 +55,76 @@ void ALB_PlayerController::OnMoveTriggered(const FInputActionValue& Value)
 	{
 		LBCharacter->AddMoveInput(Value.Get<FVector2D>());
 	}
+}
+
+void ALB_PlayerController::Jump(const FInputActionValue& Value)
+{
+	APawn* ControlledPawn = GetPawn();
+	if (!IsValid(ControlledPawn))
+		return;
+
+	ALB_PlayerCharacter* PlayerCharacter = Cast<ALB_PlayerCharacter>(ControlledPawn);
+	if (!IsValid(PlayerCharacter))
+		return;
+
+
+	PlayerCharacter->Jump();
+}
+
+void ALB_PlayerController::StopJumping()
+{
+	if (ACharacter* pCharacter = Cast<ACharacter>(GetPawn()))
+	{
+		pCharacter->StopJumping();
+	}
+}
+
+void ALB_PlayerController::StartSprint(const FInputActionValue& Value)
+{
+}
+
+void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
+{
+}
+
+void ALB_PlayerController::NormalATK(const FInputActionValue& Value)
+{
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	if (!PS)
+		return;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		PS,
+		TAG_Input_RightClick,
+		FGameplayEventData()
+	);
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC)
+		return;
+
+	FGameplayTagContainer GATagContainer;
+	GATagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("ATK.Normal")));
+
+	ASC->TryActivateAbilitiesByTag(GATagContainer);
+}
+
+void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
+{
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	if (!PS)
+		return;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		PS,
+		TAG_Input_RightClick,
+		FGameplayEventData()
+	);
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC)
+		return;
+
+	FGameplayTagContainer GATagContainer;
+	GATagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("ATK.Strong")));
+
+	ASC->TryActivateAbilitiesByTag(GATagContainer);
 }

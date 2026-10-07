@@ -32,6 +32,31 @@ protected:
 	// 에디터에서 생성한 /Game/LB/Input/IA_Move를 BP_PlayerController Class Defaults에서 연결
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> MoveAction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> DashAction;
+	// 점프- C
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> JumpAction;
+	// 평타- X
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> NormalAttackAction;
+	// 기본스킬- Z
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> StrongAttackAction;
+	
 #pragma endregion
 
+	
+private:
+#pragma  region Action
+	void Jump(const FInputActionValue& Value);
+	void StopJumping();
+
+	void StartSprint(const FInputActionValue& Value);
+	void StopSprint(const FInputActionValue& Value);
+	void NormalATK(const FInputActionValue& Value);
+	void StrongATK(const FInputActionValue& Value);
+
+	
+#pragma endregion
 };
