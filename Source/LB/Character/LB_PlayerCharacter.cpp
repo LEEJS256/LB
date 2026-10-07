@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Component/LB_GasComponent.h"
+#include "Component/LB_MeleeHitboxComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -30,6 +31,9 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 	FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 
 	GasComp = CreateDefaultSubobject<ULB_GasComponent>(TEXT("GasComp"));
+
+	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
+	MeleeHitbox->SetupAttachment(GetMesh());
 	
 }
 
