@@ -5,6 +5,7 @@
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
+#include "Component/LB_MeleeHitboxComponent.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
 ULB_GA_BasicAttack::ULB_GA_BasicAttack()
@@ -49,6 +50,23 @@ void ULB_GA_BasicAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	// 재생 실패(AnimInstance 없음 등) 시에도 OnCancelled가 호출되어 즉시 종료됨
 	MontageTask->OnCancelled.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageCancelled);
 	MontageTask->ReadyForActivation();
+}
+
+void ULB_GA_BasicAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	// Montage가 NotifyEnd 전에 중단되거나 Ability가 취소돼도 판정이 남지 않도록 정리
+	// 이미 종료된 Ability에 대한 중복 EndAbility 호출(Blend Out 후 Completed 등)은 건너뜀
+	if (IsEndAbilityValid(Handle, ActorInfo))
+	{
+		const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
+		if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
+		{
+			Hitbox->ForceEndHitWindow();
+		}
+	}
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 void ULB_GA_BasicAttack::OnMontageFinished()
