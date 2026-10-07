@@ -1,0 +1,63 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "GAS/GA/LB_GA_BasicAttack.h"
+
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Animation/AnimMontage.h"
+#include "Utility/LB_NativeGameplayTag.h"
+
+ULB_GA_BasicAttack::ULB_GA_BasicAttack()
+{
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+
+	SetAssetTags(FGameplayTagContainer(TAG_Ability_Attack_Basic));
+
+	// ActivationOwnedTags는 활성화 시 부여되고 EndAbility에서 자동 제거되므로 어떤 종료 경로에서도 남지 않음
+	ActivationOwnedTags.AddTag(TAG_State_Action_Attacking);
+	ActivationOwnedTags.AddTag(TAG_State_Movement_FacingLocked);
+	ActivationOwnedTags.AddTag(TAG_State_Movement_Blocked);
+}
+
+void ULB_GA_BasicAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	if (!AttackMontage)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+		this, NAME_None, AttackMontage, MontagePlayRate);
+	if (!MontageTask)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	MontageTask->OnCompleted.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageFinished);
+	MontageTask->OnBlendOut.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageFinished);
+	MontageTask->OnInterrupted.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageCancelled);
+	// 재생 실패(AnimInstance 없음 등) 시에도 OnCancelled가 호출되어 즉시 종료됨
+	MontageTask->OnCancelled.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageCancelled);
+	MontageTask->ReadyForActivation();
+}
+
+void ULB_GA_BasicAttack::OnMontageFinished()
+{
+	// Blend Out 이후 Completed가 이어서 오더라도 EndAbility는 이미 비활성 상태면 무시됨
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void ULB_GA_BasicAttack::OnMontageCancelled()
+{
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+}
