@@ -34,18 +34,30 @@ void ALB_PlayerController::SetupInputComponent()
 			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this,
 			                                   &ALB_PlayerController::OnMoveTriggered);
 		}
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this,
-		                                   &ALB_PlayerController::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this,
-		                                   &ALB_PlayerController::StopJumping);
-		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this,
-		                                   &ALB_PlayerController::StartSprint);
-		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Completed, this,
-		                                   &ALB_PlayerController::StopSprint);
-		EnhancedInputComponent->BindAction(NormalAttackAction, ETriggerEvent::Completed, this,
-		                                   &ALB_PlayerController::NormalATK);
-		EnhancedInputComponent->BindAction(StrongAttackAction, ETriggerEvent::Completed, this,
-		                                   &ALB_PlayerController::StrongATK);
+		if (JumpAction)
+		{
+			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this,
+			                                   &ALB_PlayerController::Jump);
+			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this,
+			                                   &ALB_PlayerController::StopJumping);
+		}
+		if (DashAction)
+		{
+			EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this,
+			                                   &ALB_PlayerController::StartSprint);
+			EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Completed, this,
+			                                   &ALB_PlayerController::StopSprint);
+		}
+		if (NormalAttackAction)
+		{
+			EnhancedInputComponent->BindAction(NormalAttackAction, ETriggerEvent::Started, this,
+			                                   &ALB_PlayerController::NormalATK);
+		}
+		if (StrongAttackAction)
+		{
+			EnhancedInputComponent->BindAction(StrongAttackAction, ETriggerEvent::Completed, this,
+			                                   &ALB_PlayerController::StrongATK);
+		}
 	}
 }
 
@@ -89,23 +101,11 @@ void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
 
 void ALB_PlayerController::NormalATK(const FInputActionValue& Value)
 {
-	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
-	if (!PS)
-		return;
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-		PS,
-		TAG_Input_RightClick,
-		FGameplayEventData()
-	);
-
-	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-	if (!ASC)
-		return;
-
-	FGameplayTagContainer GATagContainer;
-	GATagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("ATK.Normal")));
-
-	ASC->TryActivateAbilitiesByTag(GATagContainer);
+	// 공격 입력 1회당 기본 공격 활성화를 1회 요청 (실행 가능 여부는 GAS/서버가 확정)
+	if (ALB_PlayerCharacter* LBCharacter = Cast<ALB_PlayerCharacter>(GetPawn()))
+	{
+		LBCharacter->RequestBasicAttack();
+	}
 }
 
 void ALB_PlayerController::StrongATK(const FInputActionValue& Value)

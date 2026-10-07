@@ -105,6 +105,19 @@ void ALB_PlayerCharacter::AddMoveInput(const FVector2D& Axis2D)
 	AddMovementInput(FVector::RightVector, ClampedAxis.Y);
 }
 
+void ALB_PlayerCharacter::RequestBasicAttack()
+{
+	// GAS 초기화(InitAbilityActorInfo) 전이거나 Avatar가 이 캐릭터가 아니면 요청하지 않음
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC || ASC->GetAvatarActor() != this)
+	{
+		return;
+	}
+
+	// 클라이언트에서 호출해도 ASC가 Ability의 Net Execution Policy에 따라 서버로 전달하며, 실행 가능 여부는 서버가 확정
+	ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(TAG_Ability_Attack_Basic));
+}
+
 void ALB_PlayerCharacter::UpdateFacingFromInput(float HorizontalInput)
 {
 	// X 입력이 임계값 이하면(Y 입력만 있거나 작은 노이즈) 기존 방향을 유지

@@ -35,6 +35,9 @@ public:
 	// ALB_PlayerController가 IA_Move의 2D Axis 값을 전달할 때 호출 (Right:+X, Up:+Y 기준)
 	void AddMoveInput(const FVector2D& Axis2D);
 
+	// ALB_PlayerController가 공격 입력 시 호출. Ability.Attack.Basic 태그 Ability의 활성화를 ASC에 요청
+	void RequestBasicAttack();
+
 	ELB_FacingDirection GetFacing() const { return CurrentFacing; }
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
