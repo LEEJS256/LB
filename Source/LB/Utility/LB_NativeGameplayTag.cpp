@@ -34,6 +34,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Ultimate, "Ability.Ultimate");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_BuildTower, "Ability.BuildTower");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Tower_ATK, "Ability.Tower.ATK");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_InterAction, "Ability.InterAction");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Attack_Basic, "Ability.Attack.Basic");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_State, "State");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Idle, "State.Idle");
@@ -44,3 +45,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_State_Walk, "State.Walk");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Wound, "State.Wound");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Death, "State.Death");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Build, "State.Build");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Action_Attacking, "State.Action.Attacking");
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_FacingLocked, "State.Movement.FacingLocked");
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_Blocked, "State.Movement.Blocked");

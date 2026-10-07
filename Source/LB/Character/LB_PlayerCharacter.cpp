@@ -3,12 +3,14 @@
 
 #include "LB_PlayerCharacter.h"
 
+#include "AbilitySystemComponent.h"
 #include "Component/LB_GasComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/LB_PlayerState.h"
+#include "Utility/LB_NativeGameplayTag.h"
 
 // Sets default values
 ALB_PlayerCharacter::ALB_PlayerCharacter()
@@ -83,7 +85,20 @@ void ALB_PlayerCharacter::AddMoveInput(const FVector2D& Axis2D)
 		return;
 	}
 
-	UpdateFacingFromInput(ClampedAxis.X);
+	// 방향 잠금과 이동 차단은 Ability별로 조합할 수 있도록 서로 독립적으로 판단
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	const bool bFacingLocked = ASC && ASC->HasMatchingGameplayTag(TAG_State_Movement_FacingLocked);
+	const bool bMovementBlocked = ASC && ASC->HasMatchingGameplayTag(TAG_State_Movement_Blocked);
+
+	if (!bFacingLocked)
+	{
+		UpdateFacingFromInput(ClampedAxis.X);
+	}
+
+	if (bMovementBlocked)
+	{
+		return;
+	}
 
 	// 월드 X: 화면 좌우(Right:+X / Left:-X), 월드 Y: 화면 깊이(Up:+Y / Down:-Y)
 	AddMovementInput(FVector::ForwardVector, ClampedAxis.X);
