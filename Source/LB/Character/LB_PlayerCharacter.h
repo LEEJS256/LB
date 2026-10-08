@@ -90,7 +90,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<ULB_GasComponent> GasComp;
 
-	// 근접 공격 판정 Box. Mesh에 부착해 좌우 Mesh 회전을 따르며 기본 비활성
+	// 근접 공격 판정 Box. 기본 비활성이며 판정 구간마다 Socket 또는 Character 축 + CurrentFacing 기준으로 배치
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<ULB_MeleeHitboxComponent> MeleeHitbox;
 

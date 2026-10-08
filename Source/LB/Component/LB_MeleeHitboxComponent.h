@@ -8,7 +8,9 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLB_OnMeleeHit, AActor*, HitActor, const FHitResult&, HitResult);
 
-// 판정 구간 하나의 Box 설정. 위치/회전은 부착 대상(Mesh 또는 Socket) 기준 상대값
+// 판정 구간 하나의 Box 설정.
+// SocketName=None: Character 위치 기준, X=공격 방향(CurrentFacing이 Left면 반전), Y=깊이, Z=높이
+// SocketName 지정: Mesh Socket 기준 상대값
 USTRUCT(BlueprintType)
 struct FLB_MeleeHitboxSettings
 {
@@ -23,14 +25,15 @@ struct FLB_MeleeHitboxSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LB|Hitbox")
 	FRotator RelativeRotation = FRotator::ZeroRotator;
 
-	// None이면 Mesh 기준. 지정한 Socket이 Mesh에 없으면 Mesh 기준으로 대체
+	// None이면 Character 축 기준. 지정한 Socket이 Mesh에 없으면 Character 축 기준으로 대체
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LB|Hitbox")
 	FName SocketName = NAME_None;
 };
 
 /**
  * 근접 공격 판정 Box. 기본은 비활성(NoCollision)이며 판정 구간 동안만 Query Overlap을 켠다.
- * Mesh에 부착되어 좌우 Mesh 회전을 따르며, 명중은 서버에서만 확정해 OnMeleeHit으로 전달한다.
+ * Socket 지정 시 Mesh Socket을, 미지정 시 Character 축과 CurrentFacing을 기준으로 배치하며,
+ * 명중은 서버에서만 확정해 OnMeleeHit으로 전달한다.
  * Tick을 사용하지 않는다.
  */
 UCLASS(ClassGroup = (LB), meta = (BlueprintSpawnableComponent))
@@ -72,6 +75,9 @@ private:
 	void TryRegisterHit(AActor* OtherActor, UPrimitiveComponent* OtherComp, const FHitResult* SweepResult);
 
 	void DeactivateHitWindow();
+
+	// SocketName=None 설정을 Character 위치 + 월드 X/Y/Z 축 기준으로 적용. Left 방향이면 X축 거울 반전
+	void ApplyCharacterSpaceSettings(const FLB_MeleeHitboxSettings& Settings);
 
 	// BeginPlay 시점의 부착 대상(Mesh). Socket 변경 시 이 컴포넌트 기준으로 다시 부착
 	UPROPERTY(Transient)

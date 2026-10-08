@@ -4,6 +4,7 @@
 #include "Component/LB_MeleeHitboxComponent.h"
 
 #include "LB.h"
+#include "Character/LB_PlayerCharacter.h"
 
 ULB_MeleeHitboxComponent::ULB_MeleeHitboxComponent()
 {
@@ -42,24 +43,32 @@ void ULB_MeleeHitboxComponent::BeginHitWindow(const FLB_MeleeHitboxSettings& Set
 	// 이전 구간이 정리되지 않았더라도 새 구간은 깨끗한 상태에서 시작
 	DeactivateHitWindow();
 
-	if (DefaultAttachParent)
+	bool bUseSocket = false;
+	if (DefaultAttachParent && Settings.SocketName != NAME_None)
 	{
-		FName AttachSocket = Settings.SocketName;
-		if (AttachSocket != NAME_None && !DefaultAttachParent->DoesSocketExist(AttachSocket))
+		bUseSocket = DefaultAttachParent->DoesSocketExist(Settings.SocketName);
+		if (!bUseSocket)
 		{
-			UE_LOG(LogLB, Warning, TEXT("%s: Socket '%s' not found on %s. Using parent origin."),
-				*GetName(), *AttachSocket.ToString(), *GetNameSafe(DefaultAttachParent));
-			AttachSocket = NAME_None;
-		}
-
-		if (GetAttachParent() != DefaultAttachParent || GetAttachSocketName() != AttachSocket)
-		{
-			AttachToComponent(DefaultAttachParent, FAttachmentTransformRules::KeepRelativeTransform, AttachSocket);
+			UE_LOG(LogLB, Warning, TEXT("%s: Socket '%s' not found on %s. Using character axes."),
+				*GetName(), *Settings.SocketName.ToString(), *GetNameSafe(DefaultAttachParent));
 		}
 	}
 
-	SetBoxExtent(Settings.BoxExtent, false);
-	SetRelativeLocationAndRotation(Settings.RelativeLocation, Settings.RelativeRotation);
+	if (bUseSocket)
+	{
+		// Socket 기준: Mesh Socket에 부착해 Mesh의 좌우 회전을 그대로 따름
+		if (GetAttachParent() != DefaultAttachParent || GetAttachSocketName() != Settings.SocketName)
+		{
+			AttachToComponent(DefaultAttachParent, FAttachmentTransformRules::KeepRelativeTransform, Settings.SocketName);
+		}
+
+		SetBoxExtent(Settings.BoxExtent, false);
+		SetRelativeLocationAndRotation(Settings.RelativeLocation, Settings.RelativeRotation);
+	}
+	else
+	{
+		ApplyCharacterSpaceSettings(Settings);
+	}
 
 	HitActors.Reset();
 	bHitWindowActive = true;
@@ -81,6 +90,41 @@ void ULB_MeleeHitboxComponent::BeginHitWindow(const FLB_MeleeHitboxSettings& Set
 		}
 		TryRegisterHit(OtherComp ? OtherComp->GetOwner() : nullptr, OtherComp, nullptr);
 	}
+}
+
+void ULB_MeleeHitboxComponent::ApplyCharacterSpaceSettings(const FLB_MeleeHitboxSettings& Settings)
+{
+	AActor* OwnerActor = GetOwner();
+	USceneComponent* CharacterRoot = OwnerActor ? OwnerActor->GetRootComponent() : nullptr;
+	if (!CharacterRoot || CharacterRoot == this)
+	{
+		SetBoxExtent(Settings.BoxExtent, false);
+		SetRelativeLocationAndRotation(Settings.RelativeLocation, Settings.RelativeRotation);
+		return;
+	}
+
+	// Mesh는 기본 Yaw 오프셋과 좌우 회전을 가지므로 Mesh 로컬 축 대신 Character(Capsule)에 부착
+	if (GetAttachParent() != CharacterRoot || GetAttachSocketName() != NAME_None)
+	{
+		AttachToComponent(CharacterRoot, FAttachmentTransformRules::KeepRelativeTransform);
+	}
+
+	// Actor 회전은 Controller를 따를 수 있으므로 이동/방향과 같은 월드 X(공격)/Y(깊이)/Z(높이) 축을 사용
+	const ALB_PlayerCharacter* PlayerCharacter = Cast<ALB_PlayerCharacter>(OwnerActor);
+	const bool bFacingLeft = PlayerCharacter && PlayerCharacter->GetFacing() == ELB_FacingDirection::Left;
+
+	FVector Offset = Settings.RelativeLocation;
+	FRotator Rotation = Settings.RelativeRotation;
+	if (bFacingLeft)
+	{
+		// X축 거울 반전: 위치 X 반전, 회전은 Pitch/Yaw 반전(Roll 유지)
+		Offset.X = -Offset.X;
+		Rotation.Pitch = -Rotation.Pitch;
+		Rotation.Yaw = -Rotation.Yaw;
+	}
+
+	SetBoxExtent(Settings.BoxExtent, false);
+	SetWorldLocationAndRotation(OwnerActor->GetActorLocation() + Offset, Rotation);
 }
 
 void ULB_MeleeHitboxComponent::EndHitWindow()
