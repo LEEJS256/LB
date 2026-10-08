@@ -3,9 +3,14 @@
 
 #include "GAS/GA/LB_GA_NormalAttack.h"
 
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
 #include "Component/LB_MeleeHitboxComponent.h"
+#include "GameplayEffect.h"
+#include "GAS/Attribute/LB_AttributeSet.h"
+#include "LB.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
 ULB_GA_NormalAttack::ULB_GA_NormalAttack()
@@ -34,6 +39,17 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
+	}
+
+	// 명중 확정과 피해는 서버 권한. Montage 시작 전에 구독해 첫 판정 구간을 놓치지 않음
+	if (HasAuthority(&ActivationInfo))
+	{
+		const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
+		if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
+		{
+			Hitbox->OnMeleeHit.AddUniqueDynamic(this, &ULB_GA_NormalAttack::OnMeleeHit);
+			BoundHitbox = Hitbox;
+		}
 	}
 
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
@@ -66,7 +82,58 @@ void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 		}
 	}
 
+	// 모든 종료 경로에서 명중 구독 해제 (중복 호출에도 안전)
+	UnbindMeleeHit();
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResult)
+{
+	if (!IsActive() || !HasAuthority(&CurrentActivationInfo) || !IsValid(HitActor))
+	{
+		return;
+	}
+
+	if (!DamageEffectClass)
+	{
+		UE_LOG(LogLB, Warning, TEXT("%s: DamageEffectClass is not set. Skipping damage to %s."),
+			*GetName(), *GetNameSafe(HitActor));
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(HitActor);
+	// ASC 또는 Health Attribute가 없는 Actor는 게임플레이 피해 대상이 아님
+	if (!SourceASC || !TargetASC || !TargetASC->HasAttributeSetForAttribute(ULB_AttributeSet::GetHealthAttribute()))
+	{
+		return;
+	}
+
+	const float Attack = SourceASC->GetNumericAttribute(ULB_AttributeSet::GetAttackAttribute());
+	const float Armor = TargetASC->GetNumericAttribute(ULB_AttributeSet::GetArmorAttribute());
+	const float Damage = FMath::Max(1.f, Attack - Armor);
+
+	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass, GetAbilityLevel());
+	if (!SpecHandle.IsValid())
+	{
+		return;
+	}
+
+	SpecHandle.Data->GetContext().AddHitResult(HitResult, true);
+	// GE의 Health Add Modifier가 이 값을 그대로 더하므로 감소량을 음수로 전달
+	SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_Damage, -Damage);
+
+	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+}
+
+void ULB_GA_NormalAttack::UnbindMeleeHit()
+{
+	if (ULB_MeleeHitboxComponent* Hitbox = BoundHitbox.Get())
+	{
+		Hitbox->OnMeleeHit.RemoveDynamic(this, &ULB_GA_NormalAttack::OnMeleeHit);
+	}
+	BoundHitbox.Reset();
 }
 
 void ULB_GA_NormalAttack::OnMontageFinished()

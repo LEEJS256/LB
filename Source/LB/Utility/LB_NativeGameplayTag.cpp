@@ -16,6 +16,8 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_ATKType, "ATKType");
 UE_DEFINE_GAMEPLAY_TAG(TAG_ATKType_Normal, "ATKType.Normal");
 UE_DEFINE_GAMEPLAY_TAG(TAG_ATKType_Crit, "ATKType.Crit");
 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Data_Damage, "Data.Damage");
+
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Input, "Input");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Input_LeftClick, "Input.LeftClick");

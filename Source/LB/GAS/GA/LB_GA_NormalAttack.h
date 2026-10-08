@@ -7,10 +7,13 @@
 #include "LB_GA_NormalAttack.generated.h"
 
 class UAnimMontage;
+class UGameplayEffect;
+class ULB_MeleeHitboxComponent;
 
 /**
  * 기본 공격 Ability. Attack Montage 재생 수명 동안 공격/방향 잠금/이동 차단 태그를 부여한다.
- * 판정, 피해, 콤보는 이 클래스의 범위가 아니다.
+ * 활성 중 서버에서 MeleeHitbox 명중을 구독해 DamageEffectClass Spec으로 대상 Health를 감소시킨다.
+ * 판정 타이밍과 콤보는 이 클래스의 범위가 아니다.
  */
 UCLASS()
 class LB_API ULB_GA_NormalAttack : public ULB_GameplayAbility
@@ -35,7 +38,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Attack", meta = (ClampMin = "0.01"))
 	float MontagePlayRate = 1.f;
 
+	// Ability BP의 Class Defaults에서 GE_NormalAttackDamage 지정. Data.Damage SetByCaller로 Health를 변경하는 Instant GE
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Attack")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
 private:
+	// 서버에서만 브로드캐스트되는 명중. 대상 ASC에 피해 Spec 적용
+	UFUNCTION()
+	void OnMeleeHit(AActor* HitActor, const FHitResult& HitResult);
+
+	void UnbindMeleeHit();
+
+	// 활성 중 OnMeleeHit을 구독한 판정 컴포넌트. EndAbility에서 해제
+	TWeakObjectPtr<ULB_MeleeHitboxComponent> BoundHitbox;
+
 	// 완료/Blend Out은 정상 종료, Interrupt/Cancel은 취소 종료로 처리
 	UFUNCTION()
 	void OnMontageFinished();
