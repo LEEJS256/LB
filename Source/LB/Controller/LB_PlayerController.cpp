@@ -51,7 +51,7 @@ void ALB_PlayerController::SetupInputComponent()
 		if (NormalAttackAction)
 		{
 			EnhancedInputComponent->BindAction(NormalAttackAction, ETriggerEvent::Started, this,
-			                                   &ALB_PlayerController::NormalATK);
+			                                   &ALB_PlayerController::OnNormalAttackStarted);
 		}
 		if (StrongAttackAction)
 		{
@@ -99,12 +99,12 @@ void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
 {
 }
 
-void ALB_PlayerController::NormalATK(const FInputActionValue& Value)
+void ALB_PlayerController::OnNormalAttackStarted(const FInputActionValue& Value)
 {
 	// 공격 입력 1회당 기본 공격 활성화를 1회 요청 (실행 가능 여부는 GAS/서버가 확정)
 	if (ALB_PlayerCharacter* LBCharacter = Cast<ALB_PlayerCharacter>(GetPawn()))
 	{
-		LBCharacter->RequestBasicAttack();
+		LBCharacter->RequestNormalAttack();
 	}
 }
 

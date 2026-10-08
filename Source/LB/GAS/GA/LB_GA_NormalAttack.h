@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GAS/GA/LB_GameplayAbility.h"
-#include "LB_GA_BasicAttack.generated.h"
+#include "LB_GA_NormalAttack.generated.h"
 
 class UAnimMontage;
 
@@ -13,12 +13,12 @@ class UAnimMontage;
  * 판정, 피해, 콤보는 이 클래스의 범위가 아니다.
  */
 UCLASS()
-class LB_API ULB_GA_BasicAttack : public ULB_GameplayAbility
+class LB_API ULB_GA_NormalAttack : public ULB_GameplayAbility
 {
 	GENERATED_BODY()
 
 public:
-	ULB_GA_BasicAttack();
+	ULB_GA_NormalAttack();
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;

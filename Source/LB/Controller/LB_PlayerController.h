@@ -54,7 +54,7 @@ private:
 
 	void StartSprint(const FInputActionValue& Value);
 	void StopSprint(const FInputActionValue& Value);
-	void NormalATK(const FInputActionValue& Value);
+	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
 
 	

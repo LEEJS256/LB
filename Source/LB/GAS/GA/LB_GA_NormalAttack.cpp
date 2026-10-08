@@ -1,19 +1,19 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GAS/GA/LB_GA_BasicAttack.h"
+#include "GAS/GA/LB_GA_NormalAttack.h"
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
 #include "Component/LB_MeleeHitboxComponent.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
-ULB_GA_BasicAttack::ULB_GA_BasicAttack()
+ULB_GA_NormalAttack::ULB_GA_NormalAttack()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
-	SetAssetTags(FGameplayTagContainer(TAG_Ability_Attack_Basic));
+	SetAssetTags(FGameplayTagContainer(TAG_ATK_Normal));
 
 	// ActivationOwnedTags는 활성화 시 부여되고 EndAbility에서 자동 제거되므로 어떤 종료 경로에서도 남지 않음
 	ActivationOwnedTags.AddTag(TAG_State_Action_Attacking);
@@ -21,7 +21,7 @@ ULB_GA_BasicAttack::ULB_GA_BasicAttack()
 	ActivationOwnedTags.AddTag(TAG_State_Movement_Blocked);
 }
 
-void ULB_GA_BasicAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!AttackMontage)
@@ -44,15 +44,15 @@ void ULB_GA_BasicAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		return;
 	}
 
-	MontageTask->OnCompleted.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageFinished);
-	MontageTask->OnBlendOut.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageFinished);
-	MontageTask->OnInterrupted.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageCancelled);
+	MontageTask->OnCompleted.AddDynamic(this, &ULB_GA_NormalAttack::OnMontageFinished);
+	MontageTask->OnBlendOut.AddDynamic(this, &ULB_GA_NormalAttack::OnMontageFinished);
+	MontageTask->OnInterrupted.AddDynamic(this, &ULB_GA_NormalAttack::OnMontageCancelled);
 	// 재생 실패(AnimInstance 없음 등) 시에도 OnCancelled가 호출되어 즉시 종료됨
-	MontageTask->OnCancelled.AddDynamic(this, &ULB_GA_BasicAttack::OnMontageCancelled);
+	MontageTask->OnCancelled.AddDynamic(this, &ULB_GA_NormalAttack::OnMontageCancelled);
 	MontageTask->ReadyForActivation();
 }
 
-void ULB_GA_BasicAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	// Montage가 NotifyEnd 전에 중단되거나 Ability가 취소돼도 판정이 남지 않도록 정리
@@ -69,13 +69,13 @@ void ULB_GA_BasicAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, con
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-void ULB_GA_BasicAttack::OnMontageFinished()
+void ULB_GA_NormalAttack::OnMontageFinished()
 {
 	// Blend Out 이후 Completed가 이어서 오더라도 EndAbility는 이미 비활성 상태면 무시됨
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void ULB_GA_BasicAttack::OnMontageCancelled()
+void ULB_GA_NormalAttack::OnMontageCancelled()
 {
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }

@@ -109,7 +109,7 @@ void ALB_PlayerCharacter::AddMoveInput(const FVector2D& Axis2D)
 	AddMovementInput(FVector::RightVector, ClampedAxis.Y);
 }
 
-void ALB_PlayerCharacter::RequestBasicAttack()
+void ALB_PlayerCharacter::RequestNormalAttack()
 {
 	// GAS 초기화(InitAbilityActorInfo) 전이거나 Avatar가 이 캐릭터가 아니면 요청하지 않음
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
@@ -119,7 +119,7 @@ void ALB_PlayerCharacter::RequestBasicAttack()
 	}
 
 	// 클라이언트에서 호출해도 ASC가 Ability의 Net Execution Policy에 따라 서버로 전달하며, 실행 가능 여부는 서버가 확정
-	ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(TAG_Ability_Attack_Basic));
+	ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(TAG_ATK_Normal));
 }
 
 void ALB_PlayerCharacter::UpdateFacingFromInput(float HorizontalInput)
