@@ -3,11 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemInterface.h"
 #include "LB_CharacterBase.h"
 #include "GameFramework/Character.h"
 #include "LB_PlayerCharacter.generated.h"
 
 class ULB_GasComponent;
+class ULB_MeleeHitboxComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UAbilitySystemComponent;
@@ -21,7 +23,7 @@ enum class ELB_FacingDirection : uint8
 };
 
 UCLASS()
-class LB_API ALB_PlayerCharacter : public ALB_CharacterBase
+class LB_API ALB_PlayerCharacter : public ALB_CharacterBase, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -30,10 +32,14 @@ public:
 	ALB_PlayerCharacter();
 
 	//ASC = GAS본체
-	UAbilitySystemComponent* GetAbilitySystemComponent() const ;
+	// IAbilitySystemInterface: ULB_GasComponent가 연결한 PlayerState 소유 ASC를 반환 (InitGAS 전에는 nullptr)
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	// ALB_PlayerController가 IA_Move의 2D Axis 값을 전달할 때 호출 (Right:+X, Up:+Y 기준)
 	void AddMoveInput(const FVector2D& Axis2D);
+
+	// ALB_PlayerController가 공격 입력 시 호출. ATK.Normal 태그 Ability의 활성화를 ASC에 요청
+	void RequestNormalAttack();
 
 	ELB_FacingDirection GetFacing() const { return CurrentFacing; }
 
@@ -85,6 +91,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<ULB_GasComponent> GasComp;
+
+	// 근접 공격 판정 Box. 기본 비활성이며 판정 구간마다 Socket 또는 Character 축 + CurrentFacing 기준으로 배치
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<ULB_MeleeHitboxComponent> MeleeHitbox;
 
 #pragma endregion
 public:

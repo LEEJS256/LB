@@ -16,6 +16,8 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_ATKType, "ATKType");
 UE_DEFINE_GAMEPLAY_TAG(TAG_ATKType_Normal, "ATKType.Normal");
 UE_DEFINE_GAMEPLAY_TAG(TAG_ATKType_Crit, "ATKType.Crit");
 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Data_Damage, "Data.Damage");
+
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Input, "Input");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Input_LeftClick, "Input.LeftClick");
@@ -44,3 +46,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_State_Walk, "State.Walk");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Wound, "State.Wound");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Death, "State.Death");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Build, "State.Build");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Action_Attacking, "State.Action.Attacking");
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_FacingLocked, "State.Movement.FacingLocked");
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_Blocked, "State.Movement.Blocked");

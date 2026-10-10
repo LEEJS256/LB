@@ -3,12 +3,15 @@
 
 #include "LB_PlayerCharacter.h"
 
+#include "AbilitySystemComponent.h"
 #include "Component/LB_GasComponent.h"
+#include "Component/LB_MeleeHitboxComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/LB_PlayerState.h"
+#include "Utility/LB_NativeGameplayTag.h"
 
 // Sets default values
 ALB_PlayerCharacter::ALB_PlayerCharacter()
@@ -28,6 +31,9 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 	FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 
 	GasComp = CreateDefaultSubobject<ULB_GasComponent>(TEXT("GasComp"));
+
+	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
+	MeleeHitbox->SetupAttachment(GetMesh());
 	
 }
 
@@ -83,11 +89,37 @@ void ALB_PlayerCharacter::AddMoveInput(const FVector2D& Axis2D)
 		return;
 	}
 
-	UpdateFacingFromInput(ClampedAxis.X);
+	// 방향 잠금과 이동 차단은 Ability별로 조합할 수 있도록 서로 독립적으로 판단
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	const bool bFacingLocked = ASC && ASC->HasMatchingGameplayTag(TAG_State_Movement_FacingLocked);
+	const bool bMovementBlocked = ASC && ASC->HasMatchingGameplayTag(TAG_State_Movement_Blocked);
+
+	if (!bFacingLocked)
+	{
+		UpdateFacingFromInput(ClampedAxis.X);
+	}
+
+	if (bMovementBlocked)
+	{
+		return;
+	}
 
 	// 월드 X: 화면 좌우(Right:+X / Left:-X), 월드 Y: 화면 깊이(Up:+Y / Down:-Y)
 	AddMovementInput(FVector::ForwardVector, ClampedAxis.X);
 	AddMovementInput(FVector::RightVector, ClampedAxis.Y);
+}
+
+void ALB_PlayerCharacter::RequestNormalAttack()
+{
+	// GAS 초기화(InitAbilityActorInfo) 전이거나 Avatar가 이 캐릭터가 아니면 요청하지 않음
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC || ASC->GetAvatarActor() != this)
+	{
+		return;
+	}
+
+	// 클라이언트에서 호출해도 ASC가 Ability의 Net Execution Policy에 따라 서버로 전달하며, 실행 가능 여부는 서버가 확정
+	ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(TAG_ATK_Normal));
 }
 
 void ALB_PlayerCharacter::UpdateFacingFromInput(float HorizontalInput)
