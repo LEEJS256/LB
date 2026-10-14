@@ -9,7 +9,7 @@
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
-
+class ULB_HUD;
 /**
  *
  */
@@ -22,6 +22,10 @@ protected:
 	// Enhanced Input Mapping Context 등록과 Action 바인딩 (로컬 컨트롤러에서만 호출됨)
 	virtual void SetupInputComponent() override;
 
+	virtual void BeginPlay() override;
+	virtual void OnRep_PlayerState() override;      // 클라: PlayerState 도착 시점
+	virtual void OnPossess(APawn* InPawn) override; // 서버/호스트
+	
 	void OnMoveTriggered(const FInputActionValue& Value);
 
 #pragma region INPUT_AREA
@@ -48,6 +52,20 @@ protected:
 
 	
 private:
+
+#pragma region UI
+
+	// MyPlayerController.h
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<ULB_HUD> HUDWidgetClass;
+
+	UPROPERTY()
+	ULB_HUD* HUDWidget;
+
+	void InitUI();
+	void BindHUD();
+#pragma endregion 
+	
 #pragma  region Action
 	void Jump(const FInputActionValue& Value);
 	void StopJumping();

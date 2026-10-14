@@ -2,14 +2,17 @@
 
 
 #include "LB_PlayerController.h"
-
+#include "PlayerState/LB_PlayerState.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Blueprint/UserWidget.h"
 #include "Character/LB_PlayerCharacter.h"
-#include "PlayerState/LB_PlayerState.h"
+#include "UI/LB_PlayerStatus.h"
+#include "UI/LB_HUD.h"
+
 
 void ALB_PlayerController::SetupInputComponent()
 {
@@ -61,12 +64,69 @@ void ALB_PlayerController::SetupInputComponent()
 	}
 }
 
+void ALB_PlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	InitUI();
+	BindHUD();
+}
+
+void ALB_PlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	InitUI();
+	BindHUD();
+}
+
+void ALB_PlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	InitUI();
+	BindHUD();
+}
+
 void ALB_PlayerController::OnMoveTriggered(const FInputActionValue& Value)
 {
 	if (ALB_PlayerCharacter* LBCharacter = Cast<ALB_PlayerCharacter>(GetPawn()))
 	{
 		LBCharacter->AddMoveInput(Value.Get<FVector2D>());
 	}
+}
+
+void ALB_PlayerController::InitUI()
+{
+	if (HUDWidget || !IsLocalController() || !HUDWidgetClass) return;
+
+	HUDWidget = CreateWidget<ULB_HUD>(this, HUDWidgetClass);
+	if (HUDWidget)
+	{
+		HUDWidget->AddToViewport();
+	}
+}
+
+void ALB_PlayerController::BindHUD()
+{
+	if (!HUDWidget)
+		return;
+
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	if (!PS)
+		return;
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC)
+		return;
+
+
+
+	if (ULB_PlayerStatus* Status = HUDWidget->GetLocalPlayerStatus())
+	{
+		Status->BindToASC(ASC);  
+	}
+	
+
+	
 }
 
 void ALB_PlayerController::Jump(const FInputActionValue& Value)
