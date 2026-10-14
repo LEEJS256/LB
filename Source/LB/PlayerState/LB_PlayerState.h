@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayEffectTypes.h"
 #include "AbilitySystemInterface.h"
 #include "ActiveGameplayEffectHandle.h"
 #include "Utility/LB_NativeGameplayTag.h"
