@@ -7,6 +7,7 @@
 #include "AbilitySystemGlobals.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
+#include "Character/LB_PlayerCharacter.h"
 #include "Component/LB_MeleeHitboxComponent.h"
 #include "GameplayEffect.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
@@ -41,11 +42,18 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		return;
 	}
 
-	// 명중 확정과 피해는 서버 권한. Montage 시작 전에 구독해 첫 판정 구간을 놓치지 않음
-	if (HasAuthority(&ActivationInfo))
+	const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
+	if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
 	{
-		const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
-		if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
+		// 판정 Box가 Character 클래스에 의존하지 않도록 이번 공격의 X 방향을 Montage 시작 전에 전달
+		// 공격 중에는 FacingLocked 태그로 방향이 고정되므로 활성화 시점 값으로 충분
+		if (const ALB_PlayerCharacter* PlayerCharacter = Cast<ALB_PlayerCharacter>(Avatar))
+		{
+			Hitbox->SetAttackDirectionX(PlayerCharacter->GetFacing() == ELB_FacingDirection::Left ? -1.f : 1.f);
+		}
+
+		// 명중 확정과 피해는 서버 권한. Montage 시작 전에 구독해 첫 판정 구간을 놓치지 않음
+		if (HasAuthority(&ActivationInfo))
 		{
 			Hitbox->OnMeleeHit.AddUniqueDynamic(this, &ULB_GA_NormalAttack::OnMeleeHit);
 			BoundHitbox = Hitbox;
