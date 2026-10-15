@@ -3,7 +3,10 @@
 
 #include "Character/Monster/LB_MonsterBase.h"
 
+#include "LB.h"
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
+#include "Data/LB_MonsterDataAsset.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 
 // Sets default values
@@ -34,5 +37,39 @@ void ALB_MonsterBase::BeginPlay()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
+
+	InitializeMonsterData();
+}
+
+void ALB_MonsterBase::InitializeMonsterData()
+{
+	if (!HasAuthority() || bStartupApplied || !AbilitySystemComponent)
+		return;
+
+	if (!MonsterData)
+	{
+		UE_LOG(LogLB, Warning, TEXT("%s: MonsterData가 설정되지 않아 초기 GAS 데이터를 적용하지 않습니다."), *GetName());
+		return;
+	}
+
+	bStartupApplied = true;
+
+	for (const TSubclassOf<UGameplayAbility>& AbilityClass : MonsterData->StartupGA)
+	{
+		if (AbilityClass)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1, INDEX_NONE, this));
+		}
+	}
+
+	FGameplayEffectContextHandle Ctx = AbilitySystemComponent->MakeEffectContext();
+	Ctx.AddSourceObject(this);
+	for (const TSubclassOf<UGameplayEffect>& GEClass : MonsterData->StartupGE)
+	{
+		if (GEClass)
+		{
+			AbilitySystemComponent->ApplyGameplayEffectToSelf(GEClass->GetDefaultObject<UGameplayEffect>(), 1.f, Ctx);
+		}
 	}
 }

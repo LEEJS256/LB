@@ -9,6 +9,7 @@
 
 class UAbilitySystemComponent;
 class ULB_AttributeSet;
+class ULB_MonsterDataAsset;
 
 UCLASS()
 class LB_API ALB_MonsterBase : public ACharacter, public IAbilitySystemInterface
@@ -32,4 +33,13 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<ULB_AttributeSet> AttributeSet;
+
+	UPROPERTY(EditDefaultsOnly, Category = "LB|GAS")
+	TObjectPtr<ULB_MonsterDataAsset> MonsterData;
+
+private:
+	// 서버 전용, 1회만 실행
+	void InitializeMonsterData();
+
+	bool bStartupApplied = false;
 };
