@@ -7,8 +7,10 @@
 #include "Component/LB_GasComponent.h"
 #include "Component/LB_MeleeHitboxComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GAS/Attribute/LB_AttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/LB_PlayerState.h"
 #include "Utility/LB_NativeGameplayTag.h"
@@ -35,6 +37,19 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
 	MeleeHitbox->SetupAttachment(GetMesh());
 	
+}
+
+void ALB_PlayerCharacter::SetSprinting(bool bSprinting)
+{
+	bIsSprinting = bSprinting;
+
+	ULB_AttributeSet* AttributeSet =  Get_GasComponent()->GetAttributeSet();
+	
+	// UE_LOG(LogTemp, Warning, TEXT("SprintWeight: %f"), AttributeSet->GetSprintWeight());
+	// UE_LOG(LogTemp, Warning, TEXT("SprintSpeed: %f"), SprintSpeed);
+	float WalkSpeed = AttributeSet->GetSpeed();
+	float SprintSpeed = AttributeSet->GetSprintWeight() * WalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
 }
 
 UAbilitySystemComponent* ALB_PlayerCharacter::GetAbilitySystemComponent() const

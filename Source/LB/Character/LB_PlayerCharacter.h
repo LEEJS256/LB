@@ -30,6 +30,13 @@ class LB_API ALB_PlayerCharacter : public ALB_CharacterBase, public IAbilitySyst
 public:
 	// Sets default values for this character's properties
 	ALB_PlayerCharacter();
+#pragma region CommonFunction
+	void SetSprinting(bool bSprinting);
+
+	ULB_GasComponent* Get_GasComponent() const { return GasComp; }
+
+	
+#pragma  endregion
 
 	//ASC = GAS본체
 	// IAbilitySystemInterface: ULB_GasComponent가 연결한 PlayerState 소유 ASC를 반환 (InitGAS 전에는 nullptr)
@@ -101,4 +108,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+private:
+	//달라기 관련
+	bool bIsSprinting = false;
 };
