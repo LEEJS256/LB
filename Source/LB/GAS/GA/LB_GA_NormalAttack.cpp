@@ -14,6 +14,25 @@
 #include "LB.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
+namespace
+{
+	// ASC가 보유한 Team 하위 태그(Team.Player, Team.Monster 등). 없으면 빈 태그
+	FGameplayTag FindTeamTag(const UAbilitySystemComponent* ASC)
+	{
+		FGameplayTagContainer OwnedTags;
+		ASC->GetOwnedGameplayTags(OwnedTags);
+
+		for (const FGameplayTag& Tag : OwnedTags)
+		{
+			if (Tag.MatchesTag(TAG_Team) && Tag != TAG_Team)
+			{
+				return Tag;
+			}
+		}
+		return FGameplayTag();
+	}
+}
+
 ULB_GA_NormalAttack::ULB_GA_NormalAttack()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -118,7 +137,23 @@ void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResu
 		return;
 	}
 
-	const float Attack = SourceASC->GetNumericAttribute(ULB_AttributeSet::GetAttackAttribute());
+	// 팀의 단일 진실 소스는 ASC의 Team 태그. 팀을 판단할 수 없거나 같은 팀이면 피해 차단
+	const FGameplayTag SourceTeam = FindTeamTag(SourceASC);
+	const FGameplayTag TargetTeam = FindTeamTag(TargetASC);
+	if (!SourceTeam.IsValid() || !TargetTeam.IsValid())
+	{
+		UE_LOG(LogLB, Warning, TEXT("%s: Missing Team tag (Source %s: %s, Target %s: %s). Skipping damage."),
+			*GetName(), *GetNameSafe(SourceASC->GetAvatarActor()), *SourceTeam.ToString(),
+			*GetNameSafe(HitActor), *TargetTeam.ToString());
+		return;
+	}
+
+	if (SourceTeam == TargetTeam)
+	{
+		return;
+	}
+
+	const float Attack =SourceASC->GetNumericAttribute(ULB_AttributeSet::GetAttackAttribute());
 	const float Armor = TargetASC->GetNumericAttribute(ULB_AttributeSet::GetArmorAttribute());
 	const float Damage = FMath::Max(1.f, Attack - Armor);
 
