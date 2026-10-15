@@ -8,6 +8,7 @@
 #include "Abilities/GameplayAbility.h"
 #include "Data/LB_MonsterDataAsset.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
+#include "Utility/LB_NativeGameplayTag.h"
 
 // Sets default values
 ALB_MonsterBase::ALB_MonsterBase()
@@ -26,6 +27,11 @@ ALB_MonsterBase::ALB_MonsterBase()
 UAbilitySystemComponent* ALB_MonsterBase::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+bool ALB_MonsterBase::IsDead() const
+{
+	return AbilitySystemComponent && AbilitySystemComponent->HasMatchingGameplayTag(TAG_State_Death);
 }
 
 // Called when the game starts or when spawned

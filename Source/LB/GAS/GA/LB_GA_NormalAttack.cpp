@@ -137,6 +137,12 @@ void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResu
 		return;
 	}
 
+	// 이미 사망한 대상에게는 추가 피해를 적용하지 않음
+	if (TargetASC->HasMatchingGameplayTag(TAG_State_Death))
+	{
+		return;
+	}
+
 	// 팀의 단일 진실 소스는 ASC의 Team 태그. 팀을 판단할 수 없거나 같은 팀이면 피해 차단
 	const FGameplayTag SourceTeam = FindTeamTag(SourceASC);
 	const FGameplayTag TargetTeam = FindTeamTag(TargetASC);
