@@ -36,29 +36,21 @@ void ALB_PlayerState::InitializePlayerDA()
 
 	GrantDefaultGA(PlayerDA);
 	ApplyDefaultAttributes(PlayerDA);
-	GrantStateTag(TAG_State_Idle);
+	AddStateTag(TAG_State_Idle);
 }
 
-void ALB_PlayerState::GrantStateTag(FGameplayTag NewStateTag)
+
+
+void ALB_PlayerState::AddStateTag(FGameplayTag Tag)
 {
-	if (!HasAuthority() || !AbilitySystemComponent)
-		return;
+	if (HasAuthority() && AbilitySystemComponent && Tag.IsValid())
+		AbilitySystemComponent->AddLooseGameplayTag(Tag);
+}
 
-	if (CurrentStateGEHandle.IsValid())
-	{
-		AbilitySystemComponent->RemoveActiveGameplayEffect(CurrentStateGEHandle);
-		CurrentStateGEHandle.Invalidate();
-	}
-
-	if (const TSubclassOf<UGameplayEffect>* GEClass = StateTagToGE.Find(NewStateTag))
-	{
-		FGameplayEffectContextHandle Ctx = AbilitySystemComponent->MakeEffectContext();
-		FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(*GEClass, 1.f, Ctx);
-		if (Spec.IsValid())
-		{
-			CurrentStateGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-		}
-	}
+void ALB_PlayerState::RemoveStateTag(FGameplayTag Tag)
+{
+	if (HasAuthority() && AbilitySystemComponent && Tag.IsValid())
+		AbilitySystemComponent->RemoveLooseGameplayTag(Tag);
 }
 
 void ALB_PlayerState::GrantDefaultGA(const ULB_PlayerDataAsset* Data)
