@@ -7,11 +7,31 @@
 #include "AbilitySystemGlobals.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
+#include "Character/LB_PlayerCharacter.h"
 #include "Component/LB_MeleeHitboxComponent.h"
 #include "GameplayEffect.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "LB.h"
 #include "Utility/LB_NativeGameplayTag.h"
+
+namespace
+{
+	// ASC가 보유한 Team 하위 태그(Team.Player, Team.Monster 등). 없으면 빈 태그
+	FGameplayTag FindTeamTag(const UAbilitySystemComponent* ASC)
+	{
+		FGameplayTagContainer OwnedTags;
+		ASC->GetOwnedGameplayTags(OwnedTags);
+
+		for (const FGameplayTag& Tag : OwnedTags)
+		{
+			if (Tag.MatchesTag(TAG_Team) && Tag != TAG_Team)
+			{
+				return Tag;
+			}
+		}
+		return FGameplayTag();
+	}
+}
 
 ULB_GA_NormalAttack::ULB_GA_NormalAttack()
 {
@@ -41,11 +61,18 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		return;
 	}
 
-	// 명중 확정과 피해는 서버 권한. Montage 시작 전에 구독해 첫 판정 구간을 놓치지 않음
-	if (HasAuthority(&ActivationInfo))
+	const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
+	if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
 	{
-		const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
-		if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
+		// 판정 Box가 Character 클래스에 의존하지 않도록 이번 공격의 X 방향을 Montage 시작 전에 전달
+		// 공격 중에는 FacingLocked 태그로 방향이 고정되므로 활성화 시점 값으로 충분
+		if (const ALB_PlayerCharacter* PlayerCharacter = Cast<ALB_PlayerCharacter>(Avatar))
+		{
+			Hitbox->SetAttackDirectionX(PlayerCharacter->GetFacing() == ELB_FacingDirection::Left ? -1.f : 1.f);
+		}
+
+		// 명중 확정과 피해는 서버 권한. Montage 시작 전에 구독해 첫 판정 구간을 놓치지 않음
+		if (HasAuthority(&ActivationInfo))
 		{
 			Hitbox->OnMeleeHit.AddUniqueDynamic(this, &ULB_GA_NormalAttack::OnMeleeHit);
 			BoundHitbox = Hitbox;
@@ -110,7 +137,29 @@ void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResu
 		return;
 	}
 
-	const float Attack = SourceASC->GetNumericAttribute(ULB_AttributeSet::GetAttackAttribute());
+	// 이미 사망한 대상에게는 추가 피해를 적용하지 않음
+	if (TargetASC->HasMatchingGameplayTag(TAG_State_Death))
+	{
+		return;
+	}
+
+	// 팀의 단일 진실 소스는 ASC의 Team 태그. 팀을 판단할 수 없거나 같은 팀이면 피해 차단
+	const FGameplayTag SourceTeam = FindTeamTag(SourceASC);
+	const FGameplayTag TargetTeam = FindTeamTag(TargetASC);
+	if (!SourceTeam.IsValid() || !TargetTeam.IsValid())
+	{
+		UE_LOG(LogLB, Warning, TEXT("%s: Missing Team tag (Source %s: %s, Target %s: %s). Skipping damage."),
+			*GetName(), *GetNameSafe(SourceASC->GetAvatarActor()), *SourceTeam.ToString(),
+			*GetNameSafe(HitActor), *TargetTeam.ToString());
+		return;
+	}
+
+	if (SourceTeam == TargetTeam)
+	{
+		return;
+	}
+
+	const float Attack =SourceASC->GetNumericAttribute(ULB_AttributeSet::GetAttackAttribute());
 	const float Armor = TargetASC->GetNumericAttribute(ULB_AttributeSet::GetArmorAttribute());
 	const float Damage = FMath::Max(1.f, Attack - Armor);
 

@@ -4,7 +4,6 @@
 #include "Component/LB_MeleeHitboxComponent.h"
 
 #include "LB.h"
-#include "Character/LB_PlayerCharacter.h"
 
 ULB_MeleeHitboxComponent::ULB_MeleeHitboxComponent()
 {
@@ -110,12 +109,9 @@ void ULB_MeleeHitboxComponent::ApplyCharacterSpaceSettings(const FLB_MeleeHitbox
 	}
 
 	// Actor 회전은 Controller를 따를 수 있으므로 이동/방향과 같은 월드 X(공격)/Y(깊이)/Z(높이) 축을 사용
-	const ALB_PlayerCharacter* PlayerCharacter = Cast<ALB_PlayerCharacter>(OwnerActor);
-	const bool bFacingLeft = PlayerCharacter && PlayerCharacter->GetFacing() == ELB_FacingDirection::Left;
-
 	FVector Offset = Settings.RelativeLocation;
 	FRotator Rotation = Settings.RelativeRotation;
-	if (bFacingLeft)
+	if (AttackDirectionX < 0.f)
 	{
 		// X축 거울 반전: 위치 X 반전, 회전은 Pitch/Yaw 반전(Roll 유지)
 		Offset.X = -Offset.X;
@@ -125,6 +121,16 @@ void ULB_MeleeHitboxComponent::ApplyCharacterSpaceSettings(const FLB_MeleeHitbox
 
 	SetBoxExtent(Settings.BoxExtent, false);
 	SetWorldLocationAndRotation(OwnerActor->GetActorLocation() + Offset, Rotation);
+}
+
+void ULB_MeleeHitboxComponent::SetAttackDirectionX(float DirectionX)
+{
+	if (FMath::IsNearlyZero(DirectionX))
+	{
+		return;
+	}
+
+	AttackDirectionX = DirectionX > 0.f ? 1.f : -1.f;
 }
 
 void ULB_MeleeHitboxComponent::EndHitWindow()
