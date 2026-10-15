@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameFramework/PlayerController.h"
 #include "LB_PlayerController.generated.h"
 
@@ -75,6 +76,8 @@ private:
 	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
 
+	void Set_IATag();
 	
+	FGameplayTagContainer SprintTagContainer;  
 #pragma endregion
 };

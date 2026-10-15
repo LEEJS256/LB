@@ -68,6 +68,7 @@ void ALB_PlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	Set_IATag();
 	InitUI();
 	BindHUD();
 }
@@ -153,10 +154,37 @@ void ALB_PlayerController::StopJumping()
 
 void ALB_PlayerController::StartSprint(const FInputActionValue& Value)
 {
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC)
+		return;
+	if (!ASC || ASC->GetAvatarActor() != GetPawn())
+		return;
+
+	ASC->TryActivateAbilitiesByTag(SprintTagContainer);
+
+
 }
 
 void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
 {
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC)
+		return;
+
+	
+	ASC->CancelAbilities(&SprintTagContainer);
 }
 
 void ALB_PlayerController::OnNormalAttackStarted(const FInputActionValue& Value)
@@ -187,4 +215,9 @@ void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 	GATagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("ATK.Strong")));
 
 	ASC->TryActivateAbilitiesByTag(GATagContainer);
+}
+
+void ALB_PlayerController::Set_IATag()
+{
+	SprintTagContainer.AddTag(TAG_Ability_Sprint);
 }
