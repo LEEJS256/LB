@@ -51,6 +51,11 @@ void ALB_PlayerController::SetupInputComponent()
 			EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Completed, this,
 			                                   &ALB_PlayerController::StopSprint);
 		}
+		if (DodgeAction)
+		{
+			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this,
+											   &ALB_PlayerController::Dodge);
+		}
 		if (NormalAttackAction)
 		{
 			EnhancedInputComponent->BindAction(NormalAttackAction, ETriggerEvent::Started, this,
@@ -187,6 +192,23 @@ void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
 	ASC->CancelAbilities(&SprintTagContainer);
 }
 
+void ALB_PlayerController::Dodge(const FInputActionValue& Value)
+{
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC)
+		return;
+	if (!ASC || ASC->GetAvatarActor() != GetPawn())
+		return;
+
+	ASC->TryActivateAbilitiesByTag(DodgeTagContainer);
+}
+
 void ALB_PlayerController::OnNormalAttackStarted(const FInputActionValue& Value)
 {
 	// 공격 입력 1회당 기본 공격 활성화를 1회 요청 (실행 가능 여부는 GAS/서버가 확정)
@@ -220,4 +242,5 @@ void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 void ALB_PlayerController::Set_IATag()
 {
 	SprintTagContainer.AddTag(TAG_Ability_Sprint);
+	DodgeTagContainer.AddTag(TAG_Ability_Dodge);
 }

@@ -39,6 +39,10 @@ protected:
 	TObjectPtr<UInputAction> MoveAction;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DashAction;
+	//스페이스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> DodgeAction;
+
 	// 점프- C
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> JumpAction;
@@ -73,11 +77,14 @@ private:
 
 	void StartSprint(const FInputActionValue& Value);
 	void StopSprint(const FInputActionValue& Value);
+	void Dodge(const FInputActionValue& Value);
 	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
 
 	void Set_IATag();
 	
-	FGameplayTagContainer SprintTagContainer;  
+	FGameplayTagContainer SprintTagContainer;
+	FGameplayTagContainer DodgeTagContainer;
+	
 #pragma endregion
 };
