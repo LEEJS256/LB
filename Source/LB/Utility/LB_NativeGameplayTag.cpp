@@ -39,6 +39,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_InterAction, "Ability.InterAction");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_State, "State");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Idle, "State.Idle");
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Invincible, "State.Invincible");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_ATK, "State.ATK");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Option, "State.Option");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Run, "State.Run");
@@ -50,3 +51,8 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_State_Build, "State.Build");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Action_Attacking, "State.Action.Attacking");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_FacingLocked, "State.Movement.FacingLocked");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_Blocked, "State.Movement.Blocked");
+
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Event, "Event");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Event_Start, "Event.Start");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Event_End,   "Event.End");
