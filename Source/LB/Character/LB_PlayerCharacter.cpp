@@ -52,6 +52,33 @@ void ALB_PlayerCharacter::SetSprinting(bool bSprinting)
 	GetCharacterMovement()->MaxWalkSpeed = bIsSprinting ? SprintSpeed : WalkSpeed;
 }
 
+
+void ALB_PlayerCharacter::BindDelegate()
+{
+	if (bSpeedBound) return;
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */;
+	if (!ASC) return;   // 아직 준비 안 됐으면 패스
+
+	ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetSpeedAttribute())
+		.AddUObject(this, &ALB_PlayerCharacter::OnSpeedChanged);
+
+	bSpeedBound = true;
+
+	// 초기값 한 번 반영
+	GetCharacterMovement()->MaxWalkSpeed = ASC->GetNumericAttribute(ULB_AttributeSet::GetSpeedAttribute());
+}
+
+void ALB_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Speed %.1f -> %.1f (Base %.1f)"),
+	 Data.OldValue, Data.NewValue,
+	 GetAbilitySystemComponent()->GetNumericAttributeBase(ULB_AttributeSet::GetSpeedAttribute()));
+ 
+	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+}
+
+
 UAbilitySystemComponent* ALB_PlayerCharacter::GetAbilitySystemComponent() const
 {
 	return GasComp ? GasComp->GetASC() : nullptr;
@@ -78,12 +105,14 @@ void ALB_PlayerCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	InitGAS();
+	BindDelegate();
 }
 
 void ALB_PlayerCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 	InitGAS();
+	BindDelegate();
 }
 
 void ALB_PlayerCharacter::InitGAS()

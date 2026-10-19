@@ -13,6 +13,7 @@ class ULB_MeleeHitboxComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UAbilitySystemComponent;
+struct FOnAttributeChangeData;
 
 // 벨트스크롤 캐릭터는 좌/우 두 방향만 가진다
 UENUM(BlueprintType)
@@ -32,10 +33,12 @@ public:
 	ALB_PlayerCharacter();
 #pragma region CommonFunction
 	void SetSprinting(bool bSprinting);
+	void BindDelegate();
+	void OnSpeedChanged(const FOnAttributeChangeData& Data);
 
 	ULB_GasComponent* Get_GasComponent() const { return GasComp; }
 
-	
+
 #pragma  endregion
 
 	//ASC = GAS본체
@@ -104,6 +107,7 @@ protected:
 	TObjectPtr<ULB_MeleeHitboxComponent> MeleeHitbox;
 
 #pragma endregion
+
 public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -111,4 +115,5 @@ public:
 private:
 	//달라기 관련
 	bool bIsSprinting = false;
+	bool bSpeedBound = false;
 };
