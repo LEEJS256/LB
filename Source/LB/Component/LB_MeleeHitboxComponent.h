@@ -9,7 +9,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLB_OnMeleeHit, AActor*, HitActor, const FHitResult&, HitResult);
 
 // 판정 구간 하나의 Box 설정.
-// SocketName=None: Character 위치 기준, X=공격 방향(CurrentFacing이 Left면 반전), Y=깊이, Z=높이
+// SocketName=None: Character 위치 기준, X=공격 방향(AttackDirectionX가 -1이면 반전), Y=깊이, Z=높이
 // SocketName 지정: Mesh Socket 기준 상대값
 USTRUCT(BlueprintType)
 struct FLB_MeleeHitboxSettings
@@ -32,7 +32,7 @@ struct FLB_MeleeHitboxSettings
 
 /**
  * 근접 공격 판정 Box. 기본은 비활성(NoCollision)이며 판정 구간 동안만 Query Overlap을 켠다.
- * Socket 지정 시 Mesh Socket을, 미지정 시 Character 축과 CurrentFacing을 기준으로 배치하며,
+ * Socket 지정 시 Mesh Socket을, 미지정 시 Character 축과 공격 Ability가 전달한 X 공격 방향을 기준으로 배치하며,
  * 명중은 서버에서만 확정해 OnMeleeHit으로 전달한다.
  * Tick을 사용하지 않는다.
  */
@@ -59,6 +59,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "LB|Hitbox")
 	bool IsHitWindowActive() const { return bHitWindowActive; }
 
+	// 공격 Ability가 Montage 시작 전에 호출. 부호만 사용해 +1/-1로 저장하고 0이면 기존 값 유지
+	UFUNCTION(BlueprintCallable, Category = "LB|Hitbox")
+	void SetAttackDirectionX(float DirectionX);
+
+	UFUNCTION(BlueprintPure, Category = "LB|Hitbox")
+	float GetAttackDirectionX() const { return AttackDirectionX; }
+
 	// 서버에서만 브로드캐스트. 한 판정 구간에서 대상당 1회
 	UPROPERTY(BlueprintAssignable, Category = "LB|Hitbox")
 	FLB_OnMeleeHit OnMeleeHit;
@@ -76,7 +83,7 @@ private:
 
 	void DeactivateHitWindow();
 
-	// SocketName=None 설정을 Character 위치 + 월드 X/Y/Z 축 기준으로 적용. Left 방향이면 X축 거울 반전
+	// SocketName=None 설정을 Character 위치 + 월드 X/Y/Z 축 기준으로 적용. AttackDirectionX가 -1이면 X축 거울 반전
 	void ApplyCharacterSpaceSettings(const FLB_MeleeHitboxSettings& Settings);
 
 	// BeginPlay 시점의 부착 대상(Mesh). Socket 변경 시 이 컴포넌트 기준으로 다시 부착
@@ -87,4 +94,7 @@ private:
 	TSet<TWeakObjectPtr<AActor>> HitActors;
 
 	bool bHitWindowActive = false;
+
+	// Character-space 판정의 X 공격 방향. +1(Right) 또는 -1(Left)
+	float AttackDirectionX = 1.f;
 };

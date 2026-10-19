@@ -112,9 +112,10 @@ void ULB_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 			// AActor* Owner = GetOwningActor();
 			UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 
-			if (ASC)
+			// 서버에서 한 번만 부여. Loose Tag는 기본적으로 복제되지 않으므로 TagOnly로 모든 클라이언트에 복제
+			if (ASC && ASC->IsOwnerActorAuthoritative() && !ASC->HasMatchingGameplayTag(TAG_State_Death))
 			{
-				ASC->AddLooseGameplayTag(FGameplayTag::RequestGameplayTag("State.Death"));
+				ASC->AddLooseGameplayTag(TAG_State_Death, 1, EGameplayTagReplicationState::TagOnly);
 			}
 		}
 	}
