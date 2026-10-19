@@ -37,6 +37,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_Speed)
 	FGameplayAttributeData Speed;
 	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, Speed)
+	//달리기 가중치
+	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_SprintWeight)
+	FGameplayAttributeData SprintWeight;
+	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, SprintWeight)
 
 	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_Health)
 	FGameplayAttributeData Health;
@@ -86,15 +90,12 @@ public:
 	FGameplayAttributeData Poise;
 	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, Poise)
 
-	//달리기 가중치
-	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_SprintWeight)
-	FGameplayAttributeData SprintWeight;
-	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, SprintWeight)
 
 #pragma endregion
 
 #pragma region Delegate
 
+	
 	//데미지용
 	// DECLARE_MULTICAST_DELEGATE_TwoParams(FOnDamageTaken, float, FVector);
 	DECLARE_MULTICAST_DELEGATE_FourParams(
