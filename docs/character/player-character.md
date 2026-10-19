@@ -101,6 +101,8 @@ LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액�
 
 ## Architecture
 
+`ALB_CharacterBase`는 생성자에서 `PrimaryActorTick.bCanEverTick = false`로 Tick을 끈 상태를 기본으로 하고, Tick이 필요한 하위 클래스만 자신의 생성자에서 직접 켠다. `ALB_PlayerCharacter`는 이동과 입력을 Enhanced Input 이벤트로 처리하므로 이 기본값을 그대로 유지한다.
+
 ### `ALB_PlayerCharacter`
 
 - X/Y 이동 입력을 실제 `CharacterMovementComponent` 이동으로 변환한다.
