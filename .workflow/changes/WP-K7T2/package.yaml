@@ -1,0 +1,10 @@
+id: WP-K7T2
+title: 캐릭터 기반 남은 코드 정리
+branch: refactor/character-base-cleanup
+description: |
+  ALB_CharacterBase에 남아 있는 빈 override를 정리하고, Tick 기본 정책을 문서에 남긴다.
+  워크플로 앱 파일럿 작업이다.
+verify:
+  - name: 에디터 빌드
+    use: build-editor
+  - manual: PIE Listen Server + Client 1에서 플레이어 이동과 기본 공격이 이전과 같이 동작한다

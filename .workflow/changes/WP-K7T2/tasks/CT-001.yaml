@@ -1,0 +1,21 @@
+id: CT-001
+title: ALB_CharacterBase 빈 override 제거
+goal: |
+  ALB_CharacterBase는 생성자에서 PrimaryActorTick.bCanEverTick = false로 Tick을 끄고 있지만,
+  Super 호출만 하는 빈 Tick과 SetupPlayerInputComponent override가 남아 있다.
+  두 override의 선언(.h)과 정의(.cpp)를 제거한다. 생성자와 BeginPlay는 그대로 둔다.
+  하위 클래스(ALB_PlayerCharacter 등)는 수정하지 않는다.
+done_when:
+  - LB_CharacterBase.h/.cpp에 Tick과 SetupPlayerInputComponent 선언·정의가 없다
+  - 생성자의 bCanEverTick = false, bReplicates = true, Mesh 위치·회전, 이동 감속 설정은 그대로다
+  - ALB_PlayerCharacter::SetupPlayerInputComponent의 Super 호출이 그대로 컴파일된다
+allow:
+  - Source/LB/Character/LB_CharacterBase.h
+  - Source/LB/Character/LB_CharacterBase.cpp
+context:
+  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Character/LB_PlayerCharacter.cpp
+verify:
+  - name: 에디터 빌드
+    use: build-editor
+  - manual: PIE Listen Server + Client 1에서 플레이어 이동과 기본 공격이 이전과 같이 동작한다

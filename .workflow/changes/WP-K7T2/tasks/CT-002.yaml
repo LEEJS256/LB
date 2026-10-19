@@ -1,0 +1,19 @@
+id: CT-002
+title: 캐릭터 기반 Tick 정책 문서화
+goal: |
+  docs/character/player-character.md의 Architecture 섹션에
+  "ALB_CharacterBase는 Tick을 끈 상태를 기본으로 하고, Tick이 필요한 하위 클래스만 직접 켠다"는
+  현재 결정을 한두 문장으로 추가한다. 실제 코드(LB_CharacterBase.cpp, LB_PlayerCharacter.cpp)를 읽고
+  사실과 일치하게 쓴다. 다른 문장과 섹션 구조는 바꾸지 않는다.
+done_when:
+  - Architecture 섹션에 Tick 기본 정책 설명이 있다
+  - 설명이 현재 코드와 일치한다
+  - 그 외 문장은 바뀌지 않았다
+allow:
+  - docs/character/player-character.md
+context:
+  - docs/README.md
+  - Source/LB/Character/LB_CharacterBase.cpp
+  - Source/LB/Character/LB_PlayerCharacter.cpp
+verify:
+  - manual: 문서 변경이 Tick 정책 문장 추가에만 한정된다

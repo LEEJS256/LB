@@ -1,0 +1,22 @@
+base: master
+mode: solo
+remote: origin
+protected:
+  - Content/**
+  - Config/**
+  - "*.uproject"
+  - Source/*.Target.cs
+  - Source/LB/LB.Build.cs
+  - Plugins/**
+  - Source/LB/Variant_Strategy/**
+  - Source/LB/Variant_TwinStick/**
+  - .claude/**
+  - .codex/**
+  - .gitignore
+commands:
+  # 에디터를 닫은 상태에서 실행한다 (Live Coding 중에는 빌드가 실패한다).
+  build-editor: '"D:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\Build.bat" LBEditor Win64 Development -Project="%CD%\LB.uproject" -WaitMutex'
+verify_timeout_minutes: 60
+claude:
+  max_turns: 40
+  timeout_minutes: 30
