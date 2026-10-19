@@ -15,7 +15,8 @@ protected:
   - .gitignore
 commands:
   # 에디터를 닫은 상태에서 실행한다 (Live Coding 중에는 빌드가 실패한다).
-  build-editor: '"D:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\Build.bat" LBEditor Win64 Development -Project="%CD%\LB.uproject" -WaitMutex'
+  # UE_ROOT는 앱이 .uproject의 EngineAssociation으로 PC마다 찾아서 넘긴다.
+  build-editor: '"%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" LBEditor Win64 Development -Project="%CD%\LB.uproject" -WaitMutex'
 verify_timeout_minutes: 60
 claude:
   max_turns: 40
