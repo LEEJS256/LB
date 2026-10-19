@@ -15,6 +15,11 @@ ULB_GA_Sprint::ULB_GA_Sprint()
 void ULB_GA_Sprint::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+
+	if (SpeedHandle.IsValid() || DrainHandle.IsValid())
+	{
+		return;
+	}
 	
 	ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(ActorInfo->AvatarActor.Get());
 	if (!Character || !CommitAbility(Handle, ActorInfo, ActivationInfo))
@@ -23,8 +28,7 @@ void ULB_GA_Sprint::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 		return;
 	}
 
-	Character->SetSprinting(true);
-
+	
 	ALB_PlayerState* PS= Character->GetPlayerState<ALB_PlayerState>(); 
 
 	if (PS)
@@ -39,6 +43,11 @@ void ULB_GA_Sprint::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 			Handle, ActorInfo, ActivationInfo, GE_SprintCost.GetDefaultObject(), 1.f);
 	}
 
+	if (GE_SprintWeight)
+	{
+		SpeedHandle = ApplyGameplayEffectToOwner(
+			Handle, ActorInfo, ActivationInfo, GE_SprintWeight.GetDefaultObject(), 1.f);
+	}
 	
 	// 스태미나 0 이하가 되면 종료
 	UAbilityTask_WaitAttributeChange* Task = UAbilityTask_WaitAttributeChange::WaitForAttributeChange(
@@ -49,18 +58,25 @@ void ULB_GA_Sprint::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 void ULB_GA_Sprint::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (DrainHandle.IsValid())
+	
+	
+	// if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	// {
+	// 	if (DrainHandle.IsValid()) ASC->RemoveActiveGameplayEffect(DrainHandle);
+	// 	if (SpeedHandle.IsValid()) ASC->RemoveActiveGameplayEffect(SpeedHandle);
+	// }
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
-		{
-			ASC->RemoveActiveGameplayEffect(DrainHandle);
-		}
-		DrainHandle.Invalidate();
+		if (GE_SprintCost)   ASC->RemoveActiveGameplayEffectBySourceEffect(GE_SprintCost,   ASC, -1);
+		if (GE_SprintWeight) ASC->RemoveActiveGameplayEffectBySourceEffect(GE_SprintWeight, ASC, -1);
 	}
+	DrainHandle.Invalidate();
+	SpeedHandle.Invalidate();
 
 	if (ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(GetAvatarActorFromActorInfo()))
 	{
-		Character->SetSprinting(false);
+		// Character->SetSprinting(false);
+		
 		ALB_PlayerState* PS= Character->GetPlayerState<ALB_PlayerState>(); 
 
 		if (PS)

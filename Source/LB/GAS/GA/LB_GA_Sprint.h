@@ -30,11 +30,15 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="Ability|Cost")
 	TSubclassOf<UGameplayEffect> GE_SprintCost;
-
+	//대충 스프린트 가중치
+	UPROPERTY(EditDefaultsOnly, Category="Sprint")
+	TSubclassOf<UGameplayEffect> GE_SprintWeight;
 
 private:
 	UFUNCTION()
 	void OnStaminaChanged();
 
 	FActiveGameplayEffectHandle DrainHandle;
+	
+	FActiveGameplayEffectHandle SpeedHandle;
 };
