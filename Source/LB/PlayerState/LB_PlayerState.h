@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayEffectTypes.h"
 #include "AbilitySystemInterface.h"
 #include "ActiveGameplayEffectHandle.h"
 #include "Utility/LB_NativeGameplayTag.h"
@@ -24,7 +25,8 @@ class LB_API ALB_PlayerState : public APlayerState , public IAbilitySystemInterf
 	GENERATED_BODY()
 public:
 	ALB_PlayerState();
-	
+
+#pragma region GAS
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	ULB_AttributeSet* GetAttributeSet() const { return AttributeSet; }
 
@@ -32,8 +34,10 @@ public:
 	void InitializePlayerDA();
 
 	// 상태 태그 교체 (GE 방식, 서버 전용)
-	void GrantStateTag(FGameplayTag NewStateTag);
 
+	void AddStateTag(FGameplayTag Tag);
+	void RemoveStateTag(FGameplayTag Tag);
+	
 	
 	void GrantDefaultGA(const ULB_PlayerDataAsset* Data);
 	void ApplyDefaultAttributes(const ULB_PlayerDataAsset* Data);
@@ -51,6 +55,8 @@ public:
 
 	UPROPERTY()
 	TObjectPtr<ULB_AttributeSet> AttributeSet;
+
+#pragma endregion  
 
 private:
 	FActiveGameplayEffectHandle CurrentStateGEHandle;

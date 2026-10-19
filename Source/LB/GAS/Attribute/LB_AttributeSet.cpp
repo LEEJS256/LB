@@ -25,7 +25,7 @@ ULB_AttributeSet::ULB_AttributeSet()
 
 void ULB_AttributeSet::Set_PlayerName(FName ArgName)
 {
-	PlayerName = ArgName ; 
+	PlayerName = ArgName;
 }
 
 void ULB_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -45,7 +45,6 @@ void ULB_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, Poise, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, Speed, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, SprintWeight, COND_None, REPNOTIFY_Always);
-
 }
 
 void ULB_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -57,14 +56,13 @@ void ULB_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, f
 		//MaxHealth 넘지않게 하기
 		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
 	}
-	
+
 	//스태미나 
 	if (Attribute == GetStaminaAttribute())
 	{
 		//MaxStatmina 넘지않게 하기
 		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxStamina());
 	}
-	
 }
 
 void ULB_AttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
@@ -102,13 +100,13 @@ void ULB_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 			else if (Spec.DynamicGrantedTags.HasTag(TAG_DMGType_Ice))
 				DamageType = TAG_DMGType_Ice;
 
-		
+
 			OnDamageTaken.Broadcast(-Delta, HitLocation, bCritical, DamageType);
 		}
 
 		//최종체력
- 		float NewHealth = GetHealth();
-		
+		float NewHealth = GetHealth();
+
 		if (NewHealth <= 0.f)
 		{
 			// AActor* Owner = GetOwningActor();
@@ -149,8 +147,6 @@ void ULB_AttributeSet::OnRep_PlayerName(const FName& OldName)
 {
 	// GAMEPLAYATTRIBUTE_REPNOTIFY(ULB_AttributeSet, Name, OldName);
 }
-
-
 
 
 void ULB_AttributeSet::OnRep_Speed(const FGameplayAttributeData& OldSpeed)

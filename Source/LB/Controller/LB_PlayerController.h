@@ -3,13 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameFramework/PlayerController.h"
 #include "LB_PlayerController.generated.h"
 
 class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
-
+class ULB_HUD;
 /**
  *
  */
@@ -22,6 +23,10 @@ protected:
 	// Enhanced Input Mapping Context 등록과 Action 바인딩 (로컬 컨트롤러에서만 호출됨)
 	virtual void SetupInputComponent() override;
 
+	virtual void BeginPlay() override;
+	virtual void OnRep_PlayerState() override;      // 클라: PlayerState 도착 시점
+	virtual void OnPossess(APawn* InPawn) override; // 서버/호스트
+	
 	void OnMoveTriggered(const FInputActionValue& Value);
 
 #pragma region INPUT_AREA
@@ -34,6 +39,10 @@ protected:
 	TObjectPtr<UInputAction> MoveAction;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DashAction;
+	//스페이스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> DodgeAction;
+
 	// 점프- C
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> JumpAction;
@@ -48,15 +57,34 @@ protected:
 
 	
 private:
+
+#pragma region UI
+
+	// MyPlayerController.h
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<ULB_HUD> HUDWidgetClass;
+
+	UPROPERTY()
+	ULB_HUD* HUDWidget;
+
+	void InitUI();
+	void BindHUD();
+#pragma endregion 
+	
 #pragma  region Action
 	void Jump(const FInputActionValue& Value);
 	void StopJumping();
 
 	void StartSprint(const FInputActionValue& Value);
 	void StopSprint(const FInputActionValue& Value);
+	void Dodge(const FInputActionValue& Value);
 	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
 
+	void Set_IATag();
+	
+	FGameplayTagContainer SprintTagContainer;
+	FGameplayTagContainer DodgeTagContainer;
 	
 #pragma endregion
 };
