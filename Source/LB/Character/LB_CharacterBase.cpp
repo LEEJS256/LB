@@ -24,20 +24,6 @@ ALB_CharacterBase::ALB_CharacterBase()
 void ALB_CharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
-}
-
-// Called every frame
-void ALB_CharacterBase::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
-// Called to bind functionality to input
-void ALB_CharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 }
 
