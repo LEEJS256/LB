@@ -20,6 +20,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "LB|Hitbox")
 	ULB_MeleeHitboxComponent* GetMeleeHitbox() const { return MeleeHitbox; }
 
+	// 서버 전용. Target과의 월드 X 차이로 Hitbox 공격 방향을 설정. 차이가 거의 0이면 기존 방향 유지
+	UFUNCTION(BlueprintCallable, Category = "LB|Combat")
+	void SetCombatFacingFromTarget(AActor* TargetActor);
+
+	// Hitbox의 현재 공격 방향(+1/-1)
+	UFUNCTION(BlueprintPure, Category = "LB|Combat")
+	float GetCombatDirectionX() const;
+
 protected:
 	// 근접 판정 Box. 기본값(NoCollision, Tick·복제 비활성)은 컴포넌트 설정을 그대로 사용
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LB|Hitbox")

@@ -10,3 +10,24 @@ ALB_MeleeMonster::ALB_MeleeMonster()
 	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
 	MeleeHitbox->SetupAttachment(GetMesh());
 }
+
+void ALB_MeleeMonster::SetCombatFacingFromTarget(AActor* TargetActor)
+{
+	if (!HasAuthority() || IsDead() || !IsValid(TargetActor) || TargetActor == this || !MeleeHitbox)
+	{
+		return;
+	}
+
+	const float DeltaX = TargetActor->GetActorLocation().X - GetActorLocation().X;
+	if (FMath::IsNearlyZero(DeltaX))
+	{
+		return;
+	}
+
+	MeleeHitbox->SetAttackDirectionX(DeltaX);
+}
+
+float ALB_MeleeMonster::GetCombatDirectionX() const
+{
+	return MeleeHitbox ? MeleeHitbox->GetAttackDirectionX() : 1.f;
+}
