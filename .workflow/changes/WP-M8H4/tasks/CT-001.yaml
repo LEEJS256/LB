@@ -1,0 +1,23 @@
+id: CT-001
+title: 근접 몬스터 파생 클래스와 전용 Hitbox 추가
+goal: |
+  ALB_MonsterBase를 상속하고 Blueprint 파생 가능한 ALB_MeleeMonster를 추가한다.
+  MeleeHitbox를 ULB_MeleeHitboxComponent 기본 서브오브젝트로 생성해 GetMesh()에 부착한다.
+  Mesh 부착은 공용 컴포넌트의 Socket 기준 보존에 필요하며, SocketName=None의 Root/월드 축 판정은 기존 구현을 사용한다.
+  Component를 VisibleAnywhere·BlueprintReadOnly로 노출하고 BlueprintPure ULB_MeleeHitboxComponent* GetMeleeHitbox() const를 제공한다.
+  부모 초기화를 상속하고 새 ASC·Tick·불필요한 override 및 Target 방향 API는 추가하지 않는다.
+done_when:
+  - 신규 .h/.cpp에서 ALB_MeleeMonster가 ALB_MonsterBase를 상속하며 Blueprint 파생 가능하다
+  - 생성자에서 MeleeHitbox를 생성해 Mesh에 부착하고 VisibleAnywhere·BlueprintReadOnly 및 지정 getter를 제공한다
+  - NoCollision·Overlap 비활성·Tick 비활성·컴포넌트 복제 비활성 기본값을 덮어쓰지 않는다
+  - 새 ASC·Tick·초기화 override·Target 방향 API가 없고 변경은 allow의 두 파일뿐이다
+allow:
+  - Source/LB/Character/Monster/LB_MeleeMonster.h
+  - Source/LB/Character/Monster/LB_MeleeMonster.cpp
+context:
+  - Source/LB/Character/Monster/LB_MonsterBase.h
+  - Source/LB/Component/LB_MeleeHitboxComponent.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 신규 클래스 두 파일만 변경되었고 MeleeHitbox의 Mesh 부착과 부모 GAS 상속을 확인했다
