@@ -1,0 +1,22 @@
+id: CT-004
+title: "초기 Mesh 오프셋 기반 좌우 회전 적용"
+goal: |
+  ALB_MeleeMonster에 void ApplyCombatFacingToMesh()를 추가하고 BeginPlay에서 Mesh의 초기 상대 회전을 캐시한다.
+  우측은 캐시한 기본 회전, 좌측은 그 기준 Yaw 180도 차이로 표현한다. 서버 방향 변경과 OnRep에서 적용하고 누적 회전하지 않는다.
+  OnRep가 BeginPlay보다 앞서 오면 초기 회전을 잘못 캐시하지 말고 BeginPlay에서 현재 복제값을 다시 적용한다.
+  Mesh 상대 회전 변경 후 ACharacter의 Mesh 회전 오프셋 캐시도 동기화한다. Actor/Capsule 회전·판정 월드 축은 변경하지 않는다.
+  필요하면 Grep으로 ApplyFacingToMesh와 CacheInitialMeshOffset 사용 부분만 확인한다.
+done_when:
+  - "회전은 초기 Mesh 상대 회전 기준이며 서버와 OnRep 양쪽에서 적용된다"
+  - "BeginPlay 이전 OnRep와 반복 좌우 전환에서 초기 기준이 누적 변경되지 않는다"
+  - "네트워크 Mesh 오프셋 캐시를 반영하며 Actor/Capsule/판정 좌표와 플레이어 코드는 바뀌지 않는다"
+allow:
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.cpp"
+context:
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.cpp"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 초기 회전 캐시와 OnRep 순서·Mesh 오프셋 반영을 확인했다"

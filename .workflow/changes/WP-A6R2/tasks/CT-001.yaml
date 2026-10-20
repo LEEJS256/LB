@@ -1,0 +1,21 @@
+id: CT-001
+title: "서버 전용 근접 공격 Ability 파생 추가"
+goal: |
+  ULB_GA_NormalAttack을 상속하는 ULB_GA_MonsterMeleeAttack을 추가하고 NetExecutionPolicy를 ServerOnly로 지정한다.
+  CanActivateAbility의 엔진 시그니처를 override해 Super 조건과 Authority·ALB_MeleeMonster Avatar·생존·State.Action.Attacking 미보유를 검사한다.
+  ActivationBlockedTags에 State.Death와 State.Action.Attacking을 추가한다. 부모의 Montage·팀/사망 필터·피해·EndAbility 정리를 재사용한다.
+  공격 방향은 요청 전에 설정된 Hitbox 값을 유지하며 부모 Ability·플레이어 코드는 수정하지 않는다.
+done_when:
+  - "신규 Ability가 ULB_GA_NormalAttack 파생이며 ServerOnly 정책을 가진다"
+  - "몬스터 생존·권한·기존 활성 공격을 검사하고 잘못된 Avatar 활성화를 거부한다"
+  - "부모 Montage/피해 처리 복사와 플레이어 Ability 변경이 없고 allow 두 파일만 추가된다"
+allow:
+  - "Source/LB/GAS/GA/LB_GA_MonsterMeleeAttack.h"
+  - "Source/LB/GAS/GA/LB_GA_MonsterMeleeAttack.cpp"
+context:
+  - "Source/LB/GAS/GA/LB_GA_NormalAttack.h"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 ServerOnly와 재진입 차단을 확인하고 부모 공격·피해 로직이 바뀌지 않았다"

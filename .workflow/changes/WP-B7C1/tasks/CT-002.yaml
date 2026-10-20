@@ -1,0 +1,22 @@
+id: CT-002
+title: PlayerCharacter에 BattleComponent 장착
+goal: |
+  ALB_PlayerCharacter에 VisibleAnywhere·BlueprintReadOnly Category="Combat" TObjectPtr<ULB_BattleComponent> BattleComp를 추가하고 생성자에서 기본 서브오브젝트로 생성한다.
+  public BlueprintPure ULB_BattleComponent* GetBattleComponent() const를 제공해 Controller와 후속 시스템이 같은 인스턴스를 조회하게 한다.
+  기존 GasComp·MeleeHitbox·카메라 생성과 GAS 초기화 순서를 유지하며 BattleComponent에 별도 초기화 호출을 추가하지 않는다.
+  현재 RequestNormalAttack과 입력 경로는 다음 CT까지 그대로 유지한다. Tick·복제·콤보 상태·에셋 변경은 추가하지 않는다.
+done_when:
+  - PlayerCharacter가 BattleComp를 기본 서브오브젝트로 한 번 생성하고 VisibleAnywhere·BlueprintReadOnly로 노출한다
+  - 지정 getter가 생성된 Component를 반환하며 Controller가 사용할 공개 접근점이 있다
+  - 기존 컴포넌트와 GAS 초기화 및 RequestNormalAttack 동작이 유지된다
+  - Tick·복제·콤보·에셋 변경 없이 allow 두 파일만 수정된다
+allow:
+  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Character/LB_PlayerCharacter.cpp
+context:
+  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Component/LB_BattleComponent.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 기본 서브오브젝트·노출 getter와 기존 Character/GAS 구조 보존을 확인했다

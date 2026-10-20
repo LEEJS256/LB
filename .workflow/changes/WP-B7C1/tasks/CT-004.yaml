@@ -1,0 +1,23 @@
+id: CT-004
+title: Strong 공격 입력을 BattleComponent로 이전
+goal: |
+  ALB_PlayerController::StrongATK(const FInputActionValue&)가 현재 Pawn의 ALB_PlayerCharacter와 GetBattleComponent()를 확인한 뒤 RequestStrongAttack()을 한 번 호출하도록 변경한다.
+  StrongATK 내부의 PlayerState ASC 조회, SendGameplayEventToActor, 동적 "ATK.Strong" 태그 생성과 TryActivateAbilitiesByTag 호출을 제거하고 사용하지 않는 공격 관련 include를 정리한다.
+  기존 StrongAttackAction의 ETriggerEvent::Completed 바인딩과 함수 이름은 에셋·헤더 계약 보존을 위해 유지한다.
+  Strong Ability·에셋·Input Action·콤보 상태를 새로 만들거나 Normal/Strong 분기 규칙과 Controller RPC를 추가하지 않는다.
+done_when:
+  - Strong Completed 입력이 Character의 BattleComponent RequestStrongAttack을 정확히 한 번 호출한다
+  - Controller에서 Strong용 ASC·Gameplay Event·동적 공격 태그·Ability 활성화 코드가 제거된다
+  - StrongATK 함수와 Completed 바인딩은 유지되고 기존 이벤트·태그 요청은 Component가 담당한다
+  - 신규 Ability·에셋·콤보·RPC 추가 없이 allow 파일만 수정된다
+allow:
+  - Source/LB/Controller/LB_PlayerController.cpp
+context:
+  - Source/LB/Controller/LB_PlayerController.h
+  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Component/LB_BattleComponent.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 Strong 입력 위임과 Controller의 직접 GAS 공격 코드 제거 및 Completed 트리거 보존을 확인했다
+  - manual: Listen Server + Client 1에서 X 공격 회귀와 Z 요청 1회 전달을 확인했다

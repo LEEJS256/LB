@@ -1,0 +1,23 @@
+id: CT-001
+title: BattleComponent와 태그 기반 공격 요청 API 추가
+goal: |
+  UActorComponent를 상속하는 BlueprintSpawnable ULB_BattleComponent를 추가하고 bool RequestNormalAttack(), bool RequestStrongAttack(), bool RequestAttackByTag(const FGameplayTag& AttackTag)를 BlueprintCallable로 제공한다.
+  ResolveAbilitySystemComponent() const는 Owner의 IAbilitySystemInterface가 노출하는 기존 ASC를 조회하며 새 ASC를 생성·소유하거나 BeginPlay에서 영구 캐시하지 않는다.
+  RequestAttackByTag는 유효한 태그·ASC와 ASC Avatar==Owner를 확인한 뒤 TryActivateAbilitiesByTag를 호출하고 그 요청 결과를 반환한다. Normal은 TAG_ATK_Normal을 사용한다.
+  Strong은 유효성 확인 후 ASC OwnerActor에 TAG_Input_RightClick Gameplay Event를 기존처럼 한 번 전달하고 TAG_ATK_Strong으로 활성화를 요청한다. 런타임 RequestGameplayTag 문자열은 사용하지 않는다.
+  Tick·복제·RPC·콤보 상태·입력 버퍼·Montage·Hitbox·피해 처리는 추가하지 않는다.
+done_when:
+  - 신규 컴포넌트가 지정된 세 공격 요청 API와 기존 ASC 조회 helper를 제공한다
+  - 태그/ASC/Avatar 검사가 활성화 요청보다 앞에 있고 RequestAttackByTag가 TryActivateAbilitiesByTag 결과를 반환한다
+  - Normal/Strong이 네이티브 공격 태그를 사용하며 Strong의 기존 Input.RightClick 이벤트 순서가 보존된다
+  - 새 ASC·Tick·복제·RPC·콤보·Montage·Hitbox·피해 로직 없이 allow 두 파일만 추가된다
+allow:
+  - Source/LB/Component/LB_BattleComponent.h
+  - Source/LB/Component/LB_BattleComponent.cpp
+context:
+  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Utility/LB_NativeGameplayTag.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 ASC 소유권·Avatar 검사·네이티브 태그·Strong 이벤트 보존과 제외 범위를 확인했다

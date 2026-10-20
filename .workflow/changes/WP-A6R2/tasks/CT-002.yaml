@@ -1,0 +1,24 @@
+id: CT-002
+title: "서버 Target 기반 공격 요청과 Spec 선택"
+goal: |
+  ALB_MeleeMonster에 BlueprintCallable bool RequestMeleeAttack(AActor* TargetActor)를 추가한다.
+  서버·자신 생존·Target 유효/자기 자신 아님·양측 ASC/Team 태그 존재·적대 팀·Target State.Death 없음·Attacking 미보유를 확인한다.
+  StartupGA로 이미 부여된 ATK.Normal Asset Tag의 몬스터 공격 Spec 하나만 선택한다. 없거나 여러 개면 경고 후 false이며 Ability를 새로 부여하지 않는다.
+  방향을 SetCombatFacingFromTarget로 확정한 뒤 TryActivateAbility(Handle, false)를 호출한다. 반환 true는 활성화 요청 결과이며 피해/완료 성공이 아니다.
+  C++용 FGameplayAbilitySpecHandle FindMeleeAttackSpecHandle() const를 제공해 같은 선택 규칙을 재사용한다. Target을 멤버로 저장하지 않는다.
+done_when:
+  - "서버에서만 적대·생존 Target을 검사하고 공격 방향을 정한 뒤 한 Spec 활성화를 요청한다"
+  - "Spec 선택은 이미 부여된 ATK.Normal 몬스터 공격 하나로 제한하며 누락/중복이면 실패한다"
+  - "RequestMeleeAttack과 FindMeleeAttackSpecHandle 계약이 있고 부여·직접 피해·Target 저장이 없다"
+  - "기존 방향 API를 유지하고 allow 두 파일만 변경된다"
+allow:
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.cpp"
+context:
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/GAS/GA/LB_GA_MonsterMeleeAttack.h"
+  - "Source/LB/Utility/LB_NativeGameplayTag.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 Team/Death/재진입/Spec 중복 방어와 원격 활성화 금지를 확인했다"

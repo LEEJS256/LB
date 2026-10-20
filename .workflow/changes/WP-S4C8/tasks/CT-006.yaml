@@ -1,0 +1,25 @@
+id: CT-006
+title: "공격 실행 핸들별 대기와 종료 정리 Task"
+goal: |
+  FStateTreeTaskBase 기반 FLB_STT_ActivateAbilityAndWait를 추가한다. 입력은 AIController Context와 AttackRange/AttackDepthTolerance/AttackHeightTolerance, 양수 TimeoutSeconds다.
+  EnterState에서 서버·현재 Target 생존/팀·세 축 범위를 재검사하고 StopMovement 후 몬스터 FindMeleeAttackSpecHandle로 이번 Spec을 고른다.
+  OnAbilityEnded를 요청 전에 구독하고 해당 Handle의 종료만 수집한 뒤 RequestMeleeAttack(Target)을 호출한다. false 또는 동기 취소 종료는 Failed다.
+  Running 동안 Task Tick으로 Target 상실/사망·몬스터 사망·Timeout을 검사하고 실패 시 자신이 시작한 실행만 CancelAbilityHandle로 취소한다. 정상 종료만 Succeeded다.
+  Delegate에는 수명이 안전한 실행별 결과 상태만 보관하고 FStateTreeExecutionContext의 주소를 캡처하지 않는다. 동기 종료·재진입·다른 몬스터 인스턴스를 구분한다.
+  ExitState는 구독을 먼저 해제하고 아직 자신의 실행이 남았을 때만 취소한다. 중복 완료/취소 없이 정리하며 직접 피해·Actor Tick을 추가하지 않는다.
+done_when:
+  - "EnterState의 범위 재검사·StopMovement·방향 확정·단일 공격 요청이 순서대로 수행된다"
+  - "요청 전 종료 구독과 Handle 필터가 있으며 동기 종료/취소를 정상 완료와 구분한다"
+  - "Task 실행 중만 Target/사망/Timeout을 감시하고 ExitState에서 구독과 자신의 실행을 정리한다"
+  - "노드 템플릿/Context 참조에 런타임 상태를 보관하지 않고 allow 두 파일만 추가된다"
+allow:
+  - "Source/LB/AI/StateTree/LB_STT_ActivateAbilityAndWait.h"
+  - "Source/LB/AI/StateTree/LB_STT_ActivateAbilityAndWait.cpp"
+context:
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Controller/LB_MonsterAIController.h"
+  - "Source/LB/AI/StateTree/LB_STC_IsTargetInAttackRange.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 동기 종료·Handle 필터·안전한 Delegate 수명·ExitState 정리를 확인했다"
