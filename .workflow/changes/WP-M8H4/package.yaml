@@ -1,0 +1,13 @@
+id: WP-M8H4
+title: 근접 몬스터 Hitbox와 서버 공격 방향 기반
+branch: feature/melee-monster-facing
+base: master
+description: |
+  ALB_MeleeMonster에 공용 Hitbox와 서버 Target 기반 X 공격 방향 API를 추가한다.
+  MonsterBase의 GAS·초기화·Hitbox 없는 구조와 기존 플레이어 공격은 유지한다.
+  공격 Ability·에셋 연결, 실제 피해·방향 복제, AI·사망 연출은 후속 작업이다.
+verify:
+  - name: 에디터 종료 후 LBEditor 통합 빌드
+    use: build-editor
+  - manual: 최종 Diff가 LB_MeleeMonster.h와 LB_MeleeMonster.cpp 추가에 한정되고 MonsterBase·플레이어·GAS·에셋·빌드 설정 변경이 없다
+  - manual: 에디터에서 LB_MeleeMonster 클래스를 확인하고 기존 BP_MonsterBase가 정상 로드되며 Hitbox 없는 기존 구조를 유지한다
