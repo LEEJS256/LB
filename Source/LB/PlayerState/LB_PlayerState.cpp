@@ -1,6 +1,7 @@
 // LB_PlayerState.cpp
 #include "LB_PlayerState.h"
 #include "AbilitySystemComponent.h"
+#include "Component/LB_InventoryComponent.h"
 #include "Data/LB_PlayerDataAsset.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "Utility/LB_NativeGameplayTag.h"
@@ -11,11 +12,20 @@ ALB_PlayerState::ALB_PlayerState()
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
+	InventoryComponent = CreateDefaultSubobject<ULB_InventoryComponent>(TEXT("InventoryComponent"));
+	InventoryComponent->SetIsReplicated(true);
+
+	
 	// 같은 액터의 서브오브젝트라 ASC에 자동 등록됨
 	AttributeSet = CreateDefaultSubobject<ULB_AttributeSet>(TEXT("AttributeSet"));
 
 	// s나중에 조정해야함
 	SetNetUpdateFrequency(100.f);
+}
+
+ULB_InventoryComponent* ALB_PlayerState::Get_InventoryComponent() const
+{
+	return InventoryComponent;
 }
 
 UAbilitySystemComponent* ALB_PlayerState::GetAbilitySystemComponent() const
