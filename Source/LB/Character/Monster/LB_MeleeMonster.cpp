@@ -6,6 +6,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GAS/GA/LB_GA_MonsterMeleeAttack.h"
 #include "LB.h"
 #include "Net/UnrealNetwork.h"
@@ -48,12 +49,42 @@ void ALB_MeleeMonster::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// OnRep가 먼저 와도 Mesh 회전은 캐시 전까지 적용하지 않으므로 여기서 읽는 값이 초기 회전. 이후 현재 복제값을 다시 적용
+	if (!bBaseMeshRotationCached && GetMesh())
+	{
+		BaseMeshRelativeRotation = GetMesh()->GetRelativeRotation();
+		bBaseMeshRotationCached = true;
+	}
+
 	ApplyCombatDirectionToHitbox();
+	ApplyCombatFacingToMesh();
 }
 
 void ALB_MeleeMonster::OnRep_CombatDirectionX()
 {
 	ApplyCombatDirectionToHitbox();
+	ApplyCombatFacingToMesh();
+}
+
+void ALB_MeleeMonster::ApplyCombatFacingToMesh()
+{
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!bBaseMeshRotationCached || !MeshComp)
+	{
+		return;
+	}
+
+	// 항상 캐시한 초기 회전에서 계산해 반복 전환 시 누적되지 않음
+	FRotator TargetRotation = BaseMeshRelativeRotation;
+	if (CombatDirectionX < 0)
+	{
+		TargetRotation.Yaw += 180.f;
+	}
+
+	MeshComp->SetRelativeRotation(TargetRotation);
+
+	// 비로컬 인스턴스의 네트워크 스무딩이 ACharacter::BaseRotationOffset으로 Mesh 회전을 되돌리지 않도록 현재 방향을 기준으로 갱신
+	CacheInitialMeshOffset(MeshComp->GetRelativeLocation(), TargetRotation);
 }
 
 void ALB_MeleeMonster::ApplyCombatDirectionToHitbox()
@@ -85,6 +116,7 @@ void ALB_MeleeMonster::SetCombatFacingFromTarget(AActor* TargetActor)
 
 	CombatDirectionX = NewDirectionX;
 	ApplyCombatDirectionToHitbox();
+	ApplyCombatFacingToMesh();
 }
 
 float ALB_MeleeMonster::GetCombatDirectionX() const
