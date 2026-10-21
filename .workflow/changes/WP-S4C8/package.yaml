@@ -1,0 +1,13 @@
+id: WP-S4C8
+title: 근접 몬스터 AI 전투
+branch: feature/monster-ai-combat
+base: master
+description: |
+  서버 StateTree의 탐색·추적·공격·Recover와 사망 중단 루프를 구현한다.
+  수동 전투 WP의 Ability·방향 복제·피해 경로와 ASC 사망 원본을 유지한다.
+  감지/어그로·피격 반응·사망 연출·드롭·Destroy·부활은 후속 작업이다.
+verify:
+  - name: 에디터 종료 후 LBEditor 통합 빌드
+    use: build-editor
+  - manual: E03·E04·E05의 서버 Tree 시작·타깃 탐색/상실·추적·축별 범위·공격 종료/Recover·실패 복구를 확인했다
+  - manual: E06에서 모든 상태의 사망 우선 중단과 Listen Server/Client의 이동·표현·피해 결과를 확인했다

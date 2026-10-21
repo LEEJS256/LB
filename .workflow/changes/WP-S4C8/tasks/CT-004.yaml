@@ -1,0 +1,20 @@
+id: CT-004
+title: "현재 타깃 유효성 StateTree Condition"
+goal: |
+  FStateTreeConditionBase 기반 FLB_STC_IsTargetValid를 추가한다. 인스턴스 데이터의 AIController Context에서 현재 몬스터와 GetCombatTarget()을 조회한다.
+  TestCondition은 서버·유효/생존 몬스터·유효한 플레이어 Pawn·대상 ASC Team.Player·Health>0·State.Death 없음일 때만 true다.
+  몬스터의 ASC는 Team.Monster여야 한다. 입력 Actor를 장기 저장하거나 이 Condition에서 타깃을 변경하지 않는다.
+done_when:
+  - "Condition이 저장된 과거 Output이 아닌 Controller의 현재 Target과 실제 생존·팀을 검사한다"
+  - "null/Destroyed/사망/팀 누락/비서버 입력은 false이며 상태 변경이 없다"
+  - "allow 두 파일만 추가되고 타깃 탐색을 반복하지 않는다"
+allow:
+  - "Source/LB/AI/StateTree/LB_STC_IsTargetValid.h"
+  - "Source/LB/AI/StateTree/LB_STC_IsTargetValid.cpp"
+context:
+  - "Source/LB/Controller/LB_MonsterAIController.h"
+  - "Source/LB/Utility/LB_NativeGameplayTag.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 현재 타깃 조회와 무효·사망·팀 누락 거부를 확인했다"

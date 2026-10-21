@@ -1,0 +1,24 @@
+id: CT-003
+title: Normal 공격 입력을 BattleComponent로 이전
+goal: |
+  ALB_PlayerController::OnNormalAttackStarted(const FInputActionValue&)가 현재 Pawn의 ALB_PlayerCharacter와 GetBattleComponent()를 확인한 뒤 RequestNormalAttack()을 한 번 호출하도록 변경한다.
+  ALB_PlayerCharacter의 RequestNormalAttack 선언과 구현은 제거해 Normal 공격 활성화 책임이 BattleComponent에만 남게 한다.
+  기존 IA NormalAttackAction의 ETriggerEvent::Started 바인딩과 TAG_ATK_Normal Ability·LocalPredicted 실행 경로는 유지한다.
+  Controller/Character에 직접 ASC 활성화·Gameplay Event·콤보 상태·입력 버퍼를 추가하지 않고 StrongATK는 다음 CT까지 변경하지 않는다.
+done_when:
+  - Normal Started 입력이 Character의 BattleComponent RequestNormalAttack을 정확히 한 번 호출한다
+  - PlayerCharacter의 RequestNormalAttack API와 직접 ATK.Normal 활성화 코드가 제거된다
+  - 기존 Input Action과 Started 트리거 및 Ability 실행 정책은 바뀌지 않는다
+  - Strong 경로·콤보·Montage·Hitbox·피해 변경 없이 allow 세 파일만 수정된다
+allow:
+  - Source/LB/Controller/LB_PlayerController.cpp
+  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Character/LB_PlayerCharacter.cpp
+context:
+  - Source/LB/Controller/LB_PlayerController.h
+  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Component/LB_BattleComponent.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 Normal 입력 호출 횟수와 Character의 직접 공격 요청 제거 및 Strong 미변경을 확인했다
