@@ -21,11 +21,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "LB|Hitbox")
 	ULB_MeleeHitboxComponent* GetMeleeHitbox() const { return MeleeHitbox; }
 
-	// 서버 전용. Target과의 월드 X 차이로 Hitbox 공격 방향을 설정. 차이가 거의 0이면 기존 방향 유지
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// 서버 전용. Target과의 월드 X 차이로 공격 방향(CombatDirectionX)을 설정하고 Hitbox에 적용. 차이가 거의 0이면 기존 방향 유지
 	UFUNCTION(BlueprintCallable, Category = "LB|Combat")
 	void SetCombatFacingFromTarget(AActor* TargetActor);
 
-	// Hitbox의 현재 공격 방향(+1/-1)
+	// 복제되는 현재 공격 방향(+1/-1)
 	UFUNCTION(BlueprintPure, Category = "LB|Combat")
 	float GetCombatDirectionX() const;
 
@@ -38,7 +40,20 @@ public:
 	FGameplayAbilitySpecHandle FindMeleeAttackSpecHandle() const;
 
 protected:
+	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void OnRep_CombatDirectionX();
+
 	// 근접 판정 Box. 기본값(NoCollision, Tick·복제 비활성)은 컴포넌트 설정을 그대로 사용
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "LB|Hitbox")
 	TObjectPtr<ULB_MeleeHitboxComponent> MeleeHitbox;
+
+	// 공격 방향의 단일 원본. +1(Right) 또는 -1(Left). 서버에서만 변경하며 Hitbox에는 적용값으로만 전달
+	UPROPERTY(ReplicatedUsing = OnRep_CombatDirectionX, VisibleInstanceOnly, Category = "LB|Combat")
+	int8 CombatDirectionX = 1;
+
+private:
+	// CombatDirectionX를 Hitbox 공격 방향에 적용
+	void ApplyCombatDirectionToHitbox();
 };
