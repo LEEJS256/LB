@@ -3,7 +3,6 @@
 
 #include "LB_PlayerController.h"
 #include "PlayerState/LB_PlayerState.h"
-#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -226,23 +225,16 @@ void ALB_PlayerController::OnNormalAttackStarted(const FInputActionValue& Value)
 
 void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 {
-	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
-	if (!PS)
-		return;
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-		PS,
-		TAG_Input_RightClick,
-		FGameplayEventData()
-	);
-
-	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-	if (!ASC)
+	// 강공격 입력 1회당 BattleComponent에 강공격 요청을 1회 전달 (실행 가능 여부는 GAS/서버가 확정)
+	ALB_PlayerCharacter* LBCharacter = Cast<ALB_PlayerCharacter>(GetPawn());
+	if (!LBCharacter)
 		return;
 
-	FGameplayTagContainer GATagContainer;
-	GATagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("ATK.Strong")));
+	ULB_BattleComponent* BattleComp = LBCharacter->GetBattleComponent();
+	if (!BattleComp)
+		return;
 
-	ASC->TryActivateAbilitiesByTag(GATagContainer);
+	BattleComp->RequestStrongAttack();
 }
 
 void ALB_PlayerController::Set_IATag()
