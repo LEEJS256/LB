@@ -11,25 +11,7 @@
 #include "LB.h"
 #include "Net/UnrealNetwork.h"
 #include "Utility/LB_NativeGameplayTag.h"
-
-namespace
-{
-	// ASC가 보유한 Team 하위 태그(Team.Player, Team.Monster 등). 없으면 빈 태그
-	FGameplayTag FindTeamTag(const UAbilitySystemComponent* ASC)
-	{
-		FGameplayTagContainer OwnedTags;
-		ASC->GetOwnedGameplayTags(OwnedTags);
-
-		for (const FGameplayTag& Tag : OwnedTags)
-		{
-			if (Tag.MatchesTag(TAG_Team) && Tag != TAG_Team)
-			{
-				return Tag;
-			}
-		}
-		return FGameplayTag();
-	}
-}
+#include "Utility/LB_TeamTagUtility.h"
 
 ALB_MeleeMonster::ALB_MeleeMonster()
 {
@@ -139,8 +121,8 @@ bool ALB_MeleeMonster::RequestMeleeAttack(AActor* TargetActor)
 	}
 
 	// 양측 Team 태그가 있고 서로 달라야 적대. Team 태그가 없는 대상은 공격하지 않음
-	const FGameplayTag SourceTeam = FindTeamTag(SourceASC);
-	const FGameplayTag TargetTeam = FindTeamTag(TargetASC);
+	const FGameplayTag SourceTeam = LBTeamTagUtility::FindTeamTag(SourceASC);
+	const FGameplayTag TargetTeam = LBTeamTagUtility::FindTeamTag(TargetASC);
 	if (!SourceTeam.IsValid() || !TargetTeam.IsValid() || SourceTeam == TargetTeam)
 	{
 		return false;
