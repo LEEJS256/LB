@@ -7,7 +7,10 @@
 #include "Component/LB_GasComponent.h"
 #include "Component/LB_MeleeHitboxComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Component/LB_EquipComponent.h"
+#include "Component/LB_InventoryComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Equipment/LB_Equipment.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
@@ -32,8 +35,8 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 
-	GasComp = CreateDefaultSubobject<ULB_GasComponent>(TEXT("GasComp"));
-
+	GasComp		= CreateDefaultSubobject<ULB_GasComponent>(TEXT("GasComp"));
+	EquipComp	= CreateDefaultSubobject<ULB_EquipComponent>(TEXT("EquipComp"));
 	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
 	MeleeHitbox->SetupAttachment(GetMesh());
 	
@@ -79,6 +82,35 @@ void ALB_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
 }
 
 
+void ALB_PlayerCharacter::GiveDefaultWeapon()
+{
+	if (!HasAuthority() || !DefaultWeaponClass) return;
+
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	ULB_InventoryComponent* Inv = PS ? PS->Get_InventoryComponent() : nullptr;
+	if (!Inv) return;
+
+	// 무기 BP에 지정된 DA를 CDO에서 읽음
+	const ALB_Equipment* WeaponCDO = DefaultWeaponClass->GetDefaultObject<ALB_Equipment>();
+	ULB_DA_Equipment* DA = WeaponCDO ? WeaponCDO->GetItemData() : nullptr;
+	if (!DA) return;
+
+	// PlayerState는 리스폰해도 유지되니까 이미 있으면 AddItem 생략
+	if (Inv->GetInventoryItems().IsEmpty())
+	{
+		if (!Inv->AddItem(DA, DefaultWeaponClass, 1)) return;
+	}
+
+	const FLB_ItemEntry& Entry = Inv->GetInventoryItems().Last();
+
+	// 리스폰이면 bIsEquipped가 true로 남아 있어서 EquipItem이 막히니까 먼저 해제
+	if (Entry.bIsEquipped)
+	{
+		Inv->UnequipItem(Entry.ItemInstanceId);
+	}
+	Inv->EquipItem(Entry.ItemInstanceId);
+}
+
 UAbilitySystemComponent* ALB_PlayerCharacter::GetAbilitySystemComponent() const
 {
 	return GasComp ? GasComp->GetASC() : nullptr;
@@ -106,6 +138,7 @@ void ALB_PlayerCharacter::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 	InitGAS();
 	BindDelegate();
+	GiveDefaultWeapon();
 }
 
 void ALB_PlayerCharacter::OnRep_PlayerState()
@@ -113,6 +146,7 @@ void ALB_PlayerCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 	InitGAS();
 	BindDelegate();
+	GiveDefaultWeapon();
 }
 
 void ALB_PlayerCharacter::InitGAS()
