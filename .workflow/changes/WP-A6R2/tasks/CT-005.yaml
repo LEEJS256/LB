@@ -1,0 +1,26 @@
+id: CT-005
+title: "공용 Team 태그 조회로 Unity Build 중복 제거"
+goal: |
+  Source/LB/Utility에 UObject를 만들지 않는 작은 Team 유틸리티를 추가하고, ASC가 보유한 Team 하위 태그를 조회하는 FindTeamTag(const UAbilitySystemComponent* ASC)를 한 곳에서 정의한다.
+  null ASC 또는 Team 하위 태그가 없으면 빈 FGameplayTag를 반환하고 TAG_Team 루트 자체는 팀 값으로 인정하지 않는다.
+  ULB_GA_NormalAttack과 ALB_MeleeMonster의 익명 namespace FindTeamTag 중복 정의를 제거하고 공용 함수를 사용한다.
+  플레이어 피해의 Team 누락 Warning·동일 팀 피해 차단과 몬스터 공격 요청의 Team 누락·동일 팀 거부 정책은 그대로 유지한다.
+  팀 태그 부여·복제·우선순위, 피해 공식, Ability 활성화 조건과 Blueprint API는 변경하지 않는다.
+done_when:
+  - "Team 하위 태그 조회 구현이 공용 유틸리티 한 곳에만 존재한다"
+  - "플레이어 피해와 몬스터 공격 요청이 같은 조회 함수를 사용하면서 기존 Team 누락·동일 팀 정책을 유지한다"
+  - "두 cpp의 익명 namespace FindTeamTag가 제거되어 깨끗한 작업 트리의 Unity Build에서 중복 정의가 발생하지 않는다"
+  - "allow 네 파일만 추가·변경되고 UObject 계층·Blueprint API·Build.cs 변경이 없다"
+allow:
+  - "Source/LB/Utility/LB_TeamUtility.h"
+  - "Source/LB/Utility/LB_TeamUtility.cpp"
+  - "Source/LB/GAS/GA/LB_GA_NormalAttack.cpp"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.cpp"
+context:
+  - "Source/LB/Utility/LB_NativeGameplayTag.h"
+  - "Source/LB/GAS/GA/LB_GA_NormalAttack.cpp"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.cpp"
+verify:
+  - name: 에디터 종료 후 깨끗한 작업 트리에서 LBEditor 통합 빌드
+    use: build-editor
+  - manual: "Diff에서 중복 helper 제거와 기존 Team 누락 로그·동일 팀 차단 정책 보존을 확인했다"
