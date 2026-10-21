@@ -8,6 +8,7 @@
 #include "AbilitySystemGlobals.h"
 #include "GAS/GA/LB_GA_MonsterMeleeAttack.h"
 #include "LB.h"
+#include "Net/UnrealNetwork.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
 namespace
@@ -36,6 +37,33 @@ ALB_MeleeMonster::ALB_MeleeMonster()
 	MeleeHitbox->SetupAttachment(GetMesh());
 }
 
+void ALB_MeleeMonster::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ALB_MeleeMonster, CombatDirectionX);
+}
+
+void ALB_MeleeMonster::BeginPlay()
+{
+	Super::BeginPlay();
+
+	ApplyCombatDirectionToHitbox();
+}
+
+void ALB_MeleeMonster::OnRep_CombatDirectionX()
+{
+	ApplyCombatDirectionToHitbox();
+}
+
+void ALB_MeleeMonster::ApplyCombatDirectionToHitbox()
+{
+	if (MeleeHitbox)
+	{
+		MeleeHitbox->SetAttackDirectionX(static_cast<float>(CombatDirectionX));
+	}
+}
+
 void ALB_MeleeMonster::SetCombatFacingFromTarget(AActor* TargetActor)
 {
 	if (!HasAuthority() || IsDead() || !IsValid(TargetActor) || TargetActor == this || !MeleeHitbox)
@@ -49,12 +77,19 @@ void ALB_MeleeMonster::SetCombatFacingFromTarget(AActor* TargetActor)
 		return;
 	}
 
-	MeleeHitbox->SetAttackDirectionX(DeltaX);
+	const int8 NewDirectionX = DeltaX > 0.f ? 1 : -1;
+	if (NewDirectionX == CombatDirectionX)
+	{
+		return;
+	}
+
+	CombatDirectionX = NewDirectionX;
+	ApplyCombatDirectionToHitbox();
 }
 
 float ALB_MeleeMonster::GetCombatDirectionX() const
 {
-	return MeleeHitbox ? MeleeHitbox->GetAttackDirectionX() : 1.f;
+	return static_cast<float>(CombatDirectionX);
 }
 
 bool ALB_MeleeMonster::RequestMeleeAttack(AActor* TargetActor)
@@ -90,7 +125,7 @@ bool ALB_MeleeMonster::RequestMeleeAttack(AActor* TargetActor)
 		return false;
 	}
 
-	// Ability는 활성화 시점의 Hitbox 방향을 그대로 사용하므로 활성화 전에 확정
+	// Ability는 활성화 시점의 Hitbox 방향(CombatDirectionX 적용값)을 그대로 사용하므로 활성화 전에 확정
 	SetCombatFacingFromTarget(TargetActor);
 	return SourceASC->TryActivateAbility(Handle, false);
 }
