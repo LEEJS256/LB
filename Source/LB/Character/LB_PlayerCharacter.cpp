@@ -4,6 +4,7 @@
 #include "LB_PlayerCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "Component/LB_BattleComponent.h"
 #include "Component/LB_GasComponent.h"
 #include "Component/LB_MeleeHitboxComponent.h"
 #include "Camera/CameraComponent.h"
@@ -36,7 +37,9 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 
 	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
 	MeleeHitbox->SetupAttachment(GetMesh());
-	
+
+	BattleComp = CreateDefaultSubobject<ULB_BattleComponent>(TEXT("BattleComp"));
+
 }
 
 void ALB_PlayerCharacter::SetSprinting(bool bSprinting)
