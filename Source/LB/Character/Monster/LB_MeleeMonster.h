@@ -56,4 +56,13 @@ protected:
 private:
 	// CombatDirectionX를 Hitbox 공격 방향에 적용
 	void ApplyCombatDirectionToHitbox();
+
+	// CombatDirectionX를 Mesh 상대 회전에 적용. 우측은 초기 회전, 좌측은 초기 회전 기준 Yaw +180
+	// 초기 회전 캐시 전(BeginPlay 이전 OnRep)에는 적용하지 않음. CacheInitialMeshOffset() 갱신 때문에 const가 아님
+	void ApplyCombatFacingToMesh();
+
+	// BeginPlay에서 캐시한 Mesh의 초기(Right 기준) 상대 회전. 이후 좌우 전환에서 변경하지 않음
+	FRotator BaseMeshRelativeRotation = FRotator::ZeroRotator;
+
+	bool bBaseMeshRotationCached = false;
 };
