@@ -61,6 +61,11 @@ void ALB_PlayerCharacter::SetSprinting(bool bSprinting)
 
 void ALB_PlayerCharacter::BindDelegate()
 {
+	if (ULB_BattleComponent* pBattleComp = GetBattleComponent())
+	{
+		pBattleComp->BindCombatStateEvents();   // 중복 바인딩 방지
+	}
+	
 	if (bSpeedBound) return;
 
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */;
