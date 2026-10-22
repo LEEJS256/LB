@@ -4,6 +4,7 @@ branch: feature/monster-manual-combat
 base: master
 description: |
   서버 근접 공격 Ability·수동 요청·좌우 방향 복제를 구현한다.
+  플레이어와 몬스터가 중복 정의한 Team 태그 조회를 공용화해 Unity Build에서도 동일한 팀 판정 계약을 유지한다.
   MonsterBase GAS와 기존 플레이어 공격·공용 판정/피해 경로는 유지한다.
   자동 탐색·추적·StateTree 전투와 사망 중단은 다음 WP에서 구현한다.
 verify:
