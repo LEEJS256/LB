@@ -83,11 +83,15 @@ TArray<ALB_Equipment*> ULB_EquipComponent::EquipWeaponSet(FGameplayTag EquipTag,
 void ULB_EquipComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 void ULB_EquipComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(CombatExitTimer);
+	}
+	
 	UnequipWeaponSet();
 	Super::EndPlay(EndPlayReason);
 }
@@ -104,19 +108,19 @@ void ULB_EquipComponent::AttachWeapon(int32 Index, bool bCombat)
 	const FName UsedBone = bCombat ? Slot.CombatBone : Slot.SpineBone;
 
 	Weapon->AttachToComponent(OwnerCharacter->GetMesh(),
-		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-		UsedBone);
+	                          FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+	                          UsedBone);
 	Weapon->SetActorRelativeTransform(bCombat ? Slot.CombatTransform : Slot.SpineTransform);
 
-	
+
 	const bool bBoneExists = OwnerCharacter->GetMesh()->GetBoneIndex(UsedBone) != INDEX_NONE;
 	const FString Msg = FString::Printf(TEXT("[Equip] [%d] %s → %s (%s) 본존재=%s Loc=%s"),
-		Index,
-		*Slot.SlotTag.ToString(),
-		*UsedBone.ToString(),
-		bCombat ? TEXT("전투") : TEXT("등"),
-		bBoneExists ? TEXT("O") : TEXT("X"),
-		*Weapon->GetActorLocation().ToCompactString());
+	                                    Index,
+	                                    *Slot.SlotTag.ToString(),
+	                                    *UsedBone.ToString(),
+	                                    bCombat ? TEXT("전투") : TEXT("등"),
+	                                    bBoneExists ? TEXT("O") : TEXT("X"),
+	                                    *Weapon->GetActorLocation().ToCompactString());
 
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *Msg);
 	if (GEngine)
@@ -136,13 +140,34 @@ void ULB_EquipComponent::SetCombatMode(bool bCombat)
 	}
 }
 
+void ULB_EquipComponent::EnterCombat()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+
+	GetWorld()->GetTimerManager().ClearTimer(CombatExitTimer);
+	if (!bCombatMode)
+	{
+		SetCombatMode(true);
+	}
+}
+
+void ULB_EquipComponent::ReserveExitCombat()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+
+	GetWorld()->GetTimerManager().SetTimer(CombatExitTimer,
+	                                       FTimerDelegate::CreateUObject(
+		                                       this, &ULB_EquipComponent::SetCombatMode, false),
+	                                       CombatExitDelay, false);
+}
+
 const FLB_DT_WeaponInformation* ULB_EquipComponent::FindWeaponRow(const FGameplayTag& WeaponTag) const
 {
 	if (!DT_WeaponInfo)
 	{
 		return nullptr;
 	}
- 
+
 	// Weapon.Dual.Dagger -> Weapon.Dual -> Weapon 순서로 탐색
 	FGameplayTag Current = WeaponTag;
 	while (Current.IsValid())
@@ -154,7 +179,7 @@ const FLB_DT_WeaponInformation* ULB_EquipComponent::FindWeaponRow(const FGamepla
 		}
 		Current = Current.RequestDirectParent();
 	}
- 
+
 	return nullptr;
 }
 
@@ -166,7 +191,7 @@ void ULB_EquipComponent::UnequipWeaponSet()
 	{
 		return;
 	}
- 
+
 	for (AActor* Weapon : SpawnedWeapons)
 	{
 		if (IsValid(Weapon))
@@ -174,11 +199,8 @@ void ULB_EquipComponent::UnequipWeaponSet()
 			Weapon->Destroy();
 		}
 	}
- 
+
 	SpawnedWeapons.Empty();
 	CurrentWeaponTag = FGameplayTag();
 }
-
-
-
 

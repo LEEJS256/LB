@@ -39,6 +39,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equip")
 	bool IsCombatMode() const { return bCombatMode; }
 
+	/** 공격 시작 시 호출. 복귀 타이머를 취소하고 손으로 */
+	void EnterCombat();
+	/** 공격 종료 시 호출. 일정 시간 뒤 등으로 복귀 */
+	void ReserveExitCombat();
 
 	
 protected:
@@ -50,6 +54,8 @@ protected:
 		meta = (RowType = "/Script/LB.LB_DT_WeaponInformation"))
 	TObjectPtr<UDataTable> DT_WeaponInfo;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equip|Settings")
+	float CombatExitDelay = 4.f;
 private:
 	void AttachWeapon(int32 Index, bool bCombat);
 	
@@ -65,4 +71,6 @@ private:
 
 	TArray<FLB_WeaponSlot> CurrentSlots;
 	bool bCombatMode = false;
+
+	FTimerHandle CombatExitTimer;
 };
