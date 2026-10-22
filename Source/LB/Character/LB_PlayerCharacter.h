@@ -10,6 +10,7 @@
 
 class ULB_GasComponent;
 class ULB_MeleeHitboxComponent;
+class ULB_BattleComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UAbilitySystemComponent;
@@ -38,6 +39,10 @@ public:
 
 	ULB_GasComponent* Get_GasComponent() const { return GasComp; }
 
+	// Controller와 후속 시스템이 공격 요청 진입점으로 사용하는 BattleComponent
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	ULB_BattleComponent* GetBattleComponent() const { return BattleComp; }
+
 
 #pragma  endregion
 
@@ -47,9 +52,6 @@ public:
 
 	// ALB_PlayerController가 IA_Move의 2D Axis 값을 전달할 때 호출 (Right:+X, Up:+Y 기준)
 	void AddMoveInput(const FVector2D& Axis2D);
-
-	// ALB_PlayerController가 공격 입력 시 호출. ATK.Normal 태그 Ability의 활성화를 ASC에 요청
-	void RequestNormalAttack();
 
 	ELB_FacingDirection GetFacing() const { return CurrentFacing; }
 
@@ -105,6 +107,10 @@ protected:
 	// 근접 공격 판정 Box. 기본 비활성이며 판정 구간마다 Socket 또는 Character 축 + CurrentFacing 기준으로 배치
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<ULB_MeleeHitboxComponent> MeleeHitbox;
+
+	// Normal/Strong 공격 요청의 공통 진입점. ASC는 Owner의 IAbilitySystemInterface로 조회하므로 별도 초기화 없음
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<ULB_BattleComponent> BattleComp;
 
 #pragma endregion
 

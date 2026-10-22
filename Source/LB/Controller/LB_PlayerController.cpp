@@ -3,13 +3,13 @@
 
 #include "LB_PlayerController.h"
 #include "PlayerState/LB_PlayerState.h"
-#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Blueprint/UserWidget.h"
 #include "Character/LB_PlayerCharacter.h"
+#include "Component/LB_BattleComponent.h"
 #include "UI/LB_PlayerStatus.h"
 #include "UI/LB_HUD.h"
 
@@ -211,32 +211,30 @@ void ALB_PlayerController::Dodge(const FInputActionValue& Value)
 
 void ALB_PlayerController::OnNormalAttackStarted(const FInputActionValue& Value)
 {
-	// 공격 입력 1회당 기본 공격 활성화를 1회 요청 (실행 가능 여부는 GAS/서버가 확정)
-	if (ALB_PlayerCharacter* LBCharacter = Cast<ALB_PlayerCharacter>(GetPawn()))
-	{
-		LBCharacter->RequestNormalAttack();
-	}
+	// 공격 입력 1회당 BattleComponent에 기본 공격 요청을 1회 전달 (실행 가능 여부는 GAS/서버가 확정)
+	ALB_PlayerCharacter* LBCharacter = Cast<ALB_PlayerCharacter>(GetPawn());
+	if (!LBCharacter)
+		return;
+
+	ULB_BattleComponent* BattleComp = LBCharacter->GetBattleComponent();
+	if (!BattleComp)
+		return;
+
+	BattleComp->RequestNormalAttack();
 }
 
 void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 {
-	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
-	if (!PS)
-		return;
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-		PS,
-		TAG_Input_RightClick,
-		FGameplayEventData()
-	);
-
-	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-	if (!ASC)
+	// 강공격 입력 1회당 BattleComponent에 강공격 요청을 1회 전달 (실행 가능 여부는 GAS/서버가 확정)
+	ALB_PlayerCharacter* LBCharacter = Cast<ALB_PlayerCharacter>(GetPawn());
+	if (!LBCharacter)
 		return;
 
-	FGameplayTagContainer GATagContainer;
-	GATagContainer.AddTag(FGameplayTag::RequestGameplayTag(FName("ATK.Strong")));
+	ULB_BattleComponent* BattleComp = LBCharacter->GetBattleComponent();
+	if (!BattleComp)
+		return;
 
-	ASC->TryActivateAbilitiesByTag(GATagContainer);
+	BattleComp->RequestStrongAttack();
 }
 
 void ALB_PlayerController::Set_IATag()
