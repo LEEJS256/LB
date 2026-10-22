@@ -12,6 +12,7 @@
 #include "GameplayEffect.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "LB.h"
+#include "PlayerState/LB_PlayerState.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
 namespace
@@ -60,6 +61,15 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+	ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	
+	ALB_PlayerState* PS= Character->GetPlayerState<ALB_PlayerState>(); 
+
+	if (PS)
+	{
+		PS->AddStateTag(TAG_State_ATK);
+	}
+	
 
 	const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
 	if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
@@ -112,6 +122,15 @@ void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 	// 모든 종료 경로에서 명중 구독 해제 (중복 호출에도 안전)
 	UnbindMeleeHit();
 
+	ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(ActorInfo->AvatarActor.Get());
+	
+	ALB_PlayerState* PS= Character->GetPlayerState<ALB_PlayerState>(); 
+
+	if (PS)
+	{
+		PS->RemoveStateTag(TAG_State_ATK);
+	}
+	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
