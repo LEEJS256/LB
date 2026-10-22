@@ -1,0 +1,21 @@
+id: CT-001
+title: "AIController와 명시적인 StateTree 시작·종료"
+goal: |
+  AAIController를 상속하는 ALB_MonsterAIController와 기본 UStateTreeAIComponent를 추가한다.
+  EditDefaultsOnly UStateTree* CombatStateTree 설정과 void TryStartCombatLogic()를 제공한다. Component 자동 시작과 Controller의 암묵적인 Brain 시작을 비활성화한다.
+  BeginPlay와 OnPossess 양쪽에서 시작을 시도하되 Controller BeginPlay·몬스터 BeginPlay/ASC ActorInfo 준비·Authority·생존·에셋 지정 조건이 모두 맞을 때 한 번만 SetStateTree/StartLogic 한다.
+  Possess가 Pawn BeginPlay보다 먼저 오면 다음 틱 재시도로 초기화를 확인하고 중복 시작/무한 재시도를 방지한다.
+  OnUnPossess와 EndPlay에서 재시도와 Logic/이동을 정리한다. AutoPossess/ControllerClass 연결은 에디터 담당이며 Build.cs·uproject는 변경하지 않는다.
+done_when:
+  - "AIController가 StateTreeAIComponent와 설정할 Tree를 소유하며 자동 시작이 꺼져 있다"
+  - "서버에서 초기화가 끝난 살아 있는 몬스터만 Logic을 중복 없이 시작한다"
+  - "UnPossess/EndPlay에서 Logic·이동·예약 콜백을 정리하고 allow 두 파일만 추가한다"
+allow:
+  - "Source/LB/Controller/LB_MonsterAIController.h"
+  - "Source/LB/Controller/LB_MonsterAIController.cpp"
+context:
+  - "Source/LB/Character/Monster/LB_MonsterBase.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 BeginPlay/Possess 순서·서버 가드·중복 시작과 정리를 확인했다"

@@ -1,0 +1,23 @@
+id: CT-007
+title: "Controller의 사망 태그 구독과 전투 정리"
+goal: |
+  ALB_MonsterAIController가 서버에서 Possess된 몬스터 ASC의 State.Death NewOrRemoved 이벤트를 구독하도록 추가한다.
+  ASC 준비 이후 구독하고 이미 사망한 경우도 즉시 동일 정리 경로를 호출한다. OnUnPossess/EndPlay/재Possess 시 이전 ASC 구독과 예약 시작을 해제한다.
+  태그 Count>0이면 StopMovement·Target 해제·몬스터 공격 Spec 취소·ForceEndHitWindow를 멱등 수행한다. 그 외 Ability를 일괄 취소하지 않는다.
+  Tree가 Dead를 선택할 수 있게 Logic 자체를 즉시 Stop하지 않는다. Dead는 에셋에서 Health/태그 기준으로 다른 상태보다 우선하며 AI Task는 재개하지 않는다.
+  새 사망 bool·직접 Health 수정·Revive·Actor Destroy·Collision 변경·Actor Tick은 추가하지 않는다.
+done_when:
+  - "서버 ASC의 사망 태그 구독·초기 사망 검사·구독 해제가 모두 있다"
+  - "사망 시 이동·Target·해당 공격·Hitbox를 멱등 정리하고 별도 사망 상태를 만들지 않는다"
+  - "기존 StateTree 시작 조건과 생존 가드를 유지하며 다른 Ability/Health/에셋을 변경하지 않는다"
+allow:
+  - "Source/LB/Controller/LB_MonsterAIController.h"
+  - "Source/LB/Controller/LB_MonsterAIController.cpp"
+context:
+  - "Source/LB/Controller/LB_MonsterAIController.h"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Utility/LB_NativeGameplayTag.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 사망 정리 순서·중복 호출 안전성과 ASC Delegate 해제를 확인했다"

@@ -1,0 +1,21 @@
+id: CT-003
+title: "단일 공격 방향 원본과 OnRep 동기화"
+goal: |
+  ALB_MeleeMonster에 ReplicatedUsing int8 CombatDirectionX=1을 추가하고 GetLifetimeReplicatedProps와 OnRep_CombatDirectionX()를 구현한다.
+  CombatDirectionX를 방향의 단일 원본으로 바꿔 GetCombatDirectionX는 이 값을 반환하고 Hitbox는 파생 적용값으로만 사용한다.
+  서버 SetCombatFacingFromTarget의 기존 무효/0/사망 검사를 유지하며 부호가 바뀔 때 원본과 Hitbox를 함께 갱신한다.
+  OnRep와 BeginPlay 초기화에서도 Hitbox 값을 동기화한다. 서버 setter의 클라이언트 권한을 넓히거나 RPC를 추가하지 않는다.
+done_when:
+  - "CombatDirectionX 하나가 복제 원본이며 getter·서버 갱신·OnRep가 같은 값을 사용한다"
+  - "Hitbox는 방향 원본을 중복 소유하는 계약이 아닌 적용 대상이며 초기값이 동기화된다"
+  - "기존 Target/사망/0/권한 가드와 부모 초기화가 유지되고 allow 파일만 변경된다"
+allow:
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.cpp"
+context:
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Component/LB_MeleeHitboxComponent.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 방향 원본 전환·복제 등록·초기 OnRep/BeginPlay 경로를 확인했다"

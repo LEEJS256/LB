@@ -1,0 +1,23 @@
+id: CT-002
+title: 서버 Target 기반 X 공격 방향 API 추가
+goal: |
+  ALB_MeleeMonster에 BlueprintCallable void SetCombatFacingFromTarget(AActor* TargetActor)와 BlueprintPure float GetCombatDirectionX() const를 추가한다.
+  설정 함수는 비Authority·자신의 IsDead()·무효 Target·자기 자신 Target일 때 방향을 변경하지 않고 반환한다.
+  Target.X - Monster.X의 월드 X 차이가 거의 0이면 유지하고, 그 외에는 MeleeHitbox->SetAttackDirectionX(float)에 전달한다.
+  조회 함수는 MeleeHitbox->GetAttackDirectionX() const의 +1/-1을 반환한다. 초기 +1을 사용하고 Target·방향 변수를 중복 저장하지 않는다.
+  서버 로컬 판정 API이며 Actor/Mesh 회전·Y/Z 범위 판정·복제/RPC·Tick은 추가하지 않는다.
+done_when:
+  - 지정 시그니처의 설정·조회 함수가 각각 BlueprintCallable·BlueprintPure로 선언되어 있다
+  - 서버에서 유효 Target의 월드 X 차이를 Hitbox에 전달하고 거의 0일 때 유지하는 코드가 있다
+  - 비Authority·사망·무효 또는 자기 자신 Target 검사가 값 변경보다 앞에 있다
+  - 조회는 Hitbox 값을 사용하며 Target·방향 중복 상태 및 회전·Y/Z 판정·복제/RPC·Tick 추가 없이 allow 두 파일만 바뀐다
+allow:
+  - Source/LB/Character/Monster/LB_MeleeMonster.h
+  - Source/LB/Character/Monster/LB_MeleeMonster.cpp
+context:
+  - Source/LB/Character/Monster/LB_MeleeMonster.h
+  - Source/LB/Character/Monster/LB_MeleeMonster.cpp
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 Authority·Target 유효성·IsDead 검사와 X 차이의 부호·거의 0일 때 방향 유지 처리를 확인했다

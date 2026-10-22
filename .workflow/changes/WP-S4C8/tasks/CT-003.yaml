@@ -1,0 +1,23 @@
+id: CT-003
+title: "살아 있는 플레이어 탐색 StateTree Task"
+goal: |
+  FStateTreeTaskBase 기반 FLB_STT_FindTarget과 인스턴스 데이터를 추가한다. EnterState는 서버 ALB_MonsterAIController Context를 입력받는다.
+  PlayerController의 현재 Pawn 중 ASC Team.Player와 Health>0 및 State.Death 미보유인 플레이어만 후보로 삼고 몬스터와 가장 가까운 대상을 고른다.
+  동거리면 PlayerState PlayerId로 순서를 고정한다. Controller SetCombatTarget과 Output TargetActor를 동일하게 갱신한다.
+  후보가 없으면 두 값을 해제하고 Failed를 반환한다. 대기/재시도는 StateTree 에셋에서 수행하며 전역 스캔 Tick·감지 시스템은 추가하지 않는다.
+  엔진 EnterState 시그니처와 GetInstanceDataType을 사용하고 템플릿 노드에는 런타임 상태를 저장하지 않는다.
+done_when:
+  - "서버 Task가 실제 플레이어 Pawn의 ASC 생존/팀을 검사하고 거리·동거리 규칙으로 고른다"
+  - "타깃 없음은 기존 Target을 해제하고 Failed이며 중복 Target 소유가 없다"
+  - "실행별 데이터와 Output이 분리되고 allow 두 파일만 추가된다"
+allow:
+  - "Source/LB/AI/StateTree/LB_STT_FindTarget.h"
+  - "Source/LB/AI/StateTree/LB_STT_FindTarget.cpp"
+context:
+  - "Source/LB/Controller/LB_MonsterAIController.h"
+  - "Source/LB/Character/LB_PlayerCharacter.h"
+  - "Source/LB/Utility/LB_NativeGameplayTag.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 PlayerController 기반 탐색·생존 필터·타깃 없음 해제를 확인했다"

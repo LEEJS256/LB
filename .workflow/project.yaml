@@ -1,0 +1,23 @@
+base: master
+mode: solo
+remote: origin
+protected:
+  - Content/**
+  - Config/**
+  - "*.uproject"
+  - Source/*.Target.cs
+  - Source/LB/LB.Build.cs
+  - Plugins/**
+  - Source/LB/Variant_Strategy/**
+  - Source/LB/Variant_TwinStick/**
+  - .claude/**
+  - .codex/**
+  - .gitignore
+commands:
+  # 이전 파일럿의 설정을 유지한다. 앱이 엔진 경로를 UE_ROOT로 전달한다.
+  # 헤더 및 클래스 추가 작업이므로 Claude 실행 전에 Unreal Editor를 닫는다.
+  build-editor: '"%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" LBEditor Win64 Development -Project="%CD%\LB.uproject" -WaitMutex'
+verify_timeout_minutes: 60
+claude:
+  max_turns: 40
+  timeout_minutes: 30

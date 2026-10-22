@@ -1,0 +1,21 @@
+id: CT-005
+title: "월드 축별 공격 범위 StateTree Condition"
+goal: |
+  FStateTreeConditionBase 기반 FLB_STC_IsTargetInAttackRange를 추가하고 AIController Context, AttackRange, AttackDepthTolerance, AttackHeightTolerance를 인스턴스 입력으로 둔다.
+  TestCondition은 현재 Controller Target이 유효·생존·적대 대상인 경우에만 abs(Delta.X)<=AttackRange AND abs(Delta.Y)<=AttackDepthTolerance AND abs(Delta.Z)<=AttackHeightTolerance를 평가한다.
+  허용 거리는 음수·비유한값을 거부하고 현재 위치에서 계산한다. 초기 튜닝값은 에셋에서 지정한다.
+  거리나 판정 결과를 영속 저장하지 않고 구형 거리 하나로 축별 조건을 대체하지 않는다.
+done_when:
+  - "세 축을 개별 허용값으로 검사하고 경계값은 <=로 포함한다"
+  - "무효/사망/비적대 Target 및 잘못된 거리 설정을 false로 처리한다"
+  - "위치는 현재 값으로 계산하고 allow 두 파일만 추가된다"
+allow:
+  - "Source/LB/AI/StateTree/LB_STC_IsTargetInAttackRange.h"
+  - "Source/LB/AI/StateTree/LB_STC_IsTargetInAttackRange.cpp"
+context:
+  - "Source/LB/Controller/LB_MonsterAIController.h"
+  - "Source/LB/AI/StateTree/LB_STC_IsTargetValid.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 축별 AND 조건·경계값·잘못된 설정 거부를 확인했다"
