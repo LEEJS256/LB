@@ -56,3 +56,14 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_Blocked, "State.Movement.Blocked");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event, "Event");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event_Start, "Event.Start");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event_End,   "Event.End");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon			, "Weapon");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Dual		, "Weapon.Dual");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Dual_Left		, "Weapon.Dual.Left");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Dual_Right		, "Weapon.Dual.Right");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Twohanded , "Weapon.Twohanded");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Equip			, "Equip");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Weapon		, "Equip.Weapon");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Armor		, "Equip.Armor");
+

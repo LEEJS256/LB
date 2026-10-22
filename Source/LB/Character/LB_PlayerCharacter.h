@@ -8,7 +8,9 @@
 #include "GameFramework/Character.h"
 #include "LB_PlayerCharacter.generated.h"
 
+class ALB_Equipment;
 class ULB_GasComponent;
+class ULB_EquipComponent;
 class ULB_MeleeHitboxComponent;
 class ULB_BattleComponent;
 class USpringArmComponent;
@@ -37,8 +39,13 @@ public:
 	void BindDelegate();
 	void OnSpeedChanged(const FOnAttributeChangeData& Data);
 
-	ULB_GasComponent* Get_GasComponent() const { return GasComp; }
+	ULB_GasComponent*	Get_GasComponent() const { return GasComp; }
+	ULB_EquipComponent* Get_EquipComponent() const { return EquipComp; }
 
+	void GiveDefaultWeapon();
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Equip")
+	TSubclassOf<ALB_Equipment> DefaultWeaponClass;
 	// Controller와 후속 시스템이 공격 요청 진입점으로 사용하는 BattleComponent
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	ULB_BattleComponent* GetBattleComponent() const { return BattleComp; }
@@ -95,14 +102,18 @@ protected:
 #pragma endregion
 
 #pragma region COMPONENT_AREA
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Compoent|Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Compoent|Camera")
 	TObjectPtr<UCameraComponent> FollowCamera;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Compoent|GAS")
 	TObjectPtr<ULB_GasComponent> GasComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Compoent|GAS")
+	TObjectPtr<ULB_EquipComponent> EquipComp;
+
 
 	// 근접 공격 판정 Box. 기본 비활성이며 판정 구간마다 Socket 또는 Character 축 + CurrentFacing 기준으로 배치
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")

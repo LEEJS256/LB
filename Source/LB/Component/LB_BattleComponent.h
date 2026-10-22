@@ -30,6 +30,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LB|Battle")
 	bool RequestAttackByTag(const FGameplayTag& AttackTag);
 
+	//State.ATK사라지면 알림해주는 함수
+	void BindCombatStateEvents();
+
+
 protected:
 	// Owner가 IAbilitySystemInterface로 노출하는 ASC를 매번 조회 (GAS 초기화 전에는 nullptr)
 	UAbilitySystemComponent* ResolveAbilitySystemComponent() const;
@@ -37,4 +41,9 @@ protected:
 private:
 	// ASC가 있고 Avatar가 이 컴포넌트의 Owner인지 확인
 	bool CanRequestAttack(const UAbilitySystemComponent* ASC) const;
+
+	// 태그 사라졌을때 실행됨
+	void OnATKTagChanged(const FGameplayTag Tag, int32 NewCount);
+	// 공격 중인지 체크
+	bool bATKBound = false;
 };

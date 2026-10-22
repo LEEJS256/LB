@@ -12,6 +12,7 @@
 
 
 class UAbilitySystemComponent;
+class ULB_InventoryComponent;
 class UAttributeSet;
 class ULB_AttributeSet;
 class ULB_PlayerDataAsset;
@@ -26,6 +27,14 @@ class LB_API ALB_PlayerState : public APlayerState , public IAbilitySystemInterf
 public:
 	ALB_PlayerState();
 
+#pragma region component
+	UFUNCTION(BlueprintCallable, Category = "LB|Component")
+	virtual ULB_InventoryComponent* Get_InventoryComponent() const;
+	
+	UPROPERTY(VisibleAnywhere, Category = "LB|Component")
+	TObjectPtr<ULB_InventoryComponent> InventoryComponent;
+#pragma  endregion 
+	
 #pragma region GAS
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	ULB_AttributeSet* GetAttributeSet() const { return AttributeSet; }
