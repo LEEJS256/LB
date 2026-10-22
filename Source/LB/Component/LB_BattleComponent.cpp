@@ -2,7 +2,7 @@
 
 
 #include "Component/LB_BattleComponent.h"
-
+#include "Component/LB_EquipComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
@@ -63,4 +63,33 @@ UAbilitySystemComponent* ULB_BattleComponent::ResolveAbilitySystemComponent() co
 bool ULB_BattleComponent::CanRequestAttack(const UAbilitySystemComponent* ASC) const
 {
 	return ASC && ASC->GetAvatarActor() == GetOwner();
+}
+void ULB_BattleComponent::BindCombatStateEvents()
+{
+	if (bATKBound) return;
+
+	UAbilitySystemComponent* ASC = ResolveAbilitySystemComponent();
+	if (!ASC) return;
+
+	ASC->RegisterGameplayTagEvent(TAG_State_ATK, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ULB_BattleComponent::OnATKTagChanged);
+	bATKBound = true;
+}
+
+void ULB_BattleComponent::OnATKTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority()) return;
+
+	ULB_EquipComponent* EquipComp = OwnerActor->FindComponentByClass<ULB_EquipComponent>();
+	if (!EquipComp) return;
+
+	if (NewCount > 0)
+	{
+		EquipComp->EnterCombat();
+	}
+	else
+	{
+		EquipComp->ReserveExitCombat();
+	}
 }
