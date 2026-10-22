@@ -27,7 +27,7 @@
 | 순서 | WP | 코드 범위 | CT | 중간 검증 / PR 시점 |
 | --- | --- | --- | --- | --- |
 | 0 | WP-M8H4 (기존) | Hitbox 파생 구조·서버 방향 | 완료 Commit 존재 | 기존 PR 마무리 |
-| 1 | [WP-A6R2](../changes/WP-A6R2/package.yaml) | 서버 수동 공격·방향 표현/복제 | 4 | CT-002 후 E01, CT-004 후 E02 / 전체 완료 후 PR 1개 |
+| 1 | [WP-A6R2](../changes/WP-A6R2/package.yaml) | 서버 수동 공격·방향 표현/복제·공용 Team 태그 조회 | 5 | CT-002 후 E01, CT-004 후 E02, CT-005 후 깨끗한 Unity Build / 전체 완료 후 PR 1개 |
 | 2 | [WP-S4C8](../changes/WP-S4C8/package.yaml) | StateTree·타깃·추적·공격/Recover·사망 중단 | 7 | CT-001 후 E03, CT-005 후 E04, CT-006 후 E05, CT-007 후 E06 / 전체 완료 후 PR 1개 |
 
 WP 내부 CT 사이에는 Merge를 요구하지 않는다. 작은 변경은 CT별 Commit과 중간 PIE로 확인한다.
