@@ -22,12 +22,13 @@
 | CT-007 | 사망 태그 구독·전투 정리 | 빌드·검토·Commit 후 E06 최종 검증 |
 
 E03/E04/E05 사이에는 PR을 만들지 않는다. 같은 브랜치에서 다음 CT를 진행한다.
-앱은 중간 E 게이트를 자동 강제하지 않으므로 사람이 확인하고 실행한다.
+`editor-guide.yaml`의 E03~E06은 지정 CT 이후 또는 PR 전에 앱이 표시하며, 사람이 항목을 확인하기 전까지 뒤 CT 또는 PR 생성을 차단한다.
+체크는 확인 기록일 뿐 빌드·PIE·Commit을 대신하지 않는다.
 실패는 수정 요청 또는 같은 브랜치의 추가 수정 Commit으로 처리하고 자동 이력 재작성은 하지 않는다.
 
 ## 에셋·검증·PR
 
-E03~E06의 상세 절차는 `.workflow/planned/README.md`에 있다.
+E03~E06의 실행 항목은 `editor-guide.yaml`, 상세 설계 근거는 `.workflow/planned/README.md`에 있다.
 코드 CT를 먼저 Commit한 뒤 StateTree·BP·NavMesh는 사람이 Editor에서 연결해 별도 검토·Commit한다.
 Content 보호는 유지한다. 에셋 변경을 정리한 깨끗한 작업 트리에서 다음 CT를 시작한다.
 공격 Task에 쓰는 범위 값은 Condition과 같은 Tree 설정에서 바인딩한다.
