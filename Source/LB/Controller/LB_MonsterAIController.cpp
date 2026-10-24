@@ -46,6 +46,7 @@ void ALB_MonsterAIController::OnPossess(APawn* InPawn)
 void ALB_MonsterAIController::OnUnPossess()
 {
 	StopCombatLogic(TEXT("UnPossess"));
+	TargetActor.Reset();
 	// 다음 Possess에서 다시 시작할 수 있도록 초기화
 	bCombatLogicStarted = false;
 	StartRetryCount = 0;
@@ -101,6 +102,32 @@ void ALB_MonsterAIController::TryStartCombatLogic()
 	{
 		UE_LOG(LogLB, Warning, TEXT("[%s] StateTree Logic 시작 실패: %s"), *GetName(), *GetNameSafe(CombatStateTree));
 	}
+}
+
+AActor* ALB_MonsterAIController::GetCombatTarget() const
+{
+	return TargetActor.IsValid() ? TargetActor.Get() : nullptr;
+}
+
+void ALB_MonsterAIController::SetCombatTarget(AActor* NewTarget)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!NewTarget)
+	{
+		TargetActor.Reset();
+		return;
+	}
+
+	if (NewTarget == this || NewTarget == GetPawn())
+	{
+		return;
+	}
+
+	TargetActor = NewTarget;
 }
 
 bool ALB_MonsterAIController::IsMonsterReady(const ALB_MonsterBase* Monster) const
