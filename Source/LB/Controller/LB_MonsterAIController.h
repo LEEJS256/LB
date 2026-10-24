@@ -27,6 +27,13 @@ public:
 
 	UStateTreeAIComponent* GetStateTreeAIComponent() const { return StateTreeAIComponent; }
 
+	// 현재 전투 타깃. 무효(파괴/GC)된 대상은 nullptr
+	UFUNCTION(BlueprintPure, Category = "LB|AI")
+	AActor* GetCombatTarget() const;
+
+	// 서버 전용. nullptr은 타깃 해제, 자기 자신(Controller/Pawn)은 무시
+	void SetCombatTarget(AActor* NewTarget);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -49,6 +56,10 @@ private:
 
 	// 재시도 예약, Logic, 이동 정리
 	void StopCombatLogic(const FString& Reason);
+
+	// 타깃은 Controller만 소유하며 다른 객체에 복사하지 않음
+	UPROPERTY(Transient)
+	TWeakObjectPtr<AActor> TargetActor;
 
 	FTimerHandle StartRetryHandle;
 	int32 StartRetryCount = 0;
