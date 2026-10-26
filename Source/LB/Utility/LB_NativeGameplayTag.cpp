@@ -64,6 +64,24 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Dual_Left		, "Weapon.Dual.Left");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Dual_Right		, "Weapon.Dual.Right");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Twohanded , "Weapon.Twohanded");
 
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item					, "Item");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Equip			, "Item.Equip");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Consumable		, "Item.Consumable");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Currency		, "Item.Currency");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade			, "Item");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier1		, "Item.Grade.Tier1");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier2		, "Item.Grade.Tier2");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier3		, "Item.Grade.Tier3");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier4     , "Item.Grade.Tier4");
+
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Common);    // 1단계 (일반)
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Uncommon);  // 2단계 (고급)
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Rare);      // 3단계 (희귀)
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Epic);      // 4단계 (영웅)
+
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip			, "Equip");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Weapon		, "Equip.Weapon");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Armor		, "Equip.Armor");
