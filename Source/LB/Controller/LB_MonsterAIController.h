@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "GameplayTagContainer.h"
 #include "LB_MonsterAIController.generated.h"
 
+class UAbilitySystemComponent;
 class UStateTree;
 class UStateTreeAIComponent;
 class ALB_MonsterBase;
@@ -57,9 +59,22 @@ private:
 	// 재시도 예약, Logic, 이동 정리
 	void StopCombatLogic(const FString& Reason);
 
+	// 서버 전용. 몬스터 ASC의 State.Death NewOrRemoved 구독. 같은 ASC 중복 구독은 무시, 다른 ASC면 이전 구독 해제
+	void BindDeathTagEvent(UAbilitySystemComponent* ASC);
+	void UnbindDeathTagEvent();
+	void OnDeathTagChanged(const FGameplayTag Tag, int32 NewCount);
+
+	// 사망 정리. 이동 정지, Target 해제, 근접 공격 Spec 취소, Hitbox 강제 종료를 멱등 수행
+	// Dead 상태 선택은 StateTree에 맡기므로 Logic은 정지하지 않음
+	void HandleMonsterDeath();
+
 	// 타깃은 Controller만 소유하며 다른 객체에 복사하지 않음
 	UPROPERTY(Transient)
 	TWeakObjectPtr<AActor> TargetActor;
+
+	// 사망 태그를 구독 중인 ASC와 핸들
+	TWeakObjectPtr<UAbilitySystemComponent> DeathTagBoundASC;
+	FDelegateHandle DeathTagHandle;
 
 	FTimerHandle StartRetryHandle;
 	int32 StartRetryCount = 0;
