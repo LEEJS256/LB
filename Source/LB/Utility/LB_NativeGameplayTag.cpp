@@ -20,8 +20,8 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Data_Damage, "Data.Damage");
 
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Input, "Input");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Input_LeftClick, "Input.LeftClick");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Input_RightClick, "Input.RightClick");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Input_Normal, "Input.Normal");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Input_Strong, "Input.Strong");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_DMGType, "DMGType");
 UE_DEFINE_GAMEPLAY_TAG(TAG_DMGType_Normal, "DMGType.Normal");
@@ -30,6 +30,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_DMGType_Ice, "DMGType.Ice");
 UE_DEFINE_GAMEPLAY_TAG(TAG_DMGType_Lightning, "DMGType.Lightning");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability, "Ability");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Combo, "Ability.Combo");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Sprint, "Ability.Sprint");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Dodge, "Ability.Dodge");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Ultimate, "Ability.Ultimate");
@@ -67,3 +68,23 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Equip			, "Equip");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Weapon		, "Equip.Weapon");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Armor		, "Equip.Armor");
 
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_None, "Combo.None");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L1, "Combo.Left.L1");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L2, "Combo.Left.L2");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L3, "Combo.Left.L3");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L4, "Combo.Left.L4");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L1R1, "Combo.Left.L1R1");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L1R2, "Combo.Left.L1R2");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L1R3, "Combo.Left.L1R3");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L1R4, "Combo.Left.L1R4");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L2R1, "Combo.Left.L2R1");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L2R2, "Combo.Left.L2R2");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Left_L3R1, "Combo.Left.L3R1");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Right_R1, "Combo.Right.R1");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Right_R2, "Combo.Right.R2");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_Right_R3, "Combo.Right.R3");

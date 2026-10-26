@@ -6,6 +6,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "IPropertyTable.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
 ULB_BattleComponent::ULB_BattleComponent()
@@ -29,7 +30,7 @@ bool ULB_BattleComponent::RequestStrongAttack()
 	// 기존 StrongATK 흐름 유지: Input.RightClick 이벤트를 ASC OwnerActor(PlayerState)에 먼저 전달
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
 		ASC->GetOwnerActor(),
-		TAG_Input_RightClick,
+		TAG_Input_Strong,
 		FGameplayEventData()
 	);
 
@@ -92,4 +93,87 @@ void ULB_BattleComponent::OnATKTagChanged(const FGameplayTag Tag, int32 NewCount
 	{
 		EquipComp->ReserveExitCombat();
 	}
+}
+
+
+bool ULB_BattleComponent::RequestComboInput(const FGameplayTag& InputTag)
+{
+	UAbilitySystemComponent* ASC = ResolveAbilitySystemComponent();
+	if (!CanRequestAttack(ASC) || !InputTag.IsValid()) return false;
+
+	// 콤보 진행 중: 윈도우 열려있을 때만 버퍼에 저장
+	if (ASC->HasMatchingGameplayTag(TAG_State_ATK))
+	{
+		if (bComboWindowOpen)
+		{
+			BufferedInput = InputTag;
+			return true;
+		}
+		return false;
+	}
+
+	// 콤보 시작: 버퍼에 넣고 GA 활성화 (GA가 ConsumeStartSection으로 꺼내감)
+	BufferedInput = InputTag;
+	return ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(TAG_Ability_Combo));
+}
+
+bool ULB_BattleComponent::ConsumeStartSection(FName& OutSection)
+{
+	const FGameplayTag Input = BufferedInput;
+	BufferedInput = FGameplayTag();
+	return TryAdvance(Input, OutSection);
+}
+
+void ULB_BattleComponent::OpenComboWindow()
+{
+	bComboWindowOpen = true;
+	BufferedInput = FGameplayTag(); // 윈도우 이전 입력은 버림
+}
+
+bool ULB_BattleComponent::CloseComboWindow(FName& OutNextSection)
+{
+	bComboWindowOpen = false;
+	const FGameplayTag Input = BufferedInput;
+	BufferedInput = FGameplayTag();
+	return Input.IsValid() && TryAdvance(Input, OutNextSection);
+}
+
+void ULB_BattleComponent::ResetCombo()
+{
+	CurrentComboState = TAG_Combo_None;
+	BufferedInput = FGameplayTag();
+	bComboWindowOpen = false;
+}
+
+bool ULB_BattleComponent::TryAdvance(const FGameplayTag& InputTag, FName& OutSection)
+{
+	if (!InputTag.IsValid()) return false;
+
+	const FLB_DT_ComboInfo* Row = ComboMap.Find(TPair<FGameplayTag, FGameplayTag>(CurrentComboState, InputTag));
+	if (!Row) return false;
+
+	CurrentComboState = Row->ToState;
+	OutSection = Row->MontageSection;
+	return true;
+}
+
+void ULB_BattleComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	CurrentComboState = TAG_Combo_None;
+	if (!ComboTable) return;
+
+	ComboTable->ForeachRow<FLB_DT_ComboInfo>(TEXT("ComboCache"),
+		[this](const FName& Key, const FLB_DT_ComboInfo& Row)
+		{
+			const auto MapKey = TPair<FGameplayTag, FGameplayTag>(Row.FromState, Row.InputTag);
+			// 중복 키 검증
+			if (ComboMap.Contains(MapKey))
+			{
+				UE_LOG(LogTemp, Error, TEXT("Combo 중복 행: %s"), *Key.ToString());
+				return;
+			}
+			ComboMap.Add(MapKey, Row);
+		});
 }

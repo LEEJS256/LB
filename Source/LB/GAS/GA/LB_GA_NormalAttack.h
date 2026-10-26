@@ -30,6 +30,7 @@ public:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+	void ReserveNextSection(FName NextSection);
 protected:
 	// Ability BP의 Class Defaults에서 지정. AnimBP가 평가하는 Slot을 사용하는 Montage여야 함
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Attack")
