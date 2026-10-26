@@ -28,7 +28,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LB|Battle")
 	bool RequestStrongAttack();
 
-	
 	// 태그/ASC/Avatar 확인 후 TryActivateAbilitiesByTag 요청 결과를 반환 (서버 확정 결과가 아님)
 	UFUNCTION(BlueprintCallable, Category = "LB|Battle")
 	bool RequestAttackByTag(const FGameplayTag& AttackTag);
@@ -53,6 +52,9 @@ public:
 	void ResetCombo();
 #pragma endregion
 	
+
+
+
 protected:
 	virtual void BeginPlay() override;
 	
@@ -78,4 +80,6 @@ private:
 	FGameplayTag CurrentComboState;
 	FGameplayTag BufferedInput;
 	bool bComboWindowOpen = false;
+
+
 };

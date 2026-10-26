@@ -14,6 +14,7 @@
 #include "LB.h"
 #include "Component/LB_BattleComponent.h"
 #include "PlayerState/LB_PlayerState.h"
+#include "PlayerState/LB_PlayerState.h"
 #include "Utility/LB_NativeGameplayTag.h"
 #include "Utility/LB_TeamTagUtility.h"
 
@@ -53,6 +54,8 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		PS->AddStateTag(TAG_State_ATK);
 		// ActivationOwnedTags.AddTag(TAG_State_ATK);
 	}
+	
+
 	
 
 	const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
@@ -123,13 +126,12 @@ void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 		PS->RemoveStateTag(TAG_State_ATK);
 	}
 
-	if (ALB_PlayerCharacter* pCharacter = Cast<ALB_PlayerCharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr))
+	
+	if (ULB_BattleComponent* BattleComp = Character->GetBattleComponent())
 	{
-		if (ULB_BattleComponent* BattleComp = pCharacter->GetBattleComponent())
-		{
-			BattleComp->ResetCombo();
-		}
+		BattleComp->ResetCombo();
 	}
+	
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
