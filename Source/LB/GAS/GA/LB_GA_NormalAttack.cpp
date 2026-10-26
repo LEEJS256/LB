@@ -12,6 +12,7 @@
 #include "GameplayEffect.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "LB.h"
+#include "Component/LB_BattleComponent.h"
 #include "PlayerState/LB_PlayerState.h"
 #include "Utility/LB_NativeGameplayTag.h"
 #include "Utility/LB_TeamTagUtility.h"
@@ -21,7 +22,7 @@ ULB_GA_NormalAttack::ULB_GA_NormalAttack()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
-	SetAssetTags(FGameplayTagContainer(TAG_ATK_Normal));
+	SetAssetTags(FGameplayTagContainer(TAG_Ability_Combo));
 
 	// ActivationOwnedTags는 활성화 시 부여되고 EndAbility에서 자동 제거되므로 어떤 종료 경로에서도 남지 않음
 	ActivationOwnedTags.AddTag(TAG_State_Action_Attacking);
@@ -50,6 +51,7 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	if (PS)
 	{
 		PS->AddStateTag(TAG_State_ATK);
+		// ActivationOwnedTags.AddTag(TAG_State_ATK);
 	}
 	
 
@@ -70,9 +72,17 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 			BoundHitbox = Hitbox;
 		}
 	}
+	ULB_BattleComponent* BattleComp = Character ? Character->GetBattleComponent() : nullptr;
+	FName StartSection;
+	if (!BattleComp || !BattleComp->ConsumeStartSection(StartSection))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
+	// CreatePlayMontageAndWaitProxy 마지막 인자들에 StartSection 전달
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-		this, NAME_None, AttackMontage, MontagePlayRate);
+		this, NAME_None, AttackMontage, MontagePlayRate, StartSection);
 	if (!MontageTask)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -112,8 +122,25 @@ void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 	{
 		PS->RemoveStateTag(TAG_State_ATK);
 	}
+
+	if (ALB_PlayerCharacter* pCharacter = Cast<ALB_PlayerCharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr))
+	{
+		if (ULB_BattleComponent* BattleComp = pCharacter->GetBattleComponent())
+		{
+			BattleComp->ResetCombo();
+		}
+	}
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void ULB_GA_NormalAttack::ReserveNextSection(FName NextSection)
+{
+	UAnimInstance* Anim = GetActorInfo().GetAnimInstance();
+	if (!Anim || !AttackMontage) return;
+
+	const FName Current = Anim->Montage_GetCurrentSection(AttackMontage);
+	Anim->Montage_SetNextSection(Current, NextSection, AttackMontage);
 }
 
 void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResult)
