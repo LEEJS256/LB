@@ -20,6 +20,7 @@
 | CT-005 | X/Y/Z 공격 범위 Condition | 빌드·검토·Commit 후 E04 탐색·추적 확인 |
 | CT-006 | 공격 실행별 종료 대기 Task | 빌드·검토·Commit 후 E05 Attack/Recover 확인 |
 | CT-007 | 사망 태그 구독·전투 정리 | 빌드·검토·Commit 후 E06 최종 검증 |
+| CT-008 | 몬스터 전용 근접 공격 Ability 분리 | 빌드·검토·Commit 후 E05 Attack/Recover와 E06 네트워크 검증 재확인 |
 
 E03/E04/E05 사이에는 PR을 만들지 않는다. 같은 브랜치에서 다음 CT를 진행한다.
 `editor-guide.yaml`의 E03~E06은 지정 CT 이후 또는 PR 전에 앱이 표시하며, 사람이 항목을 확인하기 전까지 뒤 CT 또는 PR 생성을 차단한다.
@@ -33,7 +34,7 @@ E03~E06의 실행 항목은 `editor-guide.yaml`, 상세 설계 근거는 `.workf
 Content 보호는 유지한다. 에셋 변경을 정리한 깨끗한 작업 트리에서 다음 CT를 시작한다.
 공격 Task에 쓰는 범위 값은 Condition과 같은 Tree 설정에서 바인딩한다.
 실패/Target 상실/사망 전이와 재시도 대기를 빠뜨리지 않는다.
-일곱 CT와 E03~E06이 모두 끝나면 최종 상태로 통합 빌드·네트워크 PIE → Push → PR을 한 번 생성한다.
+여덟 CT와 E03~E06이 모두 끝나면 최종 상태로 통합 빌드·네트워크 PIE → Push → PR을 한 번 생성한다.
 PR 제목 예: `feat(monster): StateTree 기반 자동 전투 구현`.
 
 ## 기준과 한계
