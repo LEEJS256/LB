@@ -37,6 +37,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Ultimate, "Ability.Ultimate");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_BuildTower, "Ability.BuildTower");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Tower_ATK, "Ability.Tower.ATK");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_InterAction, "Ability.InterAction");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Monster_Attack_Melee, "Ability.Monster.Attack.Melee");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_State, "State");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Idle, "State.Idle");
@@ -57,6 +58,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_Blocked, "State.Movement.Blocked");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event, "Event");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event_Start, "Event.Start");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event_End,   "Event.End");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Event_AI_PlayerAvailable, "Event.AI.PlayerAvailable");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon			, "Weapon");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Dual		, "Weapon.Dual");

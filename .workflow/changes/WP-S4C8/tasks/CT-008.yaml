@@ -1,0 +1,30 @@
+id: CT-008
+title: "몬스터 전용 근접 공격 Ability 분리"
+goal: |
+  ULB_GA_MonsterMeleeAttack의 부모를 ULB_GA_NormalAttack에서 ULB_GameplayAbility로 변경하고 생성자, CanActivateAbility, ActivateAbility, EndAbility를 몬스터 전용 수명으로 구현한다.
+  Native Gameplay Tag TAG_Ability_Monster_Attack_Melee("Ability.Monster.Attack.Melee")를 추가하고 생성자 Asset Tag와 ALB_MeleeMonster::FindMeleeAttackSpecHandle의 정확 일치 검색에 사용한다. 기존 TAG_ATK_Normal은 플레이어 경로가 사용하므로 제거하거나 의미를 바꾸지 않는다.
+  Ability는 ServerOnly이며 ALB_MeleeMonster Avatar·생존·State.Action.Attacking 중복을 검사한다. AttackMontage를 시작 Section이나 콤보 입력 없이 한 번 재생하고 완료·Blend Out은 정상 종료, Interrupt·Cancel은 취소 종료로 처리한다.
+  서버에서 ULB_MeleeHitboxComponent를 실행별로 구독하고 기존 팀·사망·Health Attribute 필터와 Attack-Armor 최소 1 피해, DamageEffectClass, Data.Damage SetByCaller 경로를 보존한다. 모든 종료 경로에서 Hit Window와 Delegate를 멱등 정리한다.
+  ALB_PlayerCharacter, ALB_PlayerState, ULB_BattleComponent, Combo Section, TAG_Ability_Combo에 의존하지 않는다. 공통 근접 Ability 기반 클래스·플레이어 Ability 변경·새 Actor Tick·직접 Health 수정은 추가하지 않는다.
+done_when:
+  - "ULB_GA_MonsterMeleeAttack이 ULB_GameplayAbility를 직접 상속하고 플레이어 NormalAttack·PlayerState·BattleComponent·Combo 의존이 없다"
+  - "Ability.Monster.Attack.Melee 태그가 선언·정의되고 몬스터 Ability Asset Tag와 FindMeleeAttackSpecHandle 검색 계약이 일치한다"
+  - "서버 전용 Montage·Hitbox 구독·팀/사망 필터·GE 피해 적용과 정상/취소 종료 처리가 독립적으로 완결된다"
+  - "활성화 실패·동기 종료·중단·StateTree 취소를 포함한 모든 종료 경로에서 Hitbox와 Delegate가 중복 없이 정리된다"
+  - "기존 TAG_ATK_Normal과 ULB_GA_NormalAttack 동작 및 에셋 파일은 변경하지 않는다"
+allow:
+  - "Source/LB/GAS/GA/LB_GA_MonsterMeleeAttack.h"
+  - "Source/LB/GAS/GA/LB_GA_MonsterMeleeAttack.cpp"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.cpp"
+  - "Source/LB/Utility/LB_NativeGameplayTag.h"
+  - "Source/LB/Utility/LB_NativeGameplayTag.cpp"
+context:
+  - "Source/LB/GAS/GA/LB_GameplayAbility.h"
+  - "Source/LB/GAS/GA/LB_GA_NormalAttack.cpp"
+  - "Source/LB/Character/Monster/LB_MeleeMonster.h"
+  - "Source/LB/Component/LB_MeleeHitboxComponent.h"
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: "Diff에서 플레이어 의존 제거·몬스터 태그 검색 계약·Montage/Delegate/Hitbox 종료 수명을 확인했다"
+  - manual: "에디터 재시작 후 GA_MonsterMeleeAttack의 AttackMontage·DamageEffectClass 기본값을 확인하고 E05 공격/Recover와 E06 네트워크 사망 중단을 다시 검증했다"
