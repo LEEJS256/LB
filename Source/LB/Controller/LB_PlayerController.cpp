@@ -10,6 +10,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Character/LB_PlayerCharacter.h"
 #include "Component/LB_BattleComponent.h"
+#include "Controller/LB_MonsterAIController.h"
 #include "UI/LB_PlayerStatus.h"
 #include "UI/LB_HUD.h"
 
@@ -90,6 +91,9 @@ void ALB_PlayerController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 	InitUI();
 	BindHUD();
+
+	// 타깃이 없어 대기 중인 몬스터가 새 플레이어를 다시 탐색하도록 알림
+	ALB_MonsterAIController::NotifyPlayerAvailable(GetWorld());
 }
 
 void ALB_PlayerController::OnMoveTriggered(const FInputActionValue& Value)
