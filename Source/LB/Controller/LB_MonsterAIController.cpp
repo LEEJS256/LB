@@ -8,6 +8,7 @@
 #include "Character/Monster/LB_MonsterBase.h"
 #include "Component/LB_MeleeHitboxComponent.h"
 #include "Components/StateTreeAIComponent.h"
+#include "EngineUtils.h"
 #include "LB.h"
 #include "StateTree.h"
 #include "TimerManager.h"
@@ -141,6 +142,23 @@ void ALB_MonsterAIController::SetCombatTarget(AActor* NewTarget)
 	}
 
 	TargetActor = NewTarget;
+}
+
+void ALB_MonsterAIController::NotifyPlayerAvailable(UWorld* World)
+{
+	if (!World || World->GetNetMode() == NM_Client)
+	{
+		return;
+	}
+
+	for (TActorIterator<ALB_MonsterAIController> It(World); It; ++It)
+	{
+		ALB_MonsterAIController* AIController = *It;
+		if (AIController->bCombatLogicStarted && AIController->StateTreeAIComponent && AIController->StateTreeAIComponent->IsRunning())
+		{
+			AIController->StateTreeAIComponent->SendStateTreeEvent(TAG_Event_AI_PlayerAvailable);
+		}
+	}
 }
 
 bool ALB_MonsterAIController::IsMonsterReady(const ALB_MonsterBase* Monster) const

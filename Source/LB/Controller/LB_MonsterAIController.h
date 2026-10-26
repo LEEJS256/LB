@@ -36,6 +36,10 @@ public:
 	// 서버 전용. nullptr은 타깃 해제, 자기 자신(Controller/Pawn)은 무시
 	void SetCombatTarget(AActor* NewTarget);
 
+	// 서버 전용. World의 실행 중인 모든 몬스터 StateTree에 Event.AI.PlayerAvailable 전송
+	// 타깃이 없어 NoTarget에서 대기 중인 몬스터만 이 이벤트로 재탐색한다
+	static void NotifyPlayerAvailable(UWorld* World);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
