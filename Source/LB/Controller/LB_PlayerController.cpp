@@ -220,7 +220,7 @@ void ALB_PlayerController::OnNormalAttackStarted(const FInputActionValue& Value)
 	if (!BattleComp)
 		return;
 
-	BattleComp->RequestNormalAttack();
+	BattleComp->RequestComboInput(TAG_Input_Normal);
 }
 
 void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
@@ -234,7 +234,7 @@ void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 	if (!BattleComp)
 		return;
 
-	BattleComp->RequestStrongAttack();
+	BattleComp->RequestComboInput(TAG_Input_Strong);
 }
 
 void ALB_PlayerController::Set_IATag()
