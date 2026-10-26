@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GAS/GA/LB_GA_MonsterMeleeAttack.h"
 #include "LB.h"
 #include "Net/UnrealNetwork.h"
@@ -18,6 +19,11 @@ ALB_MeleeMonster::ALB_MeleeMonster()
 	// Socket 기준 판정을 위해 Mesh에 부착. SocketName=None 판정은 컴포넌트가 Character 축 기준으로 처리
 	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
 	MeleeHitbox->SetupAttachment(GetMesh());
+
+	// 좌우는 CombatDirectionX의 Mesh 반전만으로 표현. AIController 이동·Focus가 Actor를 돌리면 반전과 겹쳐 모션 방향이 틀어짐
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 }
 
 void ALB_MeleeMonster::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

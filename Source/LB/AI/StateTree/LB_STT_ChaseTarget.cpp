@@ -5,7 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
-#include "Character/Monster/LB_MonsterBase.h"
+#include "Character/Monster/LB_MeleeMonster.h"
 #include "Controller/LB_MonsterAIController.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -118,6 +118,12 @@ EStateTreeRunStatus FLB_STT_ChaseTarget::UpdateChase(FInstanceDataType& Instance
 	if (!IsAlivePlayerPawn(Target))
 	{
 		return EStateTreeRunStatus::Failed;
+	}
+
+	// 추적 중에는 Target 쪽을 바라봄. 접근 측면이 고정되어 있어 이동 중 좌우가 반복 반전되지 않음
+	if (ALB_MeleeMonster* MeleeMonster = Cast<ALB_MeleeMonster>(AIController->GetPawn()))
+	{
+		MeleeMonster->SetCombatFacingFromTarget(AIController->GetCombatTarget());
 	}
 
 	const FVector TargetLocation = Target->GetActorLocation();
