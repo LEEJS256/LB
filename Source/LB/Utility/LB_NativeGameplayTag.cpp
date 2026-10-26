@@ -37,6 +37,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Ultimate, "Ability.Ultimate");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_BuildTower, "Ability.BuildTower");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Tower_ATK, "Ability.Tower.ATK");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_InterAction, "Ability.InterAction");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Monster_Attack_Melee, "Ability.Monster.Attack.Melee");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_State, "State");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Idle, "State.Idle");

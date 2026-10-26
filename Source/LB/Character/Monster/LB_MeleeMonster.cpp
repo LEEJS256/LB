@@ -162,7 +162,7 @@ FGameplayAbilitySpecHandle ALB_MeleeMonster::FindMeleeAttackSpecHandle() const
 	int32 MatchCount = 0;
 	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
 	{
-		if (Spec.Ability && Spec.Ability->IsA<ULB_GA_MonsterMeleeAttack>() && Spec.Ability->GetAssetTags().HasTagExact(TAG_ATK_Normal))
+		if (Spec.Ability && Spec.Ability->IsA<ULB_GA_MonsterMeleeAttack>() && Spec.Ability->GetAssetTags().HasTagExact(TAG_Ability_Monster_Attack_Melee))
 		{
 			FoundHandle = Spec.Handle;
 			++MatchCount;
@@ -171,7 +171,7 @@ FGameplayAbilitySpecHandle ALB_MeleeMonster::FindMeleeAttackSpecHandle() const
 
 	if (MatchCount != 1)
 	{
-		UE_LOG(LogLB, Warning, TEXT("%s: ATK.Normal 몬스터 근접 공격 Spec이 %d개입니다. 정확히 1개가 부여되어야 합니다."), *GetName(), MatchCount);
+		UE_LOG(LogLB, Warning, TEXT("%s: Ability.Monster.Attack.Melee 몬스터 근접 공격 Spec이 %d개입니다. 정확히 1개가 부여되어야 합니다."), *GetName(), MatchCount);
 		return FGameplayAbilitySpecHandle();
 	}
 
