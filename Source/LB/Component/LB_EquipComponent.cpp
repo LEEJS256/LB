@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
+#include "Component/LB_EquipComponent.h"
 #include "Equipment/LB_Equipment.h"
 #include "Engine/World.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "Component/LB_EquipComponent.h"
 #include "Data/LB_DT_WeaponInformation.h"
 #include "GameplayTagContainer.h"
 #include "GameFramework/Character.h"
