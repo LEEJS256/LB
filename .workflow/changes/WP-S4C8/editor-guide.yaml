@@ -1,0 +1,57 @@
+steps:
+  - id: E03
+    after: CT-001
+    title: 최소 서버 StateTree 시작 확인
+    items:
+      - action: ALB_MonsterAIController 파생 Blueprint와 StateTreeAIComponentSchema 기반 최소 StateTree를 만들고 Wait 상태 하나만 구성한다
+        expected: 탐색·추적·공격 없이 최소 Tree가 유효하게 컴파일된다
+        restart_editor: true
+      - target: /Game/LB/Character/LB_MeleeMonster
+        action: AIControllerClass를 새 AIController Blueprint로 지정하고 Auto Possess AI를 Placed in World or Spawned로 설정한다
+        expected: 배치된 몬스터와 런타임 Spawn 몬스터가 모두 서버 AIController에 Possess된다
+      - target: /Game/LB/Maps/Lvl_GameplayTest
+        action: Listen Server에서 배치 및 Spawn 몬스터의 Tree 시작을 확인하고 Tree 미지정·UnPossess·재Possess·맵 종료도 시험한다
+        expected: 초기화 완료 뒤 서버에서 한 번만 시작하며 충돌·남은 재시도·중복 실행이 없다
+
+  - id: E04
+    after: CT-005
+    title: 타깃 탐색·추적과 축별 공격 범위 확인
+    items:
+      - action: StateTree에 AcquireTarget과 Chase를 추가하고 FindTarget 성공·실패 및 Target 상실 전이를 구성한다
+        expected: 성공 시 Chase로 이동하고 실패·사망·Destroy 시 짧은 대기 후 재탐색하며 과거 Output 대신 Controller의 현재 Target을 사용한다
+        restart_editor: true
+      - target: /Game/LB/Maps/Lvl_GameplayTest
+        action: NavMeshBoundsVolume과 NavMesh 생성을 확인하고 Chase에 엔진 Move To를 연결한다
+        expected: 이동 중인 Target을 추적하고 도달 불가능한 위치에서도 재시도 폭주가 없다
+      - action: AttackRange·AttackDepthTolerance·AttackHeightTolerance를 StateTree 설정값에 바인딩하고 X/Y/Z 경계 안·경계값·바깥을 각각 시험한다
+        expected: 세 축이 모두 허용 범위일 때만 공격 범위이며 X가 가까워도 Y 또는 Z가 벗어나면 false다
+      - target: /Game/LB/Maps/Lvl_GameplayTest
+        action: 두 플레이어의 거리·사망·퇴장·재진입에 따른 Target 선택·상실·재탐색을 확인한다
+        expected: 살아 있는 플레이어 중 가장 가까운 대상을 선택하고 무효 Target을 계속 추적하지 않는다
+
+  - id: E05
+    after: CT-006
+    title: 공격 종료 대기와 Recover 반복 확인
+    items:
+      - action: StateTree에 Attack과 Recover를 추가하고 ActivateAbilityAndWait의 세 거리 값을 E04 Condition과 같은 설정값에 바인딩한다
+        expected: Attack 진입 시 이동을 멈추고 Target과 범위를 재검사하며 정상 공격 종료만 Recover로 이어진다
+        restart_editor: true
+      - action: Recover 뒤 Target 상태와 범위에 따라 Attack·Chase·AcquireTarget으로 전이하고 실패 경로에는 짧은 재판단 대기를 둔다
+        expected: 활성화 실패·동기 취소·Target 상실·Timeout 뒤 같은 프레임에 무한 Attack 재진입하지 않는다
+      - target: /Game/LB/Maps/Lvl_GameplayTest
+        action: 몬스터 두 마리의 동시 공격과 공격 직후 취소·즉시 종료·에셋 누락·강제 상태 이탈을 시험한다
+        expected: 한 몬스터의 종료가 다른 Task를 완료하지 않고 Delegate·Ability·Hitbox가 남지 않는다
+
+  - id: E06
+    before: PR
+    title: 사망 우선 중단과 네트워크 최종 검증
+    items:
+      - action: StateTree Root에서 Dead 선택을 모든 Alive 상태보다 우선하고 ASC State.Death 또는 기존 IsDead를 조건으로 사용한다
+        expected: 별도 사망 bool 없이 Dead가 종료 상태로 유지되고 탐색·이동·공격으로 돌아가지 않는다
+        restart_editor: true
+      - target: /Game/LB/Maps/Lvl_GameplayTest
+        action: AcquireTarget·Chase·Attack·Recover 각각에서 서버 피해로 몬스터 Health를 0까지 내린다
+        expected: 어느 상태에서도 이동·공격 Ability·Montage·Hitbox가 정리되고 반복 사망 알림에도 중복 실행되지 않는다
+      - target: /Game/LB/Maps/Lvl_GameplayTest
+        action: Listen Server와 Client 1에서 Target 플레이어 사망·퇴장, 몬스터 사망, 두 플레이어와 여러 몬스터 조합을 시험한다
+        expected: Target 상실은 재탐색하고 몬스터 사망은 Dead로 전이하며 이동·좌우 표현·Montage·피해·Death 태그·팀 필터·대상별 1회 명중이 일치한다
