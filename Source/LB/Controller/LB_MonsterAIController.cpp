@@ -4,11 +4,14 @@
 #include "Controller/LB_MonsterAIController.h"
 
 #include "AbilitySystemComponent.h"
+#include "Character/Monster/LB_MeleeMonster.h"
 #include "Character/Monster/LB_MonsterBase.h"
+#include "Component/LB_MeleeHitboxComponent.h"
 #include "Components/StateTreeAIComponent.h"
 #include "LB.h"
 #include "StateTree.h"
 #include "TimerManager.h"
+#include "Utility/LB_NativeGameplayTag.h"
 
 ALB_MonsterAIController::ALB_MonsterAIController()
 {
@@ -30,6 +33,7 @@ void ALB_MonsterAIController::BeginPlay()
 
 void ALB_MonsterAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	UnbindDeathTagEvent();
 	StopCombatLogic(TEXT("Controller EndPlay"));
 
 	Super::EndPlay(EndPlayReason);
@@ -37,6 +41,10 @@ void ALB_MonsterAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ALB_MonsterAIController::OnPossess(APawn* InPawn)
 {
+	// 재Possess 시 이전 Pawn ASC 구독과 예약 시작 해제
+	UnbindDeathTagEvent();
+	GetWorldTimerManager().ClearTimer(StartRetryHandle);
+
 	Super::OnPossess(InPawn);
 
 	StartRetryCount = 0;
@@ -45,6 +53,7 @@ void ALB_MonsterAIController::OnPossess(APawn* InPawn)
 
 void ALB_MonsterAIController::OnUnPossess()
 {
+	UnbindDeathTagEvent();
 	StopCombatLogic(TEXT("UnPossess"));
 	TargetActor.Reset();
 	// 다음 Possess에서 다시 시작할 수 있도록 초기화
@@ -83,8 +92,12 @@ void ALB_MonsterAIController::TryStartCombatLogic()
 		return;
 	}
 
+	// ASC 준비 이후 구독. 이미 사망한 경우도 같은 정리 경로 사용
+	BindDeathTagEvent(Monster->GetAbilitySystemComponent());
+
 	if (Monster->IsDead())
 	{
+		HandleMonsterDeath();
 		return;
 	}
 
@@ -173,4 +186,78 @@ void ALB_MonsterAIController::StopCombatLogic(const FString& Reason)
 	}
 
 	StopMovement();
+}
+
+void ALB_MonsterAIController::BindDeathTagEvent(UAbilitySystemComponent* ASC)
+{
+	if (!HasAuthority() || !ASC)
+	{
+		return;
+	}
+
+	if (DeathTagBoundASC.Get() == ASC && DeathTagHandle.IsValid())
+	{
+		return;
+	}
+
+	UnbindDeathTagEvent();
+
+	DeathTagHandle = ASC->RegisterGameplayTagEvent(TAG_State_Death, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::OnDeathTagChanged);
+	DeathTagBoundASC = ASC;
+}
+
+void ALB_MonsterAIController::UnbindDeathTagEvent()
+{
+	if (UAbilitySystemComponent* ASC = DeathTagBoundASC.Get())
+	{
+		if (DeathTagHandle.IsValid())
+		{
+			ASC->RegisterGameplayTagEvent(TAG_State_Death, EGameplayTagEventType::NewOrRemoved)
+				.Remove(DeathTagHandle);
+		}
+	}
+
+	DeathTagHandle.Reset();
+	DeathTagBoundASC.Reset();
+}
+
+void ALB_MonsterAIController::OnDeathTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	if (NewCount > 0)
+	{
+		HandleMonsterDeath();
+	}
+}
+
+void ALB_MonsterAIController::HandleMonsterDeath()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	StopMovement();
+	TargetActor.Reset();
+
+	ALB_MeleeMonster* MeleeMonster = Cast<ALB_MeleeMonster>(GetPawn());
+	if (!MeleeMonster)
+	{
+		return;
+	}
+
+	// 몬스터 근접 공격 Spec만 취소. 그 외 Ability는 건드리지 않음
+	if (UAbilitySystemComponent* ASC = MeleeMonster->GetAbilitySystemComponent())
+	{
+		const FGameplayAbilitySpecHandle AttackHandle = MeleeMonster->FindMeleeAttackSpecHandle();
+		if (AttackHandle.IsValid())
+		{
+			ASC->CancelAbilityHandle(AttackHandle);
+		}
+	}
+
+	if (ULB_MeleeHitboxComponent* Hitbox = MeleeMonster->GetMeleeHitbox())
+	{
+		Hitbox->ForceEndHitWindow();
+	}
 }
