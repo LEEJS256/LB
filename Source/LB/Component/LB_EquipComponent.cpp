@@ -4,6 +4,7 @@
 #include "Component/LB_EquipComponent.h"
 #include "Equipment/LB_Equipment.h"
 #include "Engine/World.h"
+#include "Subsystem/LB_GISubsystem_Data.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Data/LB_DT_WeaponInformation.h"
 #include "GameplayTagContainer.h"
@@ -39,7 +40,8 @@ TArray<ALB_Equipment*> ULB_EquipComponent::EquipWeaponSet(FGameplayTag EquipTag,
 
 	UnequipWeaponSet();
 
-	const FLB_DT_WeaponInformation* Row = FindWeaponRow(EquipTag);
+	const ULB_GISubsystem_Data* Data = ULB_GISubsystem_Data::Get_Subsystem_Data(this);
+	const FLB_DT_WeaponInformation* Row = Data ? Data->FindWeaponRow(EquipTag) : nullptr;
 
 	TArray<FLB_WeaponSlot> Slots;
 	if (Row && !Row->Slots.IsEmpty())
@@ -161,27 +163,6 @@ void ULB_EquipComponent::ReserveExitCombat()
 	                                       CombatExitDelay, false);
 }
 
-const FLB_DT_WeaponInformation* ULB_EquipComponent::FindWeaponRow(const FGameplayTag& WeaponTag) const
-{
-	if (!DT_WeaponInfo)
-	{
-		return nullptr;
-	}
-
-	// Weapon.Dual.Dagger -> Weapon.Dual -> Weapon 순서로 탐색
-	FGameplayTag Current = WeaponTag;
-	while (Current.IsValid())
-	{
-		if (const FLB_DT_WeaponInformation* Row =
-			DT_WeaponInfo->FindRow<FLB_DT_WeaponInformation>(Current.GetTagName(), TEXT("EquipWeaponLookup"), false))
-		{
-			return Row;
-		}
-		Current = Current.RequestDirectParent();
-	}
-
-	return nullptr;
-}
 
 
 void ULB_EquipComponent::UnequipWeaponSet()
@@ -201,6 +182,7 @@ void ULB_EquipComponent::UnequipWeaponSet()
 	}
 
 	SpawnedWeapons.Empty();
+	CurrentSlots.Empty();  
 	CurrentWeaponTag = FGameplayTag();
 }
 
