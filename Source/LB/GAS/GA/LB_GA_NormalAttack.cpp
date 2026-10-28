@@ -47,7 +47,8 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	}
 	ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(ActorInfo->AvatarActor.Get());
 	
-	ALB_PlayerState* PS= Character->GetPlayerState<ALB_PlayerState>(); 
+	// 몬스터 Avatar는 플레이어 캐릭터가 아니므로 PlayerState 태그는 플레이어일 때만 처리
+	ALB_PlayerState* PS = Character ? Character->GetPlayerState<ALB_PlayerState>() : nullptr;
 
 	if (PS)
 	{
@@ -119,7 +120,8 @@ void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 
 	ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(ActorInfo->AvatarActor.Get());
 	
-	ALB_PlayerState* PS= Character->GetPlayerState<ALB_PlayerState>(); 
+	// 몬스터 Avatar는 플레이어 캐릭터가 아니므로 PlayerState 태그는 플레이어일 때만 처리
+	ALB_PlayerState* PS = Character ? Character->GetPlayerState<ALB_PlayerState>() : nullptr;
 
 	if (PS)
 	{
