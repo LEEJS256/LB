@@ -18,7 +18,7 @@ class LB_API ULB_DA_Equipment : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public:
-	// 아이템 종류 구분용 태그. 예) Item.Equipment, Item.Consumable
+	// 아이템 종류 구분용 태그. 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	FGameplayTag ItemTypeTag;
 

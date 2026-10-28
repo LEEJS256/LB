@@ -123,6 +123,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<ULB_BattleComponent> BattleComp;
 
+	UPROPERTY(EditDefaultsOnly, Category = "LB|Default")
+	FName DefaultWeaponItemCode;   // 마스터 DT의 행 이름
+
 #pragma endregion
 
 public:

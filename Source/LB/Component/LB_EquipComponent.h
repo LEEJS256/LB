@@ -5,13 +5,13 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
-#include "Data/LB_DT_WeaponInformation.h"
+
 #include "LB_EquipComponent.generated.h"
 
 
 class UDataTable;
 class ALB_Equipment;
-
+struct FLB_WeaponSlot;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class LB_API ULB_EquipComponent : public UActorComponent
@@ -49,19 +49,12 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
  
-	// 행 구조체: FLB_DT_WeaponInformation / 행 이름 = 태그 전체 이름
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equip|Settings",
-		meta = (RowType = "/Script/LB.LB_DT_WeaponInformation"))
-	TObjectPtr<UDataTable> DT_WeaponInfo;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equip|Settings")
 	float CombatExitDelay = 4.f;
 private:
 	void AttachWeapon(int32 Index, bool bCombat);
 	
-	// 정확히 일치하는 행을 찾고, 없으면 부모 태그로 끝까지 올라가며 탐색
-	const FLB_DT_WeaponInformation* FindWeaponRow(const FGameplayTag& WeaponTag) const;
- 
 	// 현재 장착 중인 무기 액터들 (슬롯 순서대로)
 	UPROPERTY()
 	TArray<TObjectPtr<ALB_Equipment>> SpawnedWeapons;

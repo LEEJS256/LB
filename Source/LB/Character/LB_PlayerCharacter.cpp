@@ -36,21 +36,20 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 
-	GasComp		= CreateDefaultSubobject<ULB_GasComponent>(TEXT("GasComp"));
-	EquipComp	= CreateDefaultSubobject<ULB_EquipComponent>(TEXT("EquipComp"));
+	GasComp = CreateDefaultSubobject<ULB_GasComponent>(TEXT("GasComp"));
+	EquipComp = CreateDefaultSubobject<ULB_EquipComponent>(TEXT("EquipComp"));
 	MeleeHitbox = CreateDefaultSubobject<ULB_MeleeHitboxComponent>(TEXT("MeleeHitbox"));
 	MeleeHitbox->SetupAttachment(GetMesh());
 
 	BattleComp = CreateDefaultSubobject<ULB_BattleComponent>(TEXT("BattleComp"));
-
 }
 
 void ALB_PlayerCharacter::SetSprinting(bool bSprinting)
 {
 	bIsSprinting = bSprinting;
 
-	ULB_AttributeSet* AttributeSet =  Get_GasComponent()->GetAttributeSet();
-	
+	ULB_AttributeSet* AttributeSet = Get_GasComponent()->GetAttributeSet();
+
 	// UE_LOG(LogTemp, Warning, TEXT("SprintWeight: %f"), AttributeSet->GetSprintWeight());
 	// UE_LOG(LogTemp, Warning, TEXT("SprintSpeed: %f"), SprintSpeed);
 	float WalkSpeed = AttributeSet->GetSpeed();
@@ -63,16 +62,17 @@ void ALB_PlayerCharacter::BindDelegate()
 {
 	if (ULB_BattleComponent* pBattleComp = GetBattleComponent())
 	{
-		pBattleComp->BindCombatStateEvents();   // 중복 바인딩 방지
+		pBattleComp->BindCombatStateEvents(); // 중복 바인딩 방지
 	}
-	
+
 	if (bSpeedBound) return;
 
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */;
-	if (!ASC) return;   // 아직 준비 안 됐으면 패스
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */
+	;
+	if (!ASC) return; // 아직 준비 안 됐으면 패스
 
 	ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetSpeedAttribute())
-		.AddUObject(this, &ALB_PlayerCharacter::OnSpeedChanged);
+	   .AddUObject(this, &ALB_PlayerCharacter::OnSpeedChanged);
 
 	bSpeedBound = true;
 
@@ -83,40 +83,40 @@ void ALB_PlayerCharacter::BindDelegate()
 void ALB_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Speed %.1f -> %.1f (Base %.1f)"),
-	 Data.OldValue, Data.NewValue,
-	 GetAbilitySystemComponent()->GetNumericAttributeBase(ULB_AttributeSet::GetSpeedAttribute()));
- 
+	       Data.OldValue, Data.NewValue,
+	       GetAbilitySystemComponent()->GetNumericAttributeBase(ULB_AttributeSet::GetSpeedAttribute()));
+
 	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
 }
 
 
 void ALB_PlayerCharacter::GiveDefaultWeapon()
 {
-	if (!HasAuthority() || !DefaultWeaponClass) return;
+	if (!HasAuthority() || DefaultWeaponItemCode.IsNone()) return;
 
 	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
 	ULB_InventoryComponent* Inv = PS ? PS->Get_InventoryComponent() : nullptr;
-	if (!Inv) return;
-
-	// 무기 BP에 지정된 DA를 CDO에서 읽음
-	const ALB_Equipment* WeaponCDO = DefaultWeaponClass->GetDefaultObject<ALB_Equipment>();
-	ULB_DA_Equipment* DA = WeaponCDO ? WeaponCDO->GetItemData() : nullptr;
-	if (!DA) return;
+	if (!Inv)
+		return;
 
 	// PlayerState는 리스폰해도 유지되니까 이미 있으면 AddItem 생략
-	if (Inv->GetInventoryItems().IsEmpty())
+	FGuid Id;
+	if (!Inv->FindFirstEntryByCode(DefaultWeaponItemCode, Id))
 	{
-		if (!Inv->AddItem(DA, DefaultWeaponClass, 1)) return;
+		if (Inv->AddItem(DefaultWeaponItemCode, 1) > 0)
+			return; // 0이면 성공
+		if (!Inv->FindFirstEntryByCode(DefaultWeaponItemCode, Id))
+			return;
 	}
-
-	const FLB_ItemEntry& Entry = Inv->GetInventoryItems().Last();
 
 	// 리스폰이면 bIsEquipped가 true로 남아 있어서 EquipItem이 막히니까 먼저 해제
-	if (Entry.bIsEquipped)
+	const FLB_ItemEntry* Entry = Inv->GetInventoryItems().FindByPredicate(
+		[&](const FLB_ItemEntry& E) { return E.ItemInstanceId == Id; });
+	if (Entry && Entry->bIsEquipped)
 	{
-		Inv->UnequipItem(Entry.ItemInstanceId);
+		Inv->UnequipItem(Id);
 	}
-	Inv->EquipItem(Entry.ItemInstanceId);
+	Inv->EquipItem(Id);
 }
 
 UAbilitySystemComponent* ALB_PlayerCharacter::GetAbilitySystemComponent() const
@@ -254,6 +254,4 @@ void ALB_PlayerCharacter::OnRep_Facing()
 void ALB_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }
-

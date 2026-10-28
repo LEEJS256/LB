@@ -20,17 +20,22 @@ struct FLB_ItemEntry
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	FGuid ItemInstanceId;
 
+	// 마스터테이블 RowName. DA는 이 코드로 조회
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	TObjectPtr<ULB_DA_Equipment> ItemData = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	TSubclassOf<ALB_Equipment> EquipmentClass = nullptr;
+	FName ItemCode;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	int32 StackCount = 1;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	bool bIsEquipped = false;
+	
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	// TObjectPtr<ULB_DA_Equipment> ItemData = nullptr;
+	//
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	// TSubclassOf<ALB_Equipment> EquipmentClass = nullptr;
+
 
 	FLB_ItemEntry()
 		: ItemInstanceId(FGuid::NewGuid())
