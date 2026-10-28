@@ -15,8 +15,8 @@ UCLASS()
 class LB_API ALB_DropItem : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	ALB_DropItem();
 
@@ -24,7 +24,6 @@ public:
 	void InitDrop(FName InItemCode, int32 InCount);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 
 protected:
 	// Called when the game starts or when spawned
@@ -35,11 +34,12 @@ protected:
 
 	UFUNCTION()
 	void OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	                          UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+	                          const FHitResult& SweepResult);
 
 	// 클라/서버 공통 외형 갱신 (DA 조회 → 등급별 나이아가라)
-	
 	void RefreshVisual();
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USphereComponent> Sphere;
@@ -48,7 +48,7 @@ protected:
 	TObjectPtr<UNiagaraComponent> GradeEffect;
 
 	UPROPERTY(ReplicatedUsing = OnRep_ItemCode)
-	FName ItemCode;
+	FName ItemCode = "1000";
 
 	UPROPERTY(Replicated)
 	int32 Count = 1;
@@ -57,4 +57,5 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Drop")
 	TMap<FGameplayTag, TSoftObjectPtr<UNiagaraSystem>> GradeEffectMap;
 
+	bool bPickedUp = false;
 };

@@ -4,8 +4,10 @@
 #include "Object/Item/LB_DropItem.h"
 
 #include "NiagaraComponent.h"
+#include "Component/LB_InventoryComponent.h"
 #include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PlayerState/LB_PlayerState.h"
 
 
 // Sets default values
@@ -61,17 +63,24 @@ void ALB_DropItem::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComp, AAc
                                         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                         const FHitResult& SweepResult)
 {
-	if (!HasAuthority()) return;
+	if (!HasAuthority() || bPickedUp || ItemCode.IsNone() || Count <= 0) return;
 
 	const APawn* Pawn = Cast<APawn>(OtherActor);
-	APlayerState* PS = Pawn ? Pawn->GetPlayerState() : nullptr;
-	if (!PS) return;
+	ALB_PlayerState* PS = Pawn ? Pawn->GetPlayerState<ALB_PlayerState>() : nullptr;
+	ULB_InventoryComponent* Inv = PS ? PS->Get_InventoryComponent() : nullptr;
+	if (!Inv) return;
 
-	// ULB_InventoryComponent* Inv = PS->FindComponentByClass<ULB_InventoryComponent>();
-	// if (!Inv) return;
-	// const int32 Remain = Inv->AddItem(ItemCode, Count); // 못 넣은 수량 반환
-	// if (Remain <= 0) Destroy();
-	// else Count = Remain;
+	const int32 Remain = Inv->AddItem(ItemCode, Count);   // 못 넣은 수량 반환
+	if (Remain <= 0)
+	{
+		bPickedUp = true;
+		SetActorEnableCollision(false);
+		Destroy();
+	}
+	else
+	{
+		Count = Remain;   // 일부만 먹었으면 남은 수량으로 갱신
+	}
 }
 
 void ALB_DropItem::RefreshVisual()
