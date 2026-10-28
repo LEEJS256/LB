@@ -10,6 +10,7 @@
 
 class UTexture2D;
 class UGameplayEffect;
+class ALB_Equipment;
 /**
  * 
  */
@@ -54,6 +55,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Item|Shop")
 	int32 GetSellPrice() const { return FMath::FloorToInt(BuyPrice * SellPricePercent); }
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
+	FGameplayTag WeaponTag;   // 무기 DT 행 조회용 (예: Weapon.Dual.Dagger)
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
+	TSoftClassPtr<ALB_Equipment> EquipClass;
 	
 	// Asset Manager용 ID. 타입은 전부 "LBItem"으로 통일하고, 이름은 에셋 이름 사용
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override
