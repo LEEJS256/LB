@@ -1,0 +1,21 @@
+id: CT-002
+title: 로컬 동적 레벨 조립 수명
+goal: |
+  AActor 파생 ALB_DungeonAssembler를 Dungeon에 추가한다. Tick은 비활성으로 두고 BlueprintCallable 로컬 조립 함수 bool AssembleLocal(const FLB_DungeonAssemblyState& Assembly), void UnloadLocal()를 제공한다. bReplicates=false인 로컬 실행 Actor로 두고 외부 RPC·자동 BeginPlay 로드·Layout 조회는 추가하지 않는다.
+  Assembly.Validate 통과 후 LoadLevelInstanceBySoftObjectPtr의 FTransform 오버로드를 Piece마다 호출한다. Transform은 월드 배치값 그대로이고 Assembler Transform을 합성하지 않는다. OptionalLevelNameOverride는 LB_<Assembly.InstanceKey>_<PieceId>로 구성하고 키에는 영문숫자/underscore만 허용한다.
+  UPROPERTY 목록으로 Streaming 객체를 보유한다. 같은 InstanceKey와 동일 Pieces 재호출은 중복 생성 없이 기존 요청 결과를 반환한다. 같은 키에 다른 Pieces 또는 다른 키는 거부한다. 수락 시 입력 State를 복사해 보유하고 외부 원본 변경에 의존하지 않는다. bool 반환은 요청 수락이며 로드/표시 완료로 간주하지 않는다.
+  OnLevelShown과 상태 조회로 모든 조각의 표시 완료를 집계해 로컬 BlueprintAssignable OnAssemblyReady를 한 번 발행한다. 이미 표시된 경우도 누락하지 않는다. 초기 호출 실패 또는 타이머 기반 LoadTimeoutSeconds(기본 30초) 초과 시 OnAssemblyFailed를 한 번 발행하고 부분 로드 전체를 정리한다.
+  UnloadLocal/EndPlay에서 delegate·타이머를 해제하고 ShouldBeVisible/ShouldBeLoaded=false와 SetIsRequestingUnloadAndRemoval(true)로 해제를 요청한다. 해제 진행 중에는 새 요청을 거부하고 이 Actor는 한 번만 조립하는 수명을 사용한다. Actor Tick·FlushLevelStreaming·Gameplay Actor Spawn은 추가하지 않는다.
+done_when:
+  - "명시적 이름·월드 Transform을 사용하고 동일 요청은 멱등하다"
+  - "요청 수락과 표시 완료를 구분하고 Ready/Failed는 로컬에서 각각 해당 종료 경로에 한 번만 발생한다"
+  - "타임아웃·부분 실패·종료가 Streaming과 delegate·타이머를 정리한다"
+allow:
+  - Source/LB/Dungeon/LB_DungeonAssembler.h
+  - Source/LB/Dungeon/LB_DungeonAssembler.cpp
+context:
+  - Source/LB/Data/Dungeon/LB_DungeonAssemblyTypes.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 비동기 완료·실패 정리·동일 요청 중복 방지를 확인했다

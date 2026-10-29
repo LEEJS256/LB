@@ -1,0 +1,45 @@
+steps:
+  - id: E01
+    after: CT-001
+    title: 항아리 BP와 Chaos 표현 연결
+    items:
+      - action: 에디터 종료 후 일반 빌드하고 /Game/LB/Tests/Destructible에 ALB_DestructibleProp 파생 BP_DestructiblePot과 Lvl_DestructibleTest를 만든다. 임시 큐브/기본 도형과 HitReceiver 크기를 맞춘다.
+        expected: BP가 컴파일되고 WorldDynamic HitReceiver가 Pawn Overlap을 받으며 이동은 막지 않는다.
+        restart_editor: true
+      - action: OnBreakPresentation에서 임시 Mesh를 숨겨 표현 이벤트를 확인한다. Geometry Collection이 준비됐다면 로컬 효과를 연결하고 파편의 Pawn 충돌·복제를 끈다. 아직 없다면 이 단계는 숨김 표현으로 진행하고 E99에서 실제 Chaos를 확인한다.
+        expected: 최종 Mesh 확보 없이도 표현이 한 번 실행되는지 확인할 수 있다. 숨김 표현만으로 Chaos 검증 완료를 기록하지 않는다.
+      - target: /Game/LB/Tests/Destructible/Lvl_DestructibleTest
+        action: 서버 전용 임시 테스트 이벤트에서 TryBreak를 연속 호출하고 Client 로컬 호출 및 Actor 직접 Destroy도 시험한다.
+        expected: 서버 첫 호출만 성공하고 표현이 한 번 발생한다. Client 호출은 실패하고 직접 Destroy는 보상을 만들지 않는다.
+  - id: E02
+    after: CT-003
+    title: 실제 기본 공격 연결과 기존 전투 회귀
+    items:
+      - action: 플레이어 근접 공격으로 항아리를 좌우에서 타격하고 장비·드롭·일반 WorldDynamic 배경을 함께 판정 범위에 둔다.
+        expected: 항아리만 한 번 파괴되며 장비나 Pickup을 게임플레이 명중으로 처리하지 않는다.
+        restart_editor: true
+      - action: 기존 플레이어 대 몬스터 피해·팀 필터·사망 필터와 콤보·공격 종료 후 Hitbox 정리를 Listen Server와 Client에서 확인한다.
+        expected: 기존 GAS 피해와 공격 수명이 유지되고 몬스터 공격은 환경물을 파괴하지 않는다.
+  - id: E03
+    after: CT-005
+    title: Loot Table과 기존 Pickup 검증
+    items:
+      - action: /Game/LB/Tests/Destructible의 Loot DA에 기존 DT_MasterItem의 유효 ItemCode와 수량을 설정하고 항아리 LootTable·기존 BP_DropItem 참조를 연결한다. 외형 설정이 필요하면 같은 테스트 루트의 파생 BP를 사용한다. 공용 테이블과 BP는 수정하지 않는다.
+        expected: 유효 코드가 조회되고 새 Pickup 클래스 없이 기존 ALB_DropItem 경로를 사용한다.
+        restart_editor: true
+      - action: 확률 0과 1, 추첨 0회·고정 3회·범위 1~3회, 동일 ItemCode 중복, 빈 테이블, 무효 횟수·Weight·수량·ItemCode와 반복 파괴를 시험한다.
+        expected: 확률 0과 추첨 0회는 드롭 없음, 확률 1·고정 3회는 유효 설정에서 결과 3개가 별도 위치에 생성된다. 각 Count는 Entry 범위이며 무효 결과는 재추첨하지 않는다.
+      - action: 플레이어를 떼어 두고 Drop Actor 생성·ItemCode·수량을 확인한 뒤 접근해 획득한다. Inventory 전체/일부 잔여 수량도 확인한다.
+        expected: 기존 서버 Pickup으로 획득하고 Inventory에 실제 추가된 수량만 반영되며 남은 수량은 기존 DropItem 동작을 따른다.
+  - id: E99
+    before: PR
+    title: 파괴·보상 네트워크 최종 확인
+    items:
+      - target: /Game/LB/Tests/Destructible
+        action: 임시 기본 도형으로 만든 Geometry Collection이라도 OnBreakPresentation에 연결해 실제 Chaos 파괴를 확인한다. 최종 항아리 아트는 이후 교체해도 된다.
+        expected: 파편이 로컬에서 한 번 실행되고 Pawn 충돌·복제 없이 정리된다. 미준비 상태는 Chaos 통과로 체크하지 않는다.
+      - action: 최종 코드로 에디터를 재시작하고 Listen Server와 Client 1에서 각자 공격 및 동시 타격을 시험한다.
+        expected: 서버 단일 파괴마다 확률/추첨 묶음이 한 번만 실행되고 결과 수만큼 Drop Actor가 생성되며 양쪽 파괴 표현이 확인된다. 서버 BP 표현 진입 전에 Loot 처리가 끝나는지 로그로 확인한다.
+        restart_editor: true
+      - action: 파괴 후 원본 Actor가 남아 있는 동안 늦은 Client 접속을 시험하고 지연 제거 이후에도 확인한다. PIE 종료와 직접 Destroy도 수행한다.
+        expected: 접속 시 온전한 항아리가 되살아나지 않고 정리·맵 종료에서 추가 Loot가 나오지 않으며 파편과 타이머가 남지 않는다.

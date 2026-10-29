@@ -1,0 +1,32 @@
+steps:
+  - id: E01
+    after: CT-001
+    title: 정적 조각과 Layout Data Asset 제작
+    items:
+      - action: 에디터를 재시작하고 /Game/LB/Tests/Dungeon 아래에 non-World Partition 조각 맵 2~3개와 Lvl_DungeonAssemblyTest를 만든다. 원점 Pivot·바닥 Z·X 진행축을 통일하고 임시 기본 도형 기반의 정적 환경과 충돌만 배치한다.
+        expected: PlayerStart·GameMode 의존·BeginPlay Spawn·몬스터·항아리·Pickup 없이 조각을 단독으로 확인할 수 있다.
+        restart_editor: true
+      - action: /Game/LB/Tests/Dungeon의 Layout DA에 영문숫자/underscore PieceId·맵 참조·월드 위치를 입력한다. 회전은 0, Scale은 1로 두고 동일 맵을 다른 PieceId로 두 번 포함한다.
+        expected: 모든 조각이 유효한 참조를 가지며 수동 배치에서 바닥·접합부가 맞는다.
+  - id: E02
+    after: CT-002
+    title: 로컬 조립 수락과 표시 완료 구분
+    items:
+      - target: /Game/LB/Tests/Dungeon/Lvl_DungeonAssemblyTest
+        action: 같은 테스트 루트의 ALB_DungeonAssembler 파생 BP를 Identity Transform에 배치하고 테스트 이벤트에서 Layout의 BuildAssembly로 만든 동일 State를 AssembleLocal에 두 번 전달한다.
+        expected: Streaming 인스턴스가 중복되지 않고 모든 조각이 표시된 뒤에만 로컬 Ready가 한 번 발생한다.
+        restart_editor: true
+      - action: None/중복 PieceId·무효 맵·잘못된 Transform과 짧은 Timeout을 시험하고 부분 로드 중 UnloadLocal 및 PIE 종료를 수행한다.
+        expected: 실패가 로그/이벤트로 드러나며 부분 로드·타이머·delegate가 정리되고 해제 중 새 조립을 시작하지 않는다.
+  - id: E99
+    before: PR
+    title: 동일 배치와 늦은 접속 최종 확인
+    items:
+      - target: /Game/LB/Tests/Dungeon/Lvl_DungeonAssemblyTest
+        action: 임시 조립 이벤트와 수동 Assembler를 제거한다. 테스트 전용 BP_DungeonTestGameMode의 GameStateClass·StartupDungeonLayout을 설정하고 이 맵의 GameMode Override로 지정한다. 공용 BP_GameMode와 Config는 수정하지 않는다. 고정 플랫폼에서 Listen Server와 Client 1을 시작한다.
+        expected: GameMode가 목록을 한 번 게시하고 GameState의 InstanceKey/Pieces가 양쪽에 일치한다. 각 World의 로컬 조립기 하나가 같은 이름·위치로 조립하며 표시 완료 후 Ready를 한 번 발생시킨다.
+        restart_editor: true
+      - action: 조립 완료 후 늦은 Client를 접속시키고 조각 충돌·접합부·동일 맵 반복 인스턴스를 양쪽에서 비교한다.
+        expected: Client가 Layout DA를 별도 선택하지 않고 현재 복제된 배치 목록에서 동일 던전을 조립하며 빠진 조각이나 중복 인스턴스가 없다.
+      - action: 서버/Client 로드 지연·실패를 분리해 확인하고 PIE 종료를 수행한다.
+        expected: 한 World의 Ready를 전원 준비로 표시하지 않고 실패와 종료에서 Streaming 객체·타이머·delegate가 정리된다.
