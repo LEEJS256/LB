@@ -42,6 +42,11 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 	MeleeHitbox->SetupAttachment(GetMesh());
 
 	BattleComp = CreateDefaultSubobject<ULB_BattleComponent>(TEXT("BattleComp"));
+
+	UCharacterMovementComponent* CMC = GetCharacterMovement();
+	CMC->BrakingDecelerationWalking = 1800.f; //관성크기
+	CMC->BrakingFrictionFactor = 0.f; // 마찰 항 제거 → 등감속이라 예측이 정확해짐
+	CMC->bUseSeparateBrakingFriction = false;
 }
 
 void ALB_PlayerCharacter::SetSprinting(bool bSprinting)
