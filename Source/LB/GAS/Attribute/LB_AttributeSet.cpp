@@ -21,6 +21,8 @@ ULB_AttributeSet::ULB_AttributeSet()
 	InitGold(100.f);
 	InitSpeed(500.f);
 	InitSprintWeight(1.3f);
+	InitDashDistance(100.f);
+	InitDashDuration(0.3f);
 }
 
 void ULB_AttributeSet::Set_PlayerName(FName ArgName)
@@ -45,6 +47,8 @@ void ULB_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, Poise, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, Speed, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, SprintWeight, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, DashDistance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, DashDuration, COND_None, REPNOTIFY_Always);
 }
 
 void ULB_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -212,4 +216,14 @@ void ULB_AttributeSet::OnRep_Poise(const FGameplayAttributeData& OldPoise)
 void ULB_AttributeSet::OnRep_SprintWeight(const FGameplayAttributeData& OldSprintWeight)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ULB_AttributeSet, SprintWeight, OldSprintWeight);
+}
+
+void ULB_AttributeSet::OnRep_DashDistance(const FGameplayAttributeData& OldDashDistance)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(ULB_AttributeSet, DashDistance, OldDashDistance);
+}
+
+void ULB_AttributeSet::OnRep_DashDuration(const FGameplayAttributeData& OldDashDuration)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(ULB_AttributeSet, DashDuration, OldDashDuration);
 }
