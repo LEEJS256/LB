@@ -1,0 +1,19 @@
+id: CT-002
+title: 근접 Hitbox의 파괴 오브젝트 감지
+goal: |
+  ULB_MeleeHitboxComponent 생성자의 충돌 응답에 ECC_WorldDynamic Overlap을 추가한다.
+  TryRegisterHit에서 Pawn 또는 ALB_DestructibleProp에 해당하는 Actor만 HitActors에 등록하고 Broadcast한다. 그 외 WorldDynamic 장비·Pickup·배경 Actor는 제외한다.
+  기존 Owner 제외·서버 전용·판정 구간별 Actor당 1회·활성화 직후 Overlap 수집·ForceEndHitWindow 동작을 유지한다. Pawn 채널이나 Actor ObjectType을 바꾸지 않고 피해·Loot·클라이언트 판정은 추가하지 않는다.
+done_when:
+  - "Pawn과 ALB_DestructibleProp만 명중 후보가 된다"
+  - "기존 구간별 중복 방지·서버 권한·즉시 Overlap 검사가 유지된다"
+  - "기타 WorldDynamic Actor를 제외하고 파괴나 피해를 Hitbox에서 직접 처리하지 않는다"
+allow:
+  - Source/LB/Component/LB_MeleeHitboxComponent.cpp
+context:
+  - Source/LB/Component/LB_MeleeHitboxComponent.h
+  - Source/LB/Object/Destructible/LB_DestructibleProp.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 기존 Pawn 명중과 WorldDynamic 필터를 확인했다

@@ -1,0 +1,24 @@
+id: CT-005
+title: 서버 파괴 확정 후 다중 DropItem 생성
+goal: |
+  ALB_DestructibleProp에 ULB_LootTableDataAsset 참조 LootTable, TSubclassOf<ALB_DropItem> DropItemClass, 로컬 DropOffset(기본 Z=80), DropSpacing(기본 35, 음수는 0 처리)을 EditDefaultsOnly로 추가한다.
+  TryBreak는 서버에서 bBroken/Impact를 먼저 확정하고 HitReceiver 충돌을 끈 뒤 SpawnBreakLoot() → ForceNetUpdate → ApplyBreakState의 BP 표현 순서로 처리한다. 파괴 가드는 Spawn/Blueprint 호출 전에 설정한다. 원본 지연 제거 수명도 외부 BP 호출 전에 예약한다. BP가 원본을 제거하거나 재호출해도 추첨·생성이 다시 일어나지 않아야 한다.
+  Actor별 RandomStream을 서버에서 한 번 초기화하고 RollLoot(Random, Results)를 파괴당 한 번만 호출한다. 각 결과의 ItemCode는 ULB_GISubsystem_Data의 GetItemInfo로 검증하고 무효 코드는 Warning 후 건너뛴다. 설정 누락·생성 실패도 재추첨하지 않으며 다른 유효 결과 처리는 계속한다.
+  각 결과는 SpawnActorDeferred<ALB_DropItem> → InitDrop(ItemCode, Count) → FinishSpawning으로 생성한다. Drop 위치는 TransformPosition(DropOffset + FVector(0,(Index-(Results.Num()-1)*0.5f)*DropSpacing,0))로 분산한다. 매회 유효한 World/Actor를 확인하고 원본 종료 시 남은 처리를 중단한다.
+  전체 결과 생성 시도 뒤 BP 표현을 호출하되 서버 함수 호출 순서만 보장한다. 서로 다른 Actor의 Client 복제 도착 순서에 의존하지 않는다. Client OnRep·BP·Destroyed·EndPlay·파편 이벤트에서 보상을 만들지 않으며 기존 Pickup/Inventory는 변경하지 않는다.
+done_when:
+  - "서버 파괴 가드·충돌 비활성화 뒤 RollLoot를 한 번 호출하고 다중 결과별 생성이 실행된다"
+  - "다중 결과는 코드 검증 후 초기화된 기존 DropItem으로 분산 생성된다"
+  - "무효 항목·Spawn 실패는 재추첨 없이 건너뛰고 파괴 상태를 유지한다"
+  - "서버에서 보상 처리가 BP 표현보다 앞서며 Client의 Actor 도착 순서를 가정하지 않는다"
+allow:
+  - Source/LB/Object/Destructible/LB_DestructibleProp.h
+  - Source/LB/Object/Destructible/LB_DestructibleProp.cpp
+context:
+  - Source/LB/Data/Loot/LB_LootTableDataAsset.h
+  - Source/LB/Object/Item/LB_DropItem.h
+  - Source/LB/Subsystem/LB_GISubsystem_Data.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 파괴 가드→Loot 배열 처리→BP 표현 순서·분산 위치·재진입 방지를 확인했다
