@@ -27,6 +27,12 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats|Speed")
 	float SprintWeight = 1.2f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats|Speed")
+	float DashDistance = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats|Speed")
+	float DashDuration = 0.3f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats|Health")
 	float Health = 100.f;
