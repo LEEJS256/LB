@@ -28,6 +28,9 @@ public:
 							bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 protected:
+	UPROPERTY(EditDefaultsOnly, Category="Dodge") float FallbackDashDistance = 200.f;
+	UPROPERTY(EditDefaultsOnly, Category="Dodge") float FallbackDashDuration = 0.3f;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Dodge")
 	TObjectPtr<UAnimMontage> DodgeMontage;
 
