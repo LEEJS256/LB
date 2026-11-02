@@ -1,0 +1,19 @@
+id: CT-003
+title: 플레이어 기본 공격의 항아리 파괴 연결
+goal: |
+  ULB_GA_NormalAttack::OnMeleeHit에서 기존 IsActive·서버·Target 유효성 검사 뒤, DamageEffectClass와 Target ASC 검사 전에 ALB_DestructibleProp 분기를 추가한다.
+  유효한 ALB_PlayerCharacter Avatar일 때만 Prop->TryBreak(Avatar, HitResult.ImpactPoint, (Prop위치-Avatar위치).GetSafeNormal())를 한 번 호출하고 반환한다. 플레이어가 아닌 Avatar에서는 Prop 분기를 처리하지 않는다.
+  생명체의 DamageEffectClass·Source/Target ASC·Health·팀·사망 검사 및 Attack-Armor/SetByCaller GE 피해 경로를 보존한다. 항아리 파괴에 GE나 Team 태그를 요구하지 않는다. 몬스터 Ability·콤보·공격 종료 처리는 변경하지 않는다.
+done_when:
+  - "Prop 분기가 GE/ASC 필터보다 앞에 있고 플레이어 Avatar에서만 TryBreak를 호출한다"
+  - "생명체의 기존 팀·사망·GAS 피해 계산이 보존된다"
+  - "몬스터 공격·콤보·입력·Montage 수명은 변경하지 않는다"
+allow:
+  - Source/LB/GAS/GA/LB_GA_NormalAttack.cpp
+context:
+  - Source/LB/Object/Destructible/LB_DestructibleProp.h
+  - Source/LB/Character/LB_PlayerCharacter.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 생명체 피해 경로 보존과 Prop 전용 분기 위치를 확인했다

@@ -1,0 +1,21 @@
+id: CT-001
+title: 항아리 서버 파괴 상태와 BP 표현 이벤트
+goal: |
+  AActor 파생 ALB_DestructibleProp을 Object/Destructible에 추가한다. USceneComponent Root와 UBoxComponent HitReceiver를 소유하고 Tick은 비활성, bReplicates=true로 둔다.
+  bool TryBreak(AActor* DamageCauser, const FVector& ImpactPoint, const FVector& ImpactDirection)를 BlueprintCallable로 제공한다. 서버·유효한 자신 이외 Causer·미파괴를 검사하고 한 번만 true를 반환한다. RPC나 내구도·ASC는 추가하지 않는다.
+  FLB_PropBreakState(BlueprintType)는 bBroken=false, ImpactPoint, ImpactDirection을 보유한다. ReplicatedUsing 상태 하나로 원자적으로 전달하고 OnRep_BreakState와 서버 직접 호출이 같은 ApplyBreakState()를 사용한다.
+  ApplyBreakState는 HitReceiver 충돌을 끄고 로컬 bool로 중복 표현을 차단한 뒤 BlueprintImplementableEvent void OnBreakPresentation(FVector ImpactPoint, FVector ImpactDirection)를 호출한다. Dedicated Server에서는 표현 이벤트를 생략한다.
+  서버는 BP 이벤트 호출 전에 파괴 가드·충돌 비활성화·수명을 확정한다. 파괴 상태를 ForceNetUpdate하고 BreakLifetime(기본 5초, 최소 1초) 후 제거한다. 파괴 직후 Destroy하지 않는다. HitReceiver는 WorldDynamic, QueryOnly, Pawn Overlap만 허용하며 기본 이동 방해는 없다. GeometryCollection C++ 의존·Loot·Destroyed/EndPlay 보상은 추가하지 않는다.
+done_when:
+  - "파괴 상태 한 개가 복제되고 서버 전용 TryBreak의 중복 호출은 false다"
+  - "서버/OnRep 공통 적용에서 충돌과 표현을 멱등 처리하고 전용 서버는 표현을 생략한다"
+  - "파괴 후 서버 수명과 Tick 비활성 및 WorldDynamic HitReceiver가 정의된다"
+allow:
+  - Source/LB/Object/Destructible/LB_DestructibleProp.h
+  - Source/LB/Object/Destructible/LB_DestructibleProp.cpp
+context:
+  - Source/LB/Object/Item/LB_DropItem.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 서버 권한·상태 복제·중복 표현 및 지연 제거 계약을 확인했다

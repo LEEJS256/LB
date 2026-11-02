@@ -1,0 +1,21 @@
+id: CT-004
+title: GameMode의 고정 Layout 선택과 배치 게시
+goal: |
+  ALB_GameMode에 EditDefaultsOnly ULB_DungeonLayoutDataAsset* StartupDungeonLayout=nullptr를 추가하고 StartPlay()에서 Super 이후 서버 ALB_GameState를 조회한다.
+  Layout이 null이면 Warning과 함께 게시하지 않는다. 유효 Layout이면 GUID Digits 형식의 InstanceKey로 BuildAssembly를 호출하고 성공한 State만 GameState::PublishDungeonAssembly에 전달한다.
+  중복 StartPlay 호출은 기존 게시 상태에서 추가 변환/게시/로드를 만들지 않는다. GameState는 읽기 전용 const 조회 API bool HasDungeonAssembly() const를 제공한다.
+  실패 원인을 로그로 남기고 기존 GameMode 시작·플레이어 Spawn 계약은 보존한다. GameMode는 로컬 레벨을 직접 로드하지 않고 클라이언트가 Layout을 조회하게 하지 않는다. 랜덤 생성·세션·로비·전원 Ready/입력 차단은 만들지 않는다.
+done_when:
+  - "GameMode가 고정 Layout을 런타임 State로 변환하고 GameState에 한 번 게시한다"
+  - "Layout 누락/변환 실패는 게시하지 않으며 중복 시작도 추가 조립을 만들지 않는다"
+  - "서버 선택·공유 상태·로컬 조립의 책임이 분리된다"
+allow:
+  - Source/LB/GameMode/LB_GameMode.h
+  - Source/LB/GameMode/LB_GameMode.cpp
+  - Source/LB/GameMode/LB_GameState.h
+context:
+  - Source/LB/Data/Dungeon/LB_DungeonLayoutDataAsset.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 StartPlay 게시 순서·중복 가드·기존 Spawn 흐름 보존을 확인했다

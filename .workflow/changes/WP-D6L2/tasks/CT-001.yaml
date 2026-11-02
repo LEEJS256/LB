@@ -1,0 +1,23 @@
+id: CT-001
+title: 고정 Layout과 런타임 확정 배치 데이터
+goal: |
+  Data/Dungeon의 LB_DungeonAssemblyTypes.h에 BlueprintType FLB_DungeonPiecePlacement(PieceId, TSoftObjectPtr<UWorld> Level, FTransform Transform=Identity)와 FLB_DungeonAssemblyState(FName InstanceKey=NAME_None, TArray<FLB_DungeonPiecePlacement> Pieces)를 정의한다.
+  FLB_DungeonAssemblyState::bool Validate(FString& OutError) const는 키·목록을 검사한다. 키/PieceId는 영문숫자/underscore만, PieceId는 None/중복 금지, Pieces는 1..32개, Level은 null 금지, Transform은 유한한 위치·회전0·Scale1만 허용한다. 같은 맵을 다른 PieceId로 사용하는 것은 허용한다.
+  UDataAsset 파생 ULB_DungeonLayoutDataAsset은 TArray Pieces만 보유한다. bool ValidateLayout(FString& OutError) const와 bool BuildAssembly(FName InstanceKey, FLB_DungeonAssemblyState& OutState, FString& OutError) const를 제공하고 같은 검증을 재사용한다.
+  BuildAssembly는 출력을 기본값으로 초기화하고 성공 시 원본을 복사한 독립 런타임 State를 반환한다. 서버 전용 호출은 다음 CT의 GameMode가 보장한다. Data Asset을 수정하거나 Layout 참조를 State에 넣지 않는다.
+  랜덤 생성·Seed·연결 포트·겹침 검사는 만들지 않는다. 32개 상한은 작은 고정 던전 프로토타입 경계이며 향후 대형 던전 전송 방식은 별도 검토한다.
+done_when:
+  - "작성용 Layout과 실행용 InstanceKey/Pieces가 분리된다"
+  - "Layout 변환과 런타임 State 검증이 같은 조각 규격을 따른다"
+  - "None/중복/수량/Soft 참조/Transform 실패는 출력 초기화와 원인을 남긴다"
+  - "DA 변경과 랜덤 생성 없이 확정 배치 복사본을 만든다"
+allow:
+  - Source/LB/Data/Dungeon/LB_DungeonAssemblyTypes.h
+  - Source/LB/Data/Dungeon/LB_DungeonLayoutDataAsset.h
+  - Source/LB/Data/Dungeon/LB_DungeonLayoutDataAsset.cpp
+context:
+  - Source/LB/Data/LB_PlayerDataAsset.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 원본/런타임 분리·1..32개 검증·독립 배치 복사를 확인했다
