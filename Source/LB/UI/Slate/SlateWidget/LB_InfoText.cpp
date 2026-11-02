@@ -1,5 +1,5 @@
 #include "LB_InfoText.h"
-#include "SLB_InfoText.h"
+#include "UI/Slate/SLB_InfoText.h"
 
 TSharedRef<SWidget> ULB_InfoText::RebuildWidget()
 {

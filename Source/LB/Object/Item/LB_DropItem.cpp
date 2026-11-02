@@ -6,6 +6,7 @@
 #include "NiagaraComponent.h"
 #include "Component/LB_InventoryComponent.h"
 #include "Components/SphereComponent.h"
+#include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/LB_PlayerState.h"
 
