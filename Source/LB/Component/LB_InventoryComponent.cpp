@@ -105,7 +105,7 @@ bool ULB_InventoryComponent::RemoveItem(FGuid ItemInstanceId, int32 Count)
 			InventoryItems.RemoveAt(Index);
 		}
 
-		// OnInventoryUpdated.Broadcast();
+		OnInventoryUpdated.Broadcast();
 		return true;
 	}
 
@@ -226,14 +226,14 @@ bool ULB_InventoryComponent::UnequipItem(FGuid ItemInstanceId)
 	}
 
 	TargetItem->bIsEquipped = false;
-	// OnInventoryUpdated.Broadcast();
+	OnInventoryUpdated.Broadcast();
 
 	return true;
 }
 
 void ULB_InventoryComponent::OnRep_InventoryItems()
 {
-	// OnInventoryUpdated.Broadcast();
+	OnInventoryUpdated.Broadcast();
 }
 
 bool ULB_InventoryComponent::UseItem(FGuid ItemInstanceId)

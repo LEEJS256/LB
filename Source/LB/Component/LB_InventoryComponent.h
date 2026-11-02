@@ -10,7 +10,7 @@
 
 
 
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdated);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class LB_API ULB_InventoryComponent : public UActorComponent
@@ -64,8 +64,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Equip")
 	bool UnequipItem(FGuid ItemInstanceId);
 
-	// UPROPERTY(BlueprintAssignable, Category = "Inventory")
-	// FOnInventoryUpdated OnInventoryUpdated;
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FOnInventoryUpdated OnInventoryUpdated;
 
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_InventoryItems, VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
