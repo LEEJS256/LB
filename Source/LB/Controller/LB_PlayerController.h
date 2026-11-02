@@ -18,7 +18,9 @@ UCLASS()
 class LB_API ALB_PlayerController : public APlayerController
 {
 	GENERATED_BODY()
-
+public:
+	void CloseInventory();
+	
 protected:
 	// Enhanced Input Mapping Context 등록과 Action 바인딩 (로컬 컨트롤러에서만 호출됨)
 	virtual void SetupInputComponent() override;
@@ -43,6 +45,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DodgeAction;
 
+	//인벤토리
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> InvenAction;
+
+	
 	// 점프- C
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> JumpAction;
@@ -77,14 +84,21 @@ private:
 
 	void StartSprint(const FInputActionValue& Value);
 	void StopSprint(const FInputActionValue& Value);
+	void TurnOn_Inventory(const FInputActionValue& Value);
 	void Dodge(const FInputActionValue& Value);
 	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
 
+	
 	void Set_IATag();
 	
 	FGameplayTagContainer SprintTagContainer;
 	FGameplayTagContainer DodgeTagContainer;
 	
 #pragma endregion
+
+
+private:
+	void SetInventoryUIMode(bool bOpen)   ;
+	
 };

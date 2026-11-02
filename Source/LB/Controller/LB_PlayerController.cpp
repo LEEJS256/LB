@@ -15,6 +15,14 @@
 #include "UI/LB_HUD.h"
 
 
+void ALB_PlayerController::CloseInventory()
+{
+	if (!HUDWidget || !HUDWidget->IsInventoryVisible()) return;
+
+	HUDWidget->SetInventoryVisible(false);
+	SetInventoryUIMode(false);
+}
+
 void ALB_PlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -56,6 +64,11 @@ void ALB_PlayerController::SetupInputComponent()
 		{
 			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this,
 			                                   &ALB_PlayerController::Dodge);
+		}
+		if (InvenAction)
+		{
+			EnhancedInputComponent->BindAction(InvenAction, ETriggerEvent::Started, this,
+											   &ALB_PlayerController::TurnOn_Inventory);
 		}
 		if (NormalAttackAction)
 		{
@@ -192,6 +205,16 @@ void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
 	ASC->CancelAbilities(&SprintTagContainer);
 }
 
+void ALB_PlayerController::TurnOn_Inventory(const FInputActionValue& Value)
+{
+	if (!IsLocalController() || !HUDWidget) return;
+
+	if (HUDWidget->IsInventoryVisible()) { CloseInventory(); return; }
+
+	HUDWidget->SetInventoryVisible(true);
+	SetInventoryUIMode(true);
+}
+
 void ALB_PlayerController::Dodge(const FInputActionValue& Value)
 {
 	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
@@ -241,4 +264,23 @@ void ALB_PlayerController::Set_IATag()
 {
 	SprintTagContainer.AddTag(TAG_Ability_Sprint);
 	DodgeTagContainer.AddTag(TAG_Ability_Dodge);
+}
+
+void ALB_PlayerController::SetInventoryUIMode(bool bOpen)
+{
+	if (bOpen)
+	{
+		FInputModeGameAndUI Mode;
+		Mode.SetHideCursorDuringCapture(false);
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(Mode);
+		bShowMouseCursor = true;
+		SetIgnoreLookInput(true);    // 열려 있는 동안 카메라가 마우스를 따라 돌지 않게
+	}
+	else
+	{
+		SetInputMode(FInputModeGameOnly());
+		bShowMouseCursor = false;
+		SetIgnoreLookInput(false);
+	}
 }
