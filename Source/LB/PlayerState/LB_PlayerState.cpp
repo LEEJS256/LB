@@ -15,7 +15,7 @@ ALB_PlayerState::ALB_PlayerState()
 	InventoryComponent = CreateDefaultSubobject<ULB_InventoryComponent>(TEXT("InventoryComponent"));
 	InventoryComponent->SetIsReplicated(true);
 
-	
+
 	// 같은 액터의 서브오브젝트라 ASC에 자동 등록됨
 	AttributeSet = CreateDefaultSubobject<ULB_AttributeSet>(TEXT("AttributeSet"));
 
@@ -26,6 +26,18 @@ ALB_PlayerState::ALB_PlayerState()
 ULB_InventoryComponent* ALB_PlayerState::Get_InventoryComponent() const
 {
 	return InventoryComponent;
+}
+
+void ALB_PlayerState::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnInventoryUpdated.AddUniqueDynamic(this, &ALB_PlayerState::HandleInventoryUpdated);
+	}
+
+
 }
 
 UAbilitySystemComponent* ALB_PlayerState::GetAbilitySystemComponent() const
@@ -48,7 +60,6 @@ void ALB_PlayerState::InitializePlayerDA()
 	ApplyDefaultAttributes(PlayerDA);
 	AddStateTag(TAG_State_Idle);
 }
-
 
 
 void ALB_PlayerState::AddStateTag(FGameplayTag Tag)
@@ -108,8 +119,13 @@ void ALB_PlayerState::ApplyDefaultAttributes(const ULB_PlayerDataAsset* Data)
 	AttributeSet->SetSpeed(Data->Speed);
 	AttributeSet->SetDashDistance(Data->DashDistance);
 	AttributeSet->SetDashDuration(Data->DashDuration);
-	
-	
+
+
 	AttributeSet->SetSprintWeight(Data->SprintWeight);
 	AttributeSet->Set_PlayerName(Data->Player_Name);
+}
+
+void ALB_PlayerState::HandleInventoryUpdated()
+{
+	OnInventoryUpdated.Broadcast();
 }

@@ -20,6 +20,8 @@ class UGameplayEffect;
 /**
  * 
  */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLB_OnPlayerInventoryUpdated);
+
 UCLASS()
 class LB_API ALB_PlayerState : public APlayerState , public IAbilitySystemInterface
 {
@@ -28,9 +30,14 @@ public:
 	ALB_PlayerState();
 
 #pragma region component
+	UPROPERTY(BlueprintAssignable, Category = "LB|Component")
+	FLB_OnPlayerInventoryUpdated OnInventoryUpdated;
+	
 	UFUNCTION(BlueprintCallable, Category = "LB|Component")
 	virtual ULB_InventoryComponent* Get_InventoryComponent() const;
-	
+
+	virtual void PostInitializeComponents() override;
+
 	UPROPERTY(VisibleAnywhere, Category = "LB|Component")
 	TObjectPtr<ULB_InventoryComponent> InventoryComponent;
 #pragma  endregion 
@@ -68,6 +75,9 @@ public:
 #pragma endregion  
 
 private:
+	UFUNCTION()
+	void HandleInventoryUpdated();
+	
 	FActiveGameplayEffectHandle CurrentStateGEHandle;
 
 	// [변경] 리스폰 때 어빌리티/GE가 중복 적용되지 않게 하는 가드
