@@ -69,12 +69,11 @@ void ALB_PlayerCharacter::BindDelegate()
 	{
 		pBattleComp->BindCombatStateEvents(); // 중복 바인딩 방지
 	}
-
+	
 	if (bSpeedBound) return;
 
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */
-	;
-	if (!ASC) return; // 아직 준비 안 됐으면 패스
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */;
+	if (!ASC) return;   // 아직 준비 안 됐으면 패스
 
 	ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetSpeedAttribute())
 	   .AddUObject(this, &ALB_PlayerCharacter::OnSpeedChanged);
@@ -259,4 +258,6 @@ void ALB_PlayerCharacter::OnRep_Facing()
 void ALB_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
 }
+

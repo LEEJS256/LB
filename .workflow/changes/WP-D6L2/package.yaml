@@ -1,0 +1,20 @@
+id: WP-D6L2
+title: Data Asset 기반 정적 던전 조각 조립
+branch: feature/dungeon-layout
+base: master
+protected:
+  - Source/LB/Object/Destructible/**
+  - Source/LB/Data/Loot/**
+  - Source/LB/Component/LB_MeleeHitboxComponent.h
+  - Source/LB/Component/LB_MeleeHitboxComponent.cpp
+  - Source/LB/GAS/GA/LB_GA_NormalAttack.h
+  - Source/LB/GAS/GA/LB_GA_NormalAttack.cpp
+description: |
+  Layout Data Asset의 맵 조각·배치 정보를 읽어 정적 테스트 던전을 조립한다.
+  GameMode가 고정 Layout을 배치 목록으로 변환하고 GameState로 공유하며 각 World는 동일 이름·Transform으로 조립한다.
+  랜덤 생성·포트 탐색·런타임 재조립·전투 Actor 배치·이동 잠금 및 전원 준비 배리어는 제외한다.
+verify:
+  - name: 에디터 종료 후 LBEditor 통합 빌드
+    use: build-editor
+  - manual: E01·E02에서 맵 조각 규격·로컬 로드 완료 및 실패 정리를 확인했다
+  - manual: E99에서 Listen Server·Client·늦은 접속의 동일 배치와 종료 정리를 확인했다

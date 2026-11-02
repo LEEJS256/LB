@@ -2,6 +2,13 @@
 
 이 디렉터리는 LB의 게임 설계, 공통 기술 정책과 반복 작업 절차를 관리한다. 문서는 게임 영역별로 분류하며, 이 파일의 색인을 통해 현재 기준 문서를 찾는다.
 
+## 조회 시작점
+
+기능별 코드 진입 색인은 별도 [LB-wiki README](../../LB-wiki/README.md)의 `기능별 코드 조회 시작점`을 사용한다.
+플레이어·전투·AI·아이템 상세 문서도 위키를 우선 확인한다. 형제 디렉터리 링크는 로컬 체크아웃 기준이다.
+항아리·던전 설계 원본도 위키로 통합했다. 아래 World 항목은 원본 안내이며 실행 WP는 LB에서 관리한다. 같은 색인을 양쪽에 복제하지 않는다.
+색인의 코드 기준 커밋과 현재 변경 파일을 대조하고 필요한 심볼만 읽는다. `계획` 항목을 구현 파일로 찾지 않는다.
+
 ## 문서 구성
 
 - `character`: 플레이어, 몬스터, 이동, 방향과 애니메이션 연동
@@ -60,4 +67,9 @@
 
 ### Character
 
-- [Player Character](character/player-character.md) — `Accepted` — 2.5D 벨트스크롤 플레이어의 이동, 방향, 상태와 멀티플레이 원칙
+- [Player Character](character/player-character.md) — `Superseded` — 기존 기록 보존, 현재 기준은 LB-wiki의 Player Character
+
+### World
+
+- [Destructible Prop](world/destructible-prop.md) — `Superseded` — 항아리 단발 파괴, 로컬 Chaos 표현과 ItemCode Loot 드롭 / WP-P9D4
+- [Dungeon Layout](world/dungeon-layout.md) — `Superseded` — Data Asset 기반 정적 맵 조각 배치와 각 World의 로드 수명 / WP-D6L2

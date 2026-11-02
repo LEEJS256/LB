@@ -1,8 +1,10 @@
 # Player Character
 
-> Status: Accepted
+> Status: Superseded
 
 ## Overview
+
+현재 기준은 별도 위키의 [Player Character](../../../LB-wiki/character/player-character.md)다. 2026-10-29 문서 최신화부터 이 파일은 이전 설계와 검증 기록을 보존하는 용도로 두며 아래 미래 작업 표기를 현재 미구현 목록으로 사용하지 않는다. 입력·콤보 연결의 최신 설명은 위키를 따른다.
 
 LB의 플레이어 캐릭터를 멀티플레이 기반 2.5D 벨트스크롤 액션 RPG에 맞게 구현하기 위한 1차 기준을 정의한다. 참고 방향은 던전앤파이터, 던전앤드래곤, 드래곤즈 크라운이다.
 

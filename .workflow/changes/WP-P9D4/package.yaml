@@ -1,0 +1,20 @@
+id: WP-P9D4
+title: 항아리 서버 파괴와 Loot 드롭
+branch: feature/destructible-loot
+base: master
+protected:
+  - Source/LB/Dungeon/**
+  - Source/LB/Data/Dungeon/**
+  - Source/LB/GameMode/LB_GameMode.h
+  - Source/LB/GameMode/LB_GameMode.cpp
+  - Source/LB/GameMode/LB_GameState.h
+  - Source/LB/GameMode/LB_GameState.cpp
+description: |
+  플레이어 근접 공격으로 항아리를 서버에서 한 번 파괴하고 Loot Table을 중복 허용으로 여러 번 추첨해 아이템을 드롭한다.
+  기존 GAS 생명체 피해와 ItemCode·MasterItem·ALB_DropItem·Inventory 획득 경로를 유지한다.
+  Chaos 표현은 BP에서 연결하며 파편 복제·몬스터의 환경물 공격·아이템 UI 확장은 제외한다.
+verify:
+  - name: 에디터 종료 후 LBEditor 통합 빌드
+    use: build-editor
+  - manual: E01·E02·E03에서 서버 단일 파괴·기존 전투 보존·Loot 및 기존 Pickup 경로를 확인했다
+  - manual: E99에서 Listen Server·Client 및 늦은 접속의 파괴 상태와 중복 드롭 방지를 확인했다
