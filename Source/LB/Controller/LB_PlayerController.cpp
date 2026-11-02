@@ -55,7 +55,7 @@ void ALB_PlayerController::SetupInputComponent()
 		if (DodgeAction)
 		{
 			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this,
-											   &ALB_PlayerController::Dodge);
+			                                   &ALB_PlayerController::Dodge);
 		}
 		if (NormalAttackAction)
 		{
@@ -129,14 +129,10 @@ void ALB_PlayerController::BindHUD()
 		return;
 
 
-
 	if (ULB_PlayerStatus* Status = HUDWidget->GetLocalPlayerStatus())
 	{
-		Status->BindToASC(ASC);  
+		Status->BindToASC(ASC);
 	}
-	
-
-	
 }
 
 void ALB_PlayerController::Jump(const FInputActionValue& Value)
@@ -192,7 +188,7 @@ void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
 	if (!ASC)
 		return;
 
-	
+
 	ASC->CancelAbilities(&SprintTagContainer);
 }
 

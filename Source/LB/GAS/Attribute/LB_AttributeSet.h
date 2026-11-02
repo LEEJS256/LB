@@ -8,7 +8,6 @@
 #include "LB_AttributeSet.generated.h"
 
 
-
 // 매크로 - Getter/Setter 자동 생성
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
 GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
@@ -21,22 +20,33 @@ class LB_API ULB_AttributeSet : public UAttributeSet
 {
 	GENERATED_BODY()
 
-	
 public:
 	ULB_AttributeSet();
 
 	void Set_PlayerName(FName ArgName);
 	FName Get_PlayerName() const { return PlayerName; }
-	
+
 #pragma region AttributeSet
 	// 모든 Attribute들의 이전값
 
 	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_PlayerName)
 	FName PlayerName;
-	
+
 	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_Speed)
 	FGameplayAttributeData Speed;
 	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, Speed)
+
+	//DashDistance
+	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_DashDistance)
+	FGameplayAttributeData DashDistance;
+	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, DashDistance)
+
+	//DashDuration
+	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_DashDuration)
+	FGameplayAttributeData DashDuration;
+	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, DashDuration)
+	
+
 	//달리기 가중치
 	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_SprintWeight)
 	FGameplayAttributeData SprintWeight;
@@ -67,7 +77,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_MaxExp)
 	FGameplayAttributeData MaxExp;
 	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, MaxExp)
-	
+
 	UPROPERTY(BlueprintReadOnly, Category = "Attributeset", ReplicatedUsing = OnRep_Level)
 	FGameplayAttributeData Level;
 	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, Level)
@@ -95,24 +105,21 @@ public:
 
 #pragma region Delegate
 
-	
+
 	//데미지용
 	// DECLARE_MULTICAST_DELEGATE_TwoParams(FOnDamageTaken, float, FVector);
 	DECLARE_MULTICAST_DELEGATE_FourParams(
 		FOnDamageTaken,
-		float,      // Damage
-		FVector,    // HitLocation
-		bool,       // Critical
+		float, // Damage
+		FVector, // HitLocation
+		bool, // Critical
 		FGameplayTag // DamageType
 	);
-	
+
 	FOnDamageTaken OnDamageTaken;
 #pragma  endregion
 
-
 protected:
-
-	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	//attribute 값이 실제로 변경되기 직전
@@ -122,13 +129,13 @@ protected:
 	//GE가 실행된 직후에만 호출
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
-	
+
 #pragma region Replicated
 	// UFUNCTION()
 	// virtual void OnRep_Name(const FGameplayAttributeData& OldName);
 	UFUNCTION()
 	void OnRep_PlayerName(const FName& OldName);
-	
+
 	UFUNCTION()
 	virtual void OnRep_Speed(const FGameplayAttributeData& OldSpeed);
 
@@ -153,7 +160,7 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_MaxExp(const FGameplayAttributeData& OldMaxExp);
-	
+
 	UFUNCTION()
 	virtual void OnRep_Level(const FGameplayAttributeData& OldLevel);
 
@@ -173,6 +180,12 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_SprintWeight(const FGameplayAttributeData& OldSprintWeight);
 
+	UFUNCTION()
+	virtual void OnRep_DashDistance(const FGameplayAttributeData& OldDashDistance);
+
+	UFUNCTION()
+	virtual void OnRep_DashDuration(const FGameplayAttributeData& OldDashDuration);
+
+
 #pragma endregion
-	
 };
