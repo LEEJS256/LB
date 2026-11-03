@@ -125,7 +125,11 @@ int32 ULB_InventoryPanel::CalcSlotCount(int32 ItemCount) const
 
 void ULB_InventoryPanel::RefreshFromEntries(const TArray<FLB_ItemEntry>& Items)
 {
-	if (!TileView) return;
+	// UE_LOG(LogTemp, Warning, TEXT("[Panel] Refresh Slot0Stack=%d"),
+	// 	Items.Num() > 0 ? Items[0].StackCount : -1);
+
+	if (!TileView)
+		return;
  
 	const int32 SlotCount = CalcSlotCount(Items.Num());
  

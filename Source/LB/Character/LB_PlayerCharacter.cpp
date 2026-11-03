@@ -86,9 +86,9 @@ void ALB_PlayerCharacter::BindDelegate()
 
 void ALB_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Speed %.1f -> %.1f (Base %.1f)"),
-	       Data.OldValue, Data.NewValue,
-	       GetAbilitySystemComponent()->GetNumericAttributeBase(ULB_AttributeSet::GetSpeedAttribute()));
+	// UE_LOG(LogTemp, Warning, TEXT("Speed %.1f -> %.1f (Base %.1f)"),
+	       // Data.OldValue, Data.NewValue,
+	       // GetAbilitySystemComponent()->GetNumericAttributeBase(ULB_AttributeSet::GetSpeedAttribute()));
 
 	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
 }

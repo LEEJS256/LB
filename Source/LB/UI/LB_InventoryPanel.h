@@ -63,7 +63,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Inventory|Debug", meta = (ClampMin = "0"))
 	int32 DummyItemCount = 30;
 
-	/** 마스터 DT에 실제로 있는 ItemCode를 넣을 것. 비어 있으면 빈 칸만 나온다 */
+
 	UPROPERTY(EditAnywhere, Category = "Inventory|Debug")
 	TArray<FName> DummyItemCodes;
 
@@ -83,7 +83,7 @@ private:
 	FVector2D GrabLocal = FVector2D::ZeroVector;   // 잡은 지점(창 로컬 좌표)
 	FVector2D PanelOffset = FVector2D::ZeroVector; // 현재 이동량
 	
-	/** 마지막 아이템 뒤로 한 줄 여유 + 최소 칸 수, Columns의 배수로 올림 */
+	
 	int32 CalcSlotCount(int32 ItemCount) const;
 
 	void BuildDummy();
