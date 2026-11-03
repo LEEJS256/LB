@@ -4,16 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "LB_SquareBox.h"
-
 #include "LB_InventoryBox.generated.h"
 
-class SLB_InventoryBox;
-class UTexture2D;
 
 /** (원본 그룹, 원본 인덱스, 대상 인덱스) */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLB_OnInventoryBoxDropped, FName, SrcGroup, int32, SrcIndex, int32, DstIndex);
 /** 우클릭 사용 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLB_OnInventoryBoxUse, int32, SlotIndex);
+
+class SLB_InventoryBox;
+class UTexture2D;
+
 
 /**
  * 인벤토리 한 칸 (UMG용). 데이터는 모르고 표시값만 받는다.
@@ -72,6 +73,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|InventoryBox")
 	FText HotkeyText;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|InventoryBox|Style")
+	FSlateFontInfo CountTextFont;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|InventoryBox|Style")
+	FSlateFontInfo HotkeyTextFont;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|InventoryBox|Test", meta = (InlineEditConditionToggle))
+	bool bEnableTestCount = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|InventoryBox|Test", meta = (EditCondition = "bEnableTestCount"))
+	int32 TestItemCount = 5;
+
+
+	/** 슬롯 고유 인덱스 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|InventoryBox")
+	int32 SlotIndex = INDEX_NONE;
+
+
 private:
 	void ApplyState();
 	void HandleSlotDropped(FName SrcGroup, int32 SrcIndex, int32 DstIndex);
@@ -84,6 +103,5 @@ private:
 	TObjectPtr<UTexture2D> Icon;
 
 	int32 Count = 0;
-	int32 SlotIndex = INDEX_NONE;
 	FText InfoText;
 };

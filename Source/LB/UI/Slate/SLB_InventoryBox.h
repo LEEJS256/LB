@@ -34,13 +34,19 @@ class LB_API SLB_InventoryBox : public SLB_SquareBox
 {
 public:
 	SLATE_BEGIN_ARGS(SLB_InventoryBox)
-		: _BoxSize(FVector2D(64.f, 64.f))
-		, _Group(TEXT("Inventory"))
-		, _SlotIndex(INDEX_NONE)
-	{}
-		SLATE_ARGUMENT(FVector2D, BoxSize)
+			: _BoxSize(FVector2D(64.f, 64.f))
+			  , _Group(TEXT("Inventory"))
+			  , _SlotIndex(INDEX_NONE)
+			  , _CountTextFont()
+			  , _HotkeyTextFont()
+		{
+		}
+
 		SLATE_ARGUMENT(FName, Group)
 		SLATE_ARGUMENT(int32, SlotIndex)
+		SLATE_ARGUMENT(FSlateFontInfo, CountTextFont)
+		SLATE_ARGUMENT(FSlateFontInfo, HotkeyTextFont)
+		SLATE_ARGUMENT(FVector2D, BoxSize)
 		SLATE_ARGUMENT(FText, HotkeyText)
 		SLATE_ATTRIBUTE(const FSlateBrush*, ItemIcon)
 		SLATE_ATTRIBUTE(int32, ItemCount)
@@ -60,6 +66,9 @@ public:
 	void SetSlotIndex(int32 InIndex) { SlotIndex = InIndex; }
 	void SetGroup(FName InGroup) { Group = InGroup; }
 
+	void SetTestCount(int32 InTestCount);
+	void ClearTestCount();
+
 	/** 단축키/외부에서 사용 트리거 */
 	void TriggerUse() const { OnUse.ExecuteIfBound(SlotIndex); }
 
@@ -74,6 +83,9 @@ public:
 	virtual FReply OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
 
 private:
+	int32 TestCount = 0;
+	bool HasTestCount = false; // 테스트 값이 설정되었는지 여부
+
 	FName Group;
 	int32 SlotIndex = INDEX_NONE;
 	FText HotkeyTextValue;

@@ -42,15 +42,18 @@ void SLB_InventoryBox::Construct(const FArguments& InArgs)
 	OnSlotDropped = InArgs._OnSlotDropped;
 	OnUse = InArgs._OnUse;
 
-	const FSlateFontInfo Font = FCoreStyle::GetDefaultFontStyle("Bold", 10);
+	const FSlateFontInfo CountFont = InArgs._CountTextFont.HasValidFont()
+		                                 ? InArgs._CountTextFont
+		                                 : FCoreStyle::GetDefaultFontStyle("Bold", 10);
+	const FSlateFontInfo HotkeyFont = InArgs._HotkeyTextFont.HasValidFont()
+		                                  ? InArgs._HotkeyTextFont
+		                                  : FCoreStyle::GetDefaultFontStyle("Bold", 10);
 
 	SLB_SquareBox::Construct(
 		SLB_SquareBox::FArguments()
 		.BoxSize(InArgs._BoxSize)
 		.Selected(InArgs._Selected)
 		[
-			// 자식은 전부 HitTestInvisible -> 마우스 이벤트는 박스가 받음
-			// 값은 람다로 매번 읽음 (세터로 바꿔도 반영되도록)
 			SNew(SOverlay)
 			+ SOverlay::Slot().Padding(4.f)
 			[
@@ -58,24 +61,48 @@ void SLB_InventoryBox::Construct(const FArguments& InArgs)
 				.Visibility(EVisibility::HitTestInvisible)
 				.Image_Lambda([this]() { return ItemIcon.Get(nullptr); })
 			]
+			// SLB_InventoryBox.cpp 의 Construct 함수 내부 중 수량 텍스트 부분 수정
+			// SLB_InventoryBox.cpp 의 Construct 함수 내부
+
 			+ SOverlay::Slot().HAlign(HAlign_Right).VAlign(VAlign_Bottom).Padding(0.f, 0.f, 4.f, 2.f)
 			[
 				SNew(STextBlock)
-				.Font(Font)
-				.Text_Lambda([this]() { return FText::AsNumber(ItemCount.Get(0)); })
-				.Visibility_Lambda([this]() { return ItemCount.Get(0) > 1 ? EVisibility::HitTestInvisible : EVisibility::Collapsed; })
+				.Font(CountFont)
+				.Text_Lambda([this]()
+				{
+					// [수정] 테스트 값이 있더라도, 실제 아이템이 존재하고(ItemCount가 유효하고) 
+					// 인게임 상황이라면 실제 ItemCount를 우선하거나, 
+					// 혹은 테스트 모드가 확실히 켜져있을 때만 TestCount를 쓰도록 분기
+					int32 DisplayCount = (HasTestCount && ItemCount.Get(0) <= 0) ? TestCount : ItemCount.Get(0);
+
+					// 만약 에디터 미리보기(TestCount)를 무조건 최우선으로 보고 싶으셨던 거라면, 
+					// 아이템을 먹었을 때(인게임 갱신 시) TestCount를 Clear해주는 로직이 필요합니다.
+					// 아래처럼 실제 아이템 개수가 들어오면 TestCount보다 ItemCount를 쓰게 하는 것이 안전합니다.
+
+					return FText::AsNumber(ItemCount.Get(0) > 0 ? ItemCount.Get(0) : (HasTestCount ? TestCount : 0));
+				})
+				.Visibility_Lambda([this]()
+				{
+					int32 RealCount = ItemCount.Get(0);
+					int32 DisplayCount = RealCount > 0 ? RealCount : (HasTestCount ? TestCount : 0);
+					return DisplayCount > 0 ? EVisibility::HitTestInvisible : EVisibility::Collapsed;
+				})
 			]
 			+ SOverlay::Slot().HAlign(HAlign_Left).VAlign(VAlign_Top).Padding(4.f, 2.f, 0.f, 0.f)
 			[
 				SNew(STextBlock)
-				.Font(Font)
-				.Text_Lambda([this]() { return HotkeyTextValue; })
-				.Visibility_Lambda([this]() { return HotkeyTextValue.IsEmpty() ? EVisibility::Collapsed : EVisibility::HitTestInvisible; })
+				                .Font(HotkeyFont) // [+] 단축키 폰트 적용
+				                .Text_Lambda([this]() { return HotkeyTextValue; })
+				                .Visibility_Lambda([this]()
+				                {
+					                return HotkeyTextValue.IsEmpty()
+						                       ? EVisibility::Collapsed
+						                       : EVisibility::HitTestInvisible;
+				                })
 			]
+
 		]);
 
-	// 마우스 오버 정보창. 텍스트가 비면 툴팁 안 뜸.
-	// 커스텀 정보창을 원하면 SetToolTip(SNew(SToolTip)[ ... ])로 교체
 	SetToolTipText(InArgs._InfoText);
 }
 
@@ -95,6 +122,17 @@ void SLB_InventoryBox::ClearItem()
 void SLB_InventoryBox::SetInfoText(const FText& InText)
 {
 	SetToolTipText(InText);
+}
+
+void SLB_InventoryBox::SetTestCount(int32 InTestCount)
+{
+	TestCount = InTestCount;
+	HasTestCount = true;
+}
+
+void SLB_InventoryBox::ClearTestCount()
+{
+	HasTestCount = false;
 }
 
 FReply SLB_InventoryBox::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)

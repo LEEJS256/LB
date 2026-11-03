@@ -11,6 +11,8 @@ TSharedRef<SLB_SquareBox> ULB_InventoryBox::CreateSquareBox()
 	return SNew(SLB_InventoryBox)
 		.Group(Group)
 		.SlotIndex(SlotIndex)
+		.CountTextFont(CountTextFont)     
+		.HotkeyTextFont(HotkeyTextFont)   
 		.OnSlotDropped(FLB_OnSlotDropped::CreateUObject(this, &ULB_InventoryBox::HandleSlotDropped))
 		.OnUse(FLB_OnSlotUse::CreateUObject(this, &ULB_InventoryBox::HandleUse));
 }
@@ -39,6 +41,15 @@ void ULB_InventoryBox::ApplyState()
 	Box->SetHotkeyText(HotkeyText);
 	Box->SetInfoText(InfoText);
 
+	if (bEnableTestCount)
+	{
+		Box->SetTestCount(TestItemCount);
+	}
+	else
+	{
+		Box->ClearTestCount();
+	}
+	
 	if (Icon)
 	{
 		FSlateBrush Brush;
