@@ -38,11 +38,16 @@ void ULB_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 {
+	// UE_LOG(LogTemp, Warning, TEXT("[AddItem] 호출 Code=%s Count=%d Auth=%d"),
+	//        *ItemCode.ToString(), Count, GetOwner() ? GetOwner()->HasAuthority() : -1);
+
 	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor || !OwnerActor->HasAuthority() || Count <= 0) return Count;
+	if (!OwnerActor || !OwnerActor->HasAuthority() || Count <= 0)
+		return Count;
 
 	const ULB_DA_ItemInfo* Info = GetItemInfo(ItemCode);
-	if (!Info) return Count;
+	if (!Info)
+		return Count;
 
 	const int32 MaxStack = FMath::Max(1, Info->MaxStackSize);
 	int32 Remain = Count;
@@ -68,9 +73,18 @@ int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 		InventoryItems.Add(NewEntry);
 		Remain -= NewEntry.StackCount;
 	}
+	// UE_LOG(LogTemp, Warning, TEXT("[AddItem] 결과 Remain=%d Slots=%d/%d MaxStack=%d Slot0=%d"),
+	//        Remain, InventoryItems.Num(), MaxSlots, MaxStack,
+	//        InventoryItems.Num() > 0 ? InventoryItems[0].StackCount : -1);
 
-	if (Remain < Count) OnRep_InventoryItems();   // 서버(리슨서버 호스트)는 OnRep이 안 불려서 수동 호출
-	return Remain;   // 못 넣은 개수
+
+	if (Remain < Count)
+	{
+		OwnerActor->ForceNetUpdate();
+		OnRep_InventoryItems(); // 서버(리슨서버 호스트)는 OnRep이 안 불려서 수동 호출
+		OnInventoryUpdated.Broadcast();
+	}
+	return Remain; // 못 넣은 개수
 }
 
 
@@ -233,6 +247,8 @@ bool ULB_InventoryComponent::UnequipItem(FGuid ItemInstanceId)
 
 void ULB_InventoryComponent::OnRep_InventoryItems()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[OnRep] Net=%d Slot0Stack=%d"),
+	       (int32)GetNetMode(), InventoryItems.Num() > 0 ? InventoryItems[0].StackCount : -1);
 	OnInventoryUpdated.Broadcast();
 }
 
@@ -263,7 +279,7 @@ bool ULB_InventoryComponent::UseItem(FGuid ItemInstanceId)
 			if (!GE) continue;
 			ASC->ApplyGameplayEffectToSelf(GE->GetDefaultObject<UGameplayEffect>(), 1.f, ASC->MakeEffectContext());
 		}
-		return RemoveItem(ItemInstanceId, 1);   // Entry는 이후 사용 금지
+		return RemoveItem(ItemInstanceId, 1); // Entry는 이후 사용 금지
 	}
 	return false;
 }
