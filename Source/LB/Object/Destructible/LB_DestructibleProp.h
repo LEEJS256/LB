@@ -8,6 +8,8 @@
 
 class USceneComponent;
 class UBoxComponent;
+class ULB_LootTableDataAsset;
+class ALB_DropItem;
 
 // 파괴 상태를 하나의 구조체로 원자적으로 복제한다.
 USTRUCT(BlueprintType)
@@ -43,8 +45,16 @@ public:
 	bool IsBroken() const { return BreakState.bBroken; }
 
 protected:
+	virtual void BeginPlay() override;
+
 	UFUNCTION()
 	void OnRep_BreakState();
+
+	// 서버 전용. 파괴당 한 번 RollLoot 후 결과별 DropItem 생성. 재추첨하지 않는다.
+	void SpawnBreakLoot();
+
+	// 서버에서 Actor별 RandomStream을 한 번만 초기화한다.
+	void InitLootRandomIfNeeded();
 
 	// 서버 직접 호출과 OnRep 공통 적용 (멱등)
 	void ApplyBreakState();
@@ -67,7 +77,30 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Destructible", meta = (ClampMin = "1.0", UIMin = "1.0"))
 	float BreakLifetime = 5.f;
 
+	// 파괴 시 추첨할 Loot Table (서버 전용 사용)
+	UPROPERTY(EditDefaultsOnly, Category = "Destructible|Loot")
+	TObjectPtr<ULB_LootTableDataAsset> LootTable;
+
+	// 결과별로 생성할 DropItem 클래스
+	UPROPERTY(EditDefaultsOnly, Category = "Destructible|Loot")
+	TSubclassOf<ALB_DropItem> DropItemClass;
+
+	// Actor 로컬 공간 기준 Drop 기준 위치
+	UPROPERTY(EditDefaultsOnly, Category = "Destructible|Loot")
+	FVector DropOffset = FVector(0.f, 0.f, 80.f);
+
+	// 다중 결과 간 로컬 Y축 간격. 음수는 0으로 처리.
+	UPROPERTY(EditDefaultsOnly, Category = "Destructible|Loot", meta = (ClampMin = "0.0", UIMin = "0.0"))
+	float DropSpacing = 35.f;
+
 private:
 	// 로컬 중복 표현 차단용 (복제하지 않음)
 	bool bBreakApplied = false;
+
+	// 서버 보상 처리 가드 (복제하지 않음)
+	bool bLootProcessed = false;
+
+	bool bLootRandomInitialized = false;
+
+	FRandomStream LootRandom;
 };
