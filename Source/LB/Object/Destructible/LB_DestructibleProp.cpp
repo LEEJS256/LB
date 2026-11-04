@@ -21,6 +21,7 @@ ALB_DestructibleProp::ALB_DestructibleProp()
 	HitReceiver->SetCollisionObjectType(ECC_WorldDynamic);
 	HitReceiver->SetCollisionResponseToAllChannels(ECR_Ignore);
 	HitReceiver->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	HitReceiver->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
 	HitReceiver->SetGenerateOverlapEvents(true);
 	HitReceiver->SetCanEverAffectNavigation(false);
 }
