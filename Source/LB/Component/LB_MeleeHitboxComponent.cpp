@@ -4,6 +4,8 @@
 #include "Component/LB_MeleeHitboxComponent.h"
 
 #include "LB.h"
+#include "GameFramework/Pawn.h"
+#include "Object/Destructible/LB_DestructibleProp.h"
 
 ULB_MeleeHitboxComponent::ULB_MeleeHitboxComponent()
 {
@@ -15,6 +17,8 @@ ULB_MeleeHitboxComponent::ULB_MeleeHitboxComponent()
 	SetCollisionObjectType(ECC_WorldDynamic);
 	SetCollisionResponseToAllChannels(ECR_Ignore);
 	SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	// 파괴 오브젝트(HitReceiver) 감지용. 실제 후보는 TryRegisterHit에서 클래스로 필터링
+	SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
 	SetGenerateOverlapEvents(false);
 	SetCanEverAffectNavigation(false);
 	CanCharacterStepUpOn = ECB_No;
@@ -172,6 +176,12 @@ void ULB_MeleeHitboxComponent::TryRegisterHit(AActor* OtherActor, UPrimitiveComp
 	}
 
 	if (OtherActor == OwnerActor)
+	{
+		return;
+	}
+
+	// 명중 후보는 Pawn과 파괴 오브젝트만. 그 외 WorldDynamic(장비·Pickup·배경)은 제외
+	if (!OtherActor->IsA<APawn>() && !OtherActor->IsA<ALB_DestructibleProp>())
 	{
 		return;
 	}
