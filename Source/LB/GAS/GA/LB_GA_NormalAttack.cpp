@@ -12,6 +12,7 @@
 #include "GameplayEffect.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "LB.h"
+#include "Object/Destructible/LB_DestructibleProp.h"
 #include "Component/LB_BattleComponent.h"
 #include "PlayerState/LB_PlayerState.h"
 #include "PlayerState/LB_PlayerState.h"
@@ -152,6 +153,18 @@ void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResu
 	if (!IsActive() || !HasAuthority(&CurrentActivationInfo) || !IsValid(HitActor))
 	{
 		return;
+	}
+
+	// 파괴 오브젝트는 GAS 피해 대상이 아니므로 GE/ASC/Team 검사 전에 처리. 플레이어 Avatar만 파괴 가능
+	if (ALB_DestructibleProp* Prop = Cast<ALB_DestructibleProp>(HitActor))
+	{
+		ALB_PlayerCharacter* PlayerAvatar = Cast<ALB_PlayerCharacter>(GetAvatarActorFromActorInfo());
+		if (IsValid(PlayerAvatar))
+		{
+			const FVector ImpactDirection = (Prop->GetActorLocation() - PlayerAvatar->GetActorLocation()).GetSafeNormal();
+			Prop->TryBreak(PlayerAvatar, HitResult.ImpactPoint, ImpactDirection);
+			return;
+		}
 	}
 
 	if (!DamageEffectClass)
