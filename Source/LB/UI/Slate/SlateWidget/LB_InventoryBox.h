@@ -48,6 +48,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "LB|InventoryBox")
 	void SetGroup(FName InGroup);
 
+	UFUNCTION(BlueprintCallable, Category = "LB|InventoryBox")
+	FName GetGroup();
+
+	
 	UFUNCTION(BlueprintPure, Category = "LB|InventoryBox")
 	bool HasItem() const { return Icon != nullptr; }
 

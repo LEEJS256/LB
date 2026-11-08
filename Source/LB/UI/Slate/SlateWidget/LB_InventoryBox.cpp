@@ -101,6 +101,11 @@ void ULB_InventoryBox::SetGroup(FName InGroup)
 	ApplyState();
 }
 
+FName ULB_InventoryBox::GetGroup()
+{
+	return Group;
+}
+
 void ULB_InventoryBox::HandleSlotDropped(FName SrcGroup, int32 SrcIndex, int32 DstIndex)
 {
 	OnSlotDropped.Broadcast(SrcGroup, SrcIndex, DstIndex);
