@@ -8,6 +8,7 @@
 
 class ULB_PlayerStatus;
 class ULB_InventoryPanel;
+class ULB_QuickSlotPanel;
 UCLASS()
 class LB_API ULB_HUD : public UUserWidget
 {
@@ -44,4 +45,7 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<ULB_InventoryPanel> BP_Inventory;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<ULB_QuickSlotPanel> BP_QuickSlot;
 };
