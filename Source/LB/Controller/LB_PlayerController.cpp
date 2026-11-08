@@ -10,6 +10,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Character/LB_PlayerCharacter.h"
 #include "Component/LB_BattleComponent.h"
+#include "Component/LB_QuickSlotComponent.h"
 #include "Controller/LB_MonsterAIController.h"
 #include "UI/LB_PlayerStatus.h"
 #include "UI/LB_HUD.h"
@@ -79,6 +80,16 @@ void ALB_PlayerController::SetupInputComponent()
 		{
 			EnhancedInputComponent->BindAction(StrongAttackAction, ETriggerEvent::Completed, this,
 			                                   &ALB_PlayerController::StrongATK);
+		}
+
+	
+		for (int32 i = 0; i < SkillSlotActions.Num(); ++i)
+		{
+			EnhancedInputComponent->BindAction(SkillSlotActions[i], ETriggerEvent::Started, this, &ThisClass::OnSkillSlot, i);
+		}
+		for (int32 i = 0; i < ItemSlotActions.Num(); ++i)
+		{
+			EnhancedInputComponent->BindAction(ItemSlotActions[i], ETriggerEvent::Started, this, &ThisClass::OnItemSlot, i);
 		}
 	}
 }
@@ -258,6 +269,18 @@ void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 		return;
 
 	BattleComp->RequestComboInput(TAG_Input_Strong);
+}
+
+void ALB_PlayerController::OnSkillSlot(int32 Index)
+{
+	// if (ULB_QuickSlotComponent* QS = GetPlayerState<ALB_PlayerState>()->GetQuickSlotComponent())
+	// 	QS->UseSkillSlot(Index);
+}
+
+void ALB_PlayerController::OnItemSlot(int32 Index)
+{
+	// if (ULB_QuickSlotComponent* QS = GetPlayerState<ALB_PlayerState>()->GetQuickSlotComponent())
+	// 	QS->UseSkillSlot(Index);
 }
 
 void ALB_PlayerController::Set_IATag()

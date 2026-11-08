@@ -41,6 +41,13 @@ protected:
 	TObjectPtr<UInputAction> MoveAction;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DashAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TArray<TObjectPtr<UInputAction>> SkillSlotActions; // A S D F (4개)
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TArray<TObjectPtr<UInputAction>> ItemSlotActions;  // Num1~4 (4개)
+	
 	//스페이스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DodgeAction;
@@ -89,7 +96,8 @@ private:
 	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
 
-	
+	void OnSkillSlot(int32 Index);
+	void OnItemSlot(int32 Index);
 	void Set_IATag();
 	
 	FGameplayTagContainer SprintTagContainer;
