@@ -111,8 +111,22 @@ void ULB_InventorySlotEntry::HandleUse(int32 InSlotIndex)
 
 void ULB_InventorySlotEntry::HandleSlotDropped(FName SrcGroup, int32 SrcIndex, int32 DstIndex)
 {
-	// TODO(8번): 인벤토리끼리 이동이면 Server_MoveItem(SrcIndex, DstIndex), 퀵슬롯이면 등록 처리
 	UE_LOG(LogTemp, Log, TEXT("[Inventory] Drop %s[%d] -> %d"), *SrcGroup.ToString(), SrcIndex, DstIndex);
+
+	// 자기 자신에게 놓은 경우 무시
+	if (SrcGroup == InventoryBox->GetGroup() && SrcIndex == DstIndex)
+	{
+		return;
+	}
+
+	if (ULB_InventoryComponent* Inv = GetInventoryComponent())
+	{
+		// 인벤토리 내부 간 이동일 경우 빈 칸과의 교환을 포함하여 서버 RPC 호출
+		if (SrcGroup == TEXT("Inventory") && InventoryBox->GetGroup() == TEXT("Inventory"))
+		{
+			Inv->Server_MoveItem(SrcIndex, DstIndex);
+		}
+	}
 }
 
 ULB_InventoryComponent* ULB_InventorySlotEntry::GetInventoryComponent() const

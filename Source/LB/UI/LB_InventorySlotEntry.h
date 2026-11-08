@@ -11,11 +11,7 @@ class ULB_InventoryBox;
 class ULB_InventoryItemObject;
 class ULB_InventoryComponent;
 
-/**
- * TileView가 풀링해서 돌려 쓰는 엔트리 위젯. 이 클래스를 부모로 WBP를 만들고,
- * 디자이너에 ULB_InventoryBox를 하나 올려 이름을 "InventoryBox"로 맞춘다.
- * 엔트리는 재사용되므로 상태는 여기 두지 않고, 매번 ItemObject에서 읽어 채운다.
- */
+
 UCLASS(Abstract)
 class LB_API ULB_InventorySlotEntry : public UUserWidget, public IUserObjectListEntry
 {
