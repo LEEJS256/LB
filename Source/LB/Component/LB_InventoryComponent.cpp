@@ -29,6 +29,11 @@ ULB_InventoryComponent::ULB_InventoryComponent()
 	SetIsReplicatedByDefault(true);
 }
 
+int32 ULB_InventoryComponent::Get_CurrentSlot() const
+{
+	return CurrentSlots;
+}
+
 void ULB_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -64,7 +69,7 @@ int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 	}
 
 	// 2. 새 슬롯
-	while (Remain > 0 && InventoryItems.Num() < MaxSlots)
+	while (Remain > 0 && InventoryItems.Num() < CurrentSlots)
 	{
 		FLB_ItemEntry NewEntry;
 		NewEntry.ItemInstanceId = FGuid::NewGuid();
@@ -126,6 +131,35 @@ bool ULB_InventoryComponent::RemoveItem(FGuid ItemInstanceId, int32 Count)
 	return false;
 }
 
+void ULB_InventoryComponent::Server_MoveItem_Implementation(int32 SrcIndex, int32 DstIndex)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority())
+		return;
+
+	if (SrcIndex < 0 || SrcIndex >= CurrentSlots || DstIndex < 0 || DstIndex >= CurrentSlots)
+		return;
+	if (SrcIndex == DstIndex)
+		return;
+
+	// 만약 InventoryItems 배열의 크기가 현재 가진 아이템 개수까지만 잡혀있다면, 
+	// MaxSlots 크기까지 빈 슬롯(기본 생성된 빈 FLB_ItemEntry)으로 미리 채워져 있어야 합니다.
+	// 배열 크기가 MaxSlots보다 작다면 빈 칸들을 채워주는 안전장치:
+	while (InventoryItems.Num() < CurrentSlots)
+	{
+		FLB_ItemEntry EmptyEntry;
+		// 빈 칸을 나타내는 식별자나 초기값 설정 (ItemCode가 None이면 빈 칸으로 간주)
+		InventoryItems.Add(EmptyEntry);
+	}
+
+	// 고정 슬롯 방식이므로 두 인덱스의 데이터를 안전하게 교환(Swap)
+	InventoryItems.Swap(SrcIndex, DstIndex);
+
+	OwnerActor->ForceNetUpdate();
+	OnRep_InventoryItems();
+	OnInventoryUpdated.Broadcast();
+}
+
 int32 ULB_InventoryComponent::GetItemCount(FName ItemCode) const
 {
 	int32 Total = 0;
@@ -181,6 +215,16 @@ void ULB_InventoryComponent::Server_DropItem_Implementation(FGuid ItemInstanceId
 		Drop->InitDrop(Code, Count);
 		Drop->FinishSpawning(T);
 	}
+}
+
+void ULB_InventoryComponent::ExpandInventory(int32 AddCount)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+
+	CurrentSlots = FMath::Clamp(CurrentSlots + AddCount, 0, MaxSlots);
+    
+	// UI 갱신을 위해 브로드캐스트
+	OnInventoryUpdated.Broadcast();
 }
 
 bool ULB_InventoryComponent::EquipItem(FGuid ItemInstanceId)
@@ -245,10 +289,16 @@ bool ULB_InventoryComponent::UnequipItem(FGuid ItemInstanceId)
 	return true;
 }
 
+
 void ULB_InventoryComponent::OnRep_InventoryItems()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[OnRep] Net=%d Slot0Stack=%d"),
 	       (int32)GetNetMode(), InventoryItems.Num() > 0 ? InventoryItems[0].StackCount : -1);
+	OnInventoryUpdated.Broadcast();
+}
+
+void ULB_InventoryComponent::OnRep_UnlockedSlots()
+{
 	OnInventoryUpdated.Broadcast();
 }
 
