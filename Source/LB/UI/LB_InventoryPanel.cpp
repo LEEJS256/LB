@@ -9,7 +9,6 @@
 #include "Component/LB_InventoryComponent.h"
 #include "Slate/SlateWidget/LB_Button.h"
 #include "Components/TileView.h"
-#include "GameFramework/PlayerState.h"
 #include "PlayerState/LB_PlayerState.h"
 
 void ULB_InventoryPanel::NativeConstruct()
@@ -56,7 +55,9 @@ FReply ULB_InventoryPanel::NativeOnMouseButtonDown(const FGeometry& InGeometry, 
 		&& DragHandle->GetCachedGeometry().IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
 	{
 		bDragging = true;
-		GrabLocal = InGeometry.AbsoluteToLocal(InMouseEvent.GetScreenSpacePosition());
+		DragStartScreenPos = InMouseEvent.GetScreenSpacePosition();
+		DragStartPanelOffset = PanelOffset;
+        
 		return FReply::Handled().CaptureMouse(TakeWidget());
 	}
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
@@ -64,30 +65,34 @@ FReply ULB_InventoryPanel::NativeOnMouseButtonDown(const FGeometry& InGeometry, 
 
 FReply ULB_InventoryPanel::NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (!bDragging) return Super::NativeOnMouseMove(InGeometry, InMouseEvent);
+	if (!bDragging)
+		return Super::NativeOnMouseMove(InGeometry, InMouseEvent);
 
-	// 잡은 지점과 현재 커서 위치의 차이만큼 창을 옮긴다 (DPI/스케일 자동 대응)
-	const FVector2D Local = InGeometry.AbsoluteToLocal(InMouseEvent.GetScreenSpacePosition());
-	const FVector2D Delta = Local - GrabLocal;
+	// 1. 드래그 시작 위치로부터 현재 마우스가 얼마나 움직였는지 스크린/뷰포트 기준 Delta 계산 (DPI 스케일 자동 반영)
+	const float Scale = UWidgetLayoutLibrary::GetViewportScale(this);
+	const FVector2D CurrentScreenPos = InMouseEvent.GetScreenSpacePosition();
+	const FVector2D Delta = (CurrentScreenPos - DragStartScreenPos) / Scale;
 
-	// 화면 밖으로 못 나가게 막는다
-	FVector2D PixelPos, ViewPos;
-	USlateBlueprintLibrary::LocalToViewport(this, InGeometry, FVector2D::ZeroVector, PixelPos, ViewPos);
+	// 2. 기본 이동량 적용
+	FVector2D TargetOffset = DragStartPanelOffset + Delta;
+
+	// 3. 화면 밖으로 완전히 벗어나지 않도록 클램핑 (선택 사항: 원하시면 범위를 유연하게 조절 가능)
 	const FVector2D Size = InGeometry.GetLocalSize();
-	const FVector2D VP = UWidgetLayoutLibrary::GetViewportSize(this) / UWidgetLayoutLibrary::GetViewportScale(this);
-	const FVector2D Target = ViewPos + Delta;
-	const FVector2D Clamped(
-		FMath::Clamp(Target.X, 0.0, FMath::Max(0.0, VP.X - Size.X)),
-		FMath::Clamp(Target.Y, 0.0, FMath::Max(0.0, VP.Y - Size.Y)));
+	const FVector2D VP = UWidgetLayoutLibrary::GetViewportSize(this) / Scale;
+    
+	// 예시: 창이 화면 밖으로 너무 나가지 않게 하되, 막히는 느낌이 없도록 최소한의 영역만 보장
+	PanelOffset = FVector2D(
+		FMath::Clamp(TargetOffset.X, -Size.X + 50.f, VP.X - 50.f),
+		FMath::Clamp(TargetOffset.Y, -50.f, VP.Y - 50.f)
+	);
 
-	PanelOffset += Clamped - ViewPos;
 	SetRenderTranslation(PanelOffset);
 	return FReply::Handled();
 }
 
 void ULB_InventoryPanel::NativeOnMouseCaptureLost(const FCaptureLostEvent& CaptureLostEvent)
 {
-	bDragging = false;   // 알트탭 등으로 캡처를 잃어도 드래그 상태가 남지 않게
+	// bDragging = false;   // 알트탭 등으로 캡처를 잃어도 드래그 상태가 남지 않게
 	Super::NativeOnMouseCaptureLost(CaptureLostEvent);
 }
 
@@ -118,9 +123,14 @@ void ULB_InventoryPanel::HandleInventoryUpdated()
 
 int32 ULB_InventoryPanel::CalcSlotCount(int32 ItemCount) const
 {
-	const int32 Cols = FMath::Max(1, Columns);
-	const int32 Count = FMath::Max(MinSlots, ItemCount + Cols);
-	return FMath::DivideAndRoundUp(Count, Cols) * Cols;
+	// const int32 Cols = FMath::Max(1, Columns);
+	// const int32 Count = FMath::Max(MinSlots, ItemCount + Cols);
+	// return FMath::DivideAndRoundUp(Count, Cols) * Cols;
+
+	const ALB_PlayerState* PS = BoundPlayerState.Get();
+	const ULB_InventoryComponent* Inv = PS ? PS->Get_InventoryComponent() : nullptr;
+	// int32 Result = Inv->Get_CurrentSlot();
+	return Inv->Get_CurrentSlot();
 }
 
 void ULB_InventoryPanel::RefreshFromEntries(const TArray<FLB_ItemEntry>& Items)

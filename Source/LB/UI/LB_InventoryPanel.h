@@ -27,6 +27,7 @@ class LB_API ULB_InventoryPanel : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	
 	/** 슬롯 목록을 다시 만든다. 배열 인덱스가 곧 슬롯 번호 */
 	void RefreshFromEntries(const TArray<FLB_ItemEntry>& Items);
 
@@ -82,6 +83,9 @@ private:
 	bool bDragging = false;
 	FVector2D GrabLocal = FVector2D::ZeroVector;   // 잡은 지점(창 로컬 좌표)
 	FVector2D PanelOffset = FVector2D::ZeroVector; // 현재 이동량
+
+	FVector2D DragStartScreenPos; // 드래그 시작 시점의 마우스 스크린(절대) 좌표
+	FVector2D DragStartPanelOffset; // 드래그 시작 시점의 패널 오프셋
 	
 	
 	int32 CalcSlotCount(int32 ItemCount) const;
