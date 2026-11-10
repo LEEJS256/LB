@@ -39,39 +39,22 @@ void ULB_QuickSlot::Setup(ELB_QuickSlotType InType, int32 InIndex, const FText& 
 
 void ULB_QuickSlot::BindToComponent(ULB_QuickSlotComponent* InComponent)
 {
-
-
-
 	if (Component.IsValid())
 	{
-		Component->OnQuickSlotUpdated.AddUniqueDynamic(this, &ULB_QuickSlot::HandleQuickSlotUpdated);
-		
-		// ⚠️ 핵심 수정: 매개변수 개수(2개)가 일치하는 HandleSlotChanged로 연결해야 합니다!
-		Component->OnSlotChanged.AddDynamic(this, &ULB_QuickSlot::HandleSlotChanged);
-        
-		// 바인딩 직후 초기 상태 갱신
-		RefreshFromComponent();
-	}
-	
-	if (Component.IsValid())
-	{
-		Component->OnSlotChanged.RemoveDynamic(this, &ULB_QuickSlot::HandleSlotChanged);
 		Component->OnQuickSlotUpdated.RemoveDynamic(this, &ULB_QuickSlot::HandleQuickSlotUpdated);
+		Component->OnSlotChanged.RemoveDynamic(this, &ULB_QuickSlot::HandleSlotChanged);
 	}
 
 	Component = InComponent;
 
 	if (Component.IsValid())
 	{
-	
-		
 		Component->OnQuickSlotUpdated.AddUniqueDynamic(this, &ULB_QuickSlot::HandleQuickSlotUpdated);
-		Component->OnSlotChanged.AddDynamic(this, &ULB_QuickSlot::HandleSlotChanged); // 필요에 따라 바인딩
+		Component->OnSlotChanged.AddUniqueDynamic(this, &ULB_QuickSlot::HandleSlotChanged);
         
-		// 바인딩 직후 초기 상태 갱신 (기존 UpdateViewFromComponent 제거)
+		// 바인딩 직후 초기 상태 갱신
 		RefreshFromComponent();
 	}
-	
 
 }
 
@@ -170,6 +153,8 @@ void ULB_QuickSlot::ApplyState()
 		Brush.ImageSize = FVector2D(Icon->GetSizeX(), Icon->GetSizeY());
 		Box->SetItem(Brush, Count);
 		Box->SetDimmed(SlotType == ELB_QuickSlotType::Item && Count <= 0);
+
+		
 	}
 	else
 	{
