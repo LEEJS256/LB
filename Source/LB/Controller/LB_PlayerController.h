@@ -11,6 +11,7 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 class ULB_HUD;
+class ULB_DMGFontManager;
 /**
  *
  */
@@ -18,8 +19,12 @@ UCLASS()
 class LB_API ALB_PlayerController : public APlayerController
 {
 	GENERATED_BODY()
+	ALB_PlayerController();
 public:
 	void CloseInventory();
+
+	UFUNCTION(BlueprintCallable, Category = "LB|Component")
+	class ULB_DMGFontManager* Get_DMGFontMgr() const;
 	
 protected:
 	// Enhanced Input Mapping Context 등록과 Action 바인딩 (로컬 컨트롤러에서만 호출됨)
@@ -31,6 +36,9 @@ protected:
 	
 	void OnMoveTriggered(const FInputActionValue& Value);
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<ULB_DMGFontManager> DamageNumberManager;
+	
 #pragma region INPUT_AREA
 	// 에디터에서 생성한 /Game/LB/Input/IMC_Player를 BP_PlayerController Class Defaults에서 연결
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")

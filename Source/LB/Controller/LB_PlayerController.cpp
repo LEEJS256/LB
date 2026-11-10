@@ -10,11 +10,16 @@
 #include "Blueprint/UserWidget.h"
 #include "Character/LB_PlayerCharacter.h"
 #include "Component/LB_BattleComponent.h"
-#include "Component/LB_QuickSlotComponent.h"
 #include "Controller/LB_MonsterAIController.h"
+#include "Subsystem/LB_DMGFontManager.h"
 #include "UI/LB_PlayerStatus.h"
 #include "UI/LB_HUD.h"
 
+
+ALB_PlayerController::ALB_PlayerController()
+{
+	DamageNumberManager = CreateDefaultSubobject<ULB_DMGFontManager>(TEXT("DMGFontManager"));
+}
 
 void ALB_PlayerController::CloseInventory()
 {
@@ -23,6 +28,13 @@ void ALB_PlayerController::CloseInventory()
 	HUDWidget->SetInventoryVisible(false);
 	SetInventoryUIMode(false);
 }
+
+class ULB_DMGFontManager* ALB_PlayerController::Get_DMGFontMgr() const
+{
+	return DamageNumberManager;
+}
+
+
 
 void ALB_PlayerController::SetupInputComponent()
 {
