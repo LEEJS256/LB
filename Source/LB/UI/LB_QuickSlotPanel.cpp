@@ -7,14 +7,15 @@
 #include "GameFramework/PlayerState.h"
 #include "TimerManager.h"
 #include "Component/LB_InventoryComponent.h"
+#include "PlayerState/LB_PlayerState.h"
 #include "UI/Slate/SlateWidget/LB_QuickSlot.h"
 #include "Utility/LB_ItemEntry.h"
 
 ULB_QuickSlotPanel::ULB_QuickSlotPanel(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	SkillKeyLabels = { INVTEXT("A"), INVTEXT("S"), INVTEXT("D"), INVTEXT("F") };
-	ItemKeyLabels  = { INVTEXT("1"), INVTEXT("2"), INVTEXT("3"), INVTEXT("4") };
+	SkillKeyLabels = {INVTEXT("A"), INVTEXT("S"), INVTEXT("D"), INVTEXT("F")};
+	ItemKeyLabels = {INVTEXT("1"), INVTEXT("2"), INVTEXT("3"), INVTEXT("4")};
 }
 
 void ULB_QuickSlotPanel::NativeOnInitialized()
@@ -55,7 +56,8 @@ void ULB_QuickSlotPanel::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void ULB_QuickSlotPanel::BuildSlots(ELB_QuickSlotType Type, UHorizontalBox* Box, int32 Count, const TArray<FText>& Labels)
+void ULB_QuickSlotPanel::BuildSlots(ELB_QuickSlotType Type, UHorizontalBox* Box, int32 Count,
+                                    const TArray<FText>& Labels)
 {
 	if (!Box || !WidgetTree) return;
 
@@ -81,7 +83,6 @@ void ULB_QuickSlotPanel::BuildSlots(ELB_QuickSlotType Type, UHorizontalBox* Box,
 		// 	SkillSlotWidgets.Add(QuickSlot);
 		// }
 	}
-
 }
 
 void ULB_QuickSlotPanel::RebuildSlots()
@@ -89,7 +90,7 @@ void ULB_QuickSlotPanel::RebuildSlots()
 	Slots.Reset();
 	SkillSlotWidgets.Reset();
 	BuildSlots(ELB_QuickSlotType::Skill, SkillBox, ULB_QuickSlotComponent::SkillSlotCount, SkillKeyLabels);
-	BuildSlots(ELB_QuickSlotType::Item,  ItemBox,  ULB_QuickSlotComponent::ItemSlotCount,  ItemKeyLabels);
+	BuildSlots(ELB_QuickSlotType::Item, ItemBox, ULB_QuickSlotComponent::ItemSlotCount, ItemKeyLabels);
 }
 
 void ULB_QuickSlotPanel::TryAutoBind()
@@ -97,16 +98,16 @@ void ULB_QuickSlotPanel::TryAutoBind()
 	// 멀티에선 위젯이 PlayerState보다 먼저 만들어질 수 있어서, 준비될 때까지 재시도
 	if (const APlayerController* PC = GetOwningPlayer())
 	{
-		if (APlayerState* PS = PC->PlayerState)
+		if (ALB_PlayerState* PS = PC->GetPlayerState<ALB_PlayerState>())
 		{
-			if (ULB_QuickSlotComponent* Comp = PS->FindComponentByClass<ULB_QuickSlotComponent>())
+			if (ULB_QuickSlotComponent* QS_Comp = PS->Get_QuickSlotComponent())
 			{
-				BindToComponent(Comp);
-				return;
+				BindToComponent(QS_Comp);
+				return; 
 			}
 		}
 	}
-
+	
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(BindRetryHandle, this, &ULB_QuickSlotPanel::TryAutoBind, 0.2f, false);
@@ -134,17 +135,17 @@ void ULB_QuickSlotPanel::BindToComponent(ULB_QuickSlotComponent* InComponent)
 void ULB_QuickSlotPanel::HandleSlotDropped(ELB_QuickSlotType DstType, FName SrcGroup, int32 SrcIndex, int32 DstIndex)
 {
 	UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Drop %s[%d] -> %s[%d]"),
-	   *SrcGroup.ToString(), SrcIndex, *LBSlotGroup::FromQuickSlotType(DstType).ToString(), DstIndex);
-	
+	*SrcGroup.ToString(), SrcIndex, *LBSlotGroup::FromQuickSlotType(DstType).ToString(), DstIndex);
+
 	if (!Component.IsValid())
 		return;
- 
+
 	// 1) 인벤토리 → 퀵슬롯: 아이템 칸에만 등록
 	if (SrcGroup == LBSlotGroup::Inventory())
 	{
 		if (DstType != ELB_QuickSlotType::Item)
 			return;
- 
+
 		const FName ItemCode = ResolveInventoryItemCode(SrcIndex);
 		if (!ItemCode.IsNone())
 		{
@@ -152,14 +153,13 @@ void ULB_QuickSlotPanel::HandleSlotDropped(ELB_QuickSlotType DstType, FName SrcG
 		}
 		return;
 	}
- 
 	// 2) 같은 종류 퀵슬롯끼리: 서로 교환
 	if (SrcGroup == LBSlotGroup::FromQuickSlotType(DstType))
 	{
 		Component->SwapSlots(DstType, SrcIndex, DstIndex);
 		return;
 	}
- 
+
 	// TODO: 스킬창 → 스킬 칸 (스킬 목록 UI가 생기면 SrcGroup/SrcIndex → AbilityTag 변환 후 RegisterSkill)
 }
 
@@ -167,12 +167,11 @@ FName ULB_QuickSlotPanel::ResolveInventoryItemCode(int32 InventoryIndex) const
 {
 	// 인벤토리는 고정 슬롯이라 배열 인덱스 = 칸 번호. 배열이 칸 수보다 짧을 수 있어서 범위 확인
 	if (!Component.IsValid()) return NAME_None;
- 
+
 	const AActor* Owner = Component->GetOwner();
 	const ULB_InventoryComponent* Inv = Owner ? Owner->FindComponentByClass<ULB_InventoryComponent>() : nullptr;
 	if (!Inv) return NAME_None;
- 
+
 	const TArray<FLB_ItemEntry>& Items = Inv->GetInventoryItems();
 	return Items.IsValidIndex(InventoryIndex) ? Items[InventoryIndex].ItemCode : NAME_None;
-
 }
