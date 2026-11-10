@@ -43,9 +43,6 @@ void ULB_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 {
-	// UE_LOG(LogTemp, Warning, TEXT("[AddItem] 호출 Code=%s Count=%d Auth=%d"),
-	//        *ItemCode.ToString(), Count, GetOwner() ? GetOwner()->HasAuthority() : -1);
-
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor || !OwnerActor->HasAuthority() || Count <= 0)
 		return Count;
@@ -54,10 +51,16 @@ int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 	if (!Info)
 		return Count;
 
+	// 인벤토리 배열 크기를 현재 해금된 슬롯 수(CurrentSlots)에 맞게 항상 고정 유지
+	if (InventoryItems.Num() < CurrentSlots)
+	{
+		InventoryItems.SetNum(CurrentSlots);
+	}
+
 	const int32 MaxStack = FMath::Max(1, Info->MaxStackSize);
 	int32 Remain = Count;
 
-	// 1. 기존 스택 채우기
+	// 1. 기존에 같은 아이템이 있는 스택 채우기
 	for (FLB_ItemEntry& Entry : InventoryItems)
 	{
 		if (Remain <= 0) break;
@@ -68,20 +71,20 @@ int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 		Remain -= Add;
 	}
 
-	// 2. 새 슬롯
-	while (Remain > 0 && InventoryItems.Num() < CurrentSlots)
+	// 2. 비어 있는 슬롯(ItemCode.IsNone())에 새로 채우기
+	for (FLB_ItemEntry& Entry : InventoryItems)
 	{
-		FLB_ItemEntry NewEntry;
-		NewEntry.ItemInstanceId = FGuid::NewGuid();
-		NewEntry.ItemCode = ItemCode;
-		NewEntry.StackCount = FMath::Min(Remain, MaxStack);
-		InventoryItems.Add(NewEntry);
-		Remain -= NewEntry.StackCount;
-	}
-	// UE_LOG(LogTemp, Warning, TEXT("[AddItem] 결과 Remain=%d Slots=%d/%d MaxStack=%d Slot0=%d"),
-	//        Remain, InventoryItems.Num(), MaxSlots, MaxStack,
-	//        InventoryItems.Num() > 0 ? InventoryItems[0].StackCount : -1);
+		if (Remain <= 0) break;
+		if (!Entry.ItemCode.IsNone()) continue; // 빈 칸이 아니면 패스
 
+		Entry.ItemInstanceId = FGuid::NewGuid();
+		Entry.ItemCode = ItemCode;
+		Entry.StackCount = FMath::Min(Remain, MaxStack);
+		Remain -= Entry.StackCount;
+	}
+
+	// UE_LOG(LogTemp, Warning, TEXT("[AddItem] 결과 Remain=%d Slots=%d/%d MaxStack=%d"),
+	//        Remain, InventoryItems.Num(), CurrentSlots, MaxStack);
 
 	if (Remain < Count)
 	{
@@ -121,7 +124,8 @@ bool ULB_InventoryComponent::RemoveItem(FGuid ItemInstanceId, int32 Count)
 			{
 				UnequipItem(ItemInstanceId);
 			}
-			InventoryItems.RemoveAt(Index);
+			TargetItem = FLB_ItemEntry();
+			// InventoryItems.RemoveAt(Index);
 		}
 
 		OnInventoryUpdated.Broadcast();
@@ -222,7 +226,11 @@ void ULB_InventoryComponent::ExpandInventory(int32 AddCount)
 	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
 
 	CurrentSlots = FMath::Clamp(CurrentSlots + AddCount, 0, MaxSlots);
-    
+
+	if (InventoryItems.Num() < CurrentSlots)
+	{
+		InventoryItems.SetNum(CurrentSlots);
+	}
 	// UI 갱신을 위해 브로드캐스트
 	OnInventoryUpdated.Broadcast();
 }
