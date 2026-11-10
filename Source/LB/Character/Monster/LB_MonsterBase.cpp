@@ -8,8 +8,11 @@
 #include "Abilities/GameplayAbility.h"
 #include "GameplayEffectTypes.h"
 #include "Components/WidgetComponent.h"
+#include "Controller/LB_PlayerController.h"
 #include "Data/LB_MonsterDataAsset.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
+#include "Kismet/GameplayStatics.h"
+#include "Subsystem/LB_DMGFontManager.h"
 #include "UI/LB_MonsterHPBar.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
@@ -27,7 +30,6 @@ ALB_MonsterBase::ALB_MonsterBase()
 
 	// 같은 액터의 서브오브젝트라 ASC에 자동 등록됨
 	AttributeSet = CreateDefaultSubobject<ULB_AttributeSet>(TEXT("AttributeSet"));
-	
 }
 
 UAbilitySystemComponent* ALB_MonsterBase::GetAbilitySystemComponent() const
@@ -54,7 +56,6 @@ void ALB_MonsterBase::BeginPlay()
 	}
 
 	InitializeMonsterData();
-	
 }
 
 void ALB_MonsterBase::Set_HPComp()
@@ -101,6 +102,20 @@ void ALB_MonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 		Bar->SetHealth(Data.NewValue, Max);
 	}
 
+#pragma region DMGFONT
+	const float Delta = Data.OldValue - Data.NewValue;
+	if (Delta > 0.f) // 깎인 경우만 (회복/초기 복제값은 무시)
+	{
+		if (ALB_PlayerController* LB_PC = Cast<ALB_PlayerController>(UGameplayStatics::GetPlayerController(this, 0)))
+		{
+			if (auto* Mgr = LB_PC->FindComponentByClass<ULB_DMGFontManager>())
+			{
+				Mgr->Spawn(GetActorLocation() + FVector(0.f, 0.f, 100.f), Delta);
+			}
+		}
+	}
+#pragma endregion
+
 	if (Data.NewValue <= 0.f)
 	{
 		HPBarComp->SetVisibility(false);
@@ -109,16 +124,6 @@ void ALB_MonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 
 	// 평소 피격 시에는 체력바를 켜두고 유지 (타이머로 자동 숨김 안 함)
 	HPBarComp->SetVisibility(true);
-
-	//
-	// if (Data.NewValue <= 0.f)
-	// {
-	// 	HideHPBar();
-	// 	return;
-	// }
-	//
-	// GetWorldTimerManager().ClearTimer(HPBarHideTimer);
-	// GetWorldTimerManager().SetTimer(HPBarHideTimer, this, &ALB_MonsterBase::HideHPBar, HPBarHideDelay, false);
 }
 
 
@@ -160,7 +165,7 @@ void ALB_MonsterBase::InitializeMonsterData()
 	}
 
 	ApplyDefaultAttributes(MonsterData);
-	
+
 	bStartupApplied = true;
 
 	for (const TSubclassOf<UGameplayAbility>& AbilityClass : MonsterData->StartupGA)
