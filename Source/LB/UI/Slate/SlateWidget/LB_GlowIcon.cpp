@@ -1,5 +1,5 @@
 #include "LB_GlowIcon.h"
-#include "SLB_GlowIcon.h"
+#include "../SLB_GlowIcon.h"
 
 TSharedRef<SWidget> ULB_GlowIcon::RebuildWidget()
 {

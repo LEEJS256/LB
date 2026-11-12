@@ -47,7 +47,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UNiagaraComponent> GradeEffect;
 
-	UPROPERTY(ReplicatedUsing = OnRep_ItemCode)
+	UPROPERTY(EditAnywhere,ReplicatedUsing = OnRep_ItemCode)
 	FName ItemCode = "1000";
 
 	UPROPERTY(Replicated)

@@ -11,8 +11,29 @@
 #include "Character/LB_PlayerCharacter.h"
 #include "Component/LB_BattleComponent.h"
 #include "Controller/LB_MonsterAIController.h"
+#include "Subsystem/LB_DMGFontManager.h"
 #include "UI/LB_PlayerStatus.h"
 #include "UI/LB_HUD.h"
+
+
+ALB_PlayerController::ALB_PlayerController()
+{
+	DamageNumberManager = CreateDefaultSubobject<ULB_DMGFontManager>(TEXT("DMGFontManager"));
+}
+
+void ALB_PlayerController::CloseInventory()
+{
+	if (!HUDWidget || !HUDWidget->IsInventoryVisible()) return;
+
+	HUDWidget->SetInventoryVisible(false);
+	SetInventoryUIMode(false);
+}
+
+class ULB_DMGFontManager* ALB_PlayerController::Get_DMGFontMgr() const
+{
+	return DamageNumberManager;
+}
+
 
 
 void ALB_PlayerController::SetupInputComponent()
@@ -57,6 +78,11 @@ void ALB_PlayerController::SetupInputComponent()
 			EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this,
 			                                   &ALB_PlayerController::Dodge);
 		}
+		if (InvenAction)
+		{
+			EnhancedInputComponent->BindAction(InvenAction, ETriggerEvent::Started, this,
+											   &ALB_PlayerController::TurnOn_Inventory);
+		}
 		if (NormalAttackAction)
 		{
 			EnhancedInputComponent->BindAction(NormalAttackAction, ETriggerEvent::Started, this,
@@ -66,6 +92,16 @@ void ALB_PlayerController::SetupInputComponent()
 		{
 			EnhancedInputComponent->BindAction(StrongAttackAction, ETriggerEvent::Completed, this,
 			                                   &ALB_PlayerController::StrongATK);
+		}
+
+	
+		for (int32 i = 0; i < SkillSlotActions.Num(); ++i)
+		{
+			EnhancedInputComponent->BindAction(SkillSlotActions[i], ETriggerEvent::Started, this, &ThisClass::OnSkillSlot, i);
+		}
+		for (int32 i = 0; i < ItemSlotActions.Num(); ++i)
+		{
+			EnhancedInputComponent->BindAction(ItemSlotActions[i], ETriggerEvent::Started, this, &ThisClass::OnItemSlot, i);
 		}
 	}
 }
@@ -192,6 +228,16 @@ void ALB_PlayerController::StopSprint(const FInputActionValue& Value)
 	ASC->CancelAbilities(&SprintTagContainer);
 }
 
+void ALB_PlayerController::TurnOn_Inventory(const FInputActionValue& Value)
+{
+	if (!IsLocalController() || !HUDWidget) return;
+
+	if (HUDWidget->IsInventoryVisible()) { CloseInventory(); return; }
+
+	HUDWidget->SetInventoryVisible(true);
+	SetInventoryUIMode(true);
+}
+
 void ALB_PlayerController::Dodge(const FInputActionValue& Value)
 {
 	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
@@ -237,8 +283,39 @@ void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 	BattleComp->RequestComboInput(TAG_Input_Strong);
 }
 
+void ALB_PlayerController::OnSkillSlot(int32 Index)
+{
+	// if (ULB_QuickSlotComponent* QS = GetPlayerState<ALB_PlayerState>()->GetQuickSlotComponent())
+	// 	QS->UseSkillSlot(Index);
+}
+
+void ALB_PlayerController::OnItemSlot(int32 Index)
+{
+	// if (ULB_QuickSlotComponent* QS = GetPlayerState<ALB_PlayerState>()->GetQuickSlotComponent())
+	// 	QS->UseSkillSlot(Index);
+}
+
 void ALB_PlayerController::Set_IATag()
 {
 	SprintTagContainer.AddTag(TAG_Ability_Sprint);
 	DodgeTagContainer.AddTag(TAG_Ability_Dodge);
+}
+
+void ALB_PlayerController::SetInventoryUIMode(bool bOpen)
+{
+	if (bOpen)
+	{
+		FInputModeGameAndUI Mode;
+		Mode.SetHideCursorDuringCapture(false);
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(Mode);
+		bShowMouseCursor = true;
+		SetIgnoreLookInput(true);    // 열려 있는 동안 카메라가 마우스를 따라 돌지 않게
+	}
+	else
+	{
+		SetInputMode(FInputModeGameOnly());
+		bShowMouseCursor = false;
+		SetIgnoreLookInput(false);
+	}
 }

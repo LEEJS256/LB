@@ -13,6 +13,7 @@
 
 class UAbilitySystemComponent;
 class ULB_InventoryComponent;
+class ULB_QuickSlotComponent;
 class UAttributeSet;
 class ULB_AttributeSet;
 class ULB_PlayerDataAsset;
@@ -20,6 +21,9 @@ class UGameplayEffect;
 /**
  * 
  */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLB_OnPlayerInventoryUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLB_OnPlayerQuickSlotUpdated, ELB_QuickSlotType, SlotType, int32, SlotIndex, FName, NewItemCode);
+
 UCLASS()
 class LB_API ALB_PlayerState : public APlayerState , public IAbilitySystemInterface
 {
@@ -28,11 +32,26 @@ public:
 	ALB_PlayerState();
 
 #pragma region component
+	UPROPERTY(BlueprintAssignable, Category = "LB|Component")
+	FLB_OnPlayerInventoryUpdated OnInventoryUpdated;
+	
+	virtual void PostInitializeComponents() override;
+	
 	UFUNCTION(BlueprintCallable, Category = "LB|Component")
 	virtual ULB_InventoryComponent* Get_InventoryComponent() const;
-	
+
 	UPROPERTY(VisibleAnywhere, Category = "LB|Component")
 	TObjectPtr<ULB_InventoryComponent> InventoryComponent;
+
+	UPROPERTY(BlueprintAssignable, Category = "LB|Component")
+	FLB_OnPlayerQuickSlotUpdated OnQuickSlotUpdated;
+
+	
+	UFUNCTION(BlueprintCallable, Category = "LB|Component")
+	virtual ULB_QuickSlotComponent* Get_QuickSlotComponent() const;
+
+	UPROPERTY(VisibleAnywhere, Category = "LB|Component")
+	TObjectPtr<ULB_QuickSlotComponent> QuickSlotComponent;
 #pragma  endregion 
 	
 #pragma region GAS
@@ -68,6 +87,12 @@ public:
 #pragma endregion  
 
 private:
+	UFUNCTION()
+	void HandleInventoryUpdated();
+
+	UFUNCTION()
+	void HandleQuickSlotUpdated(ELB_QuickSlotType SlotType, int32 SlotIndex, FName NewItemCode); 
+	
 	FActiveGameplayEffectHandle CurrentStateGEHandle;
 
 	// [변경] 리스폰 때 어빌리티/GE가 중복 적용되지 않게 하는 가드

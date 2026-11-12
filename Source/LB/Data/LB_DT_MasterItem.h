@@ -17,6 +17,10 @@ struct LB_API FLB_DT_MasterItem : public FTableRowBase
 
 	//아이템코드는 DT의 로우로
 
+	//1000 -장비템
+	//2000- 소비템
+	//3000- 재화템
+	
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftObjectPtr<ULB_DA_ItemInfo> ItemInfo;

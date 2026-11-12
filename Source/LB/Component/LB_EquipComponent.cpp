@@ -124,7 +124,7 @@ void ULB_EquipComponent::AttachWeapon(int32 Index, bool bCombat)
 	                                    bBoneExists ? TEXT("O") : TEXT("X"),
 	                                    *Weapon->GetActorLocation().ToCompactString());
 
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *Msg);
+	//UE_LOG(LogTemp, Warning, TEXT("%s"), *Msg);
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, bBoneExists ? FColor::Cyan : FColor::Red, Msg);

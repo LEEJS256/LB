@@ -11,6 +11,7 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 class ULB_HUD;
+class ULB_DMGFontManager;
 /**
  *
  */
@@ -18,7 +19,13 @@ UCLASS()
 class LB_API ALB_PlayerController : public APlayerController
 {
 	GENERATED_BODY()
+	ALB_PlayerController();
+public:
+	void CloseInventory();
 
+	UFUNCTION(BlueprintCallable, Category = "LB|Component")
+	class ULB_DMGFontManager* Get_DMGFontMgr() const;
+	
 protected:
 	// Enhanced Input Mapping Context 등록과 Action 바인딩 (로컬 컨트롤러에서만 호출됨)
 	virtual void SetupInputComponent() override;
@@ -29,6 +36,9 @@ protected:
 	
 	void OnMoveTriggered(const FInputActionValue& Value);
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<ULB_DMGFontManager> DamageNumberManager;
+	
 #pragma region INPUT_AREA
 	// 에디터에서 생성한 /Game/LB/Input/IMC_Player를 BP_PlayerController Class Defaults에서 연결
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
@@ -39,10 +49,22 @@ protected:
 	TObjectPtr<UInputAction> MoveAction;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DashAction;
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TArray<TObjectPtr<UInputAction>> SkillSlotActions; // A S D F (4개)
+
+	UPROPERTY(EditDefaultsOnly, Category="Input")
+	TArray<TObjectPtr<UInputAction>> ItemSlotActions;  // Num1~4 (4개)
+	
 	//스페이스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DodgeAction;
 
+	//인벤토리
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> InvenAction;
+
+	
 	// 점프- C
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> JumpAction;
@@ -77,14 +99,22 @@ private:
 
 	void StartSprint(const FInputActionValue& Value);
 	void StopSprint(const FInputActionValue& Value);
+	void TurnOn_Inventory(const FInputActionValue& Value);
 	void Dodge(const FInputActionValue& Value);
 	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
 
+	void OnSkillSlot(int32 Index);
+	void OnItemSlot(int32 Index);
 	void Set_IATag();
 	
 	FGameplayTagContainer SprintTagContainer;
 	FGameplayTagContainer DodgeTagContainer;
 	
 #pragma endregion
+
+
+private:
+	void SetInventoryUIMode(bool bOpen)   ;
+	
 };

@@ -6,21 +6,25 @@
 #include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "Utility/LB_NativeGameplayTag.h"
+#include "Data/LB_TooltipTypes.h"
 #include "LB_DA_ItemInfo.generated.h"
 
 class UTexture2D;
 class UGameplayEffect;
-class ALB_Equipment;
 /**
- * 
+ *
  */
 UCLASS()
 class LB_API ULB_DA_ItemInfo : public UPrimaryDataAsset
 {
 public:
-	
+
 	GENERATED_BODY()
-	// 아이템 종류 구분용 태그.  
+
+	/** 툴팁에 표시할 추가 줄. 타입별 DA가 오버라이드해서 채운다. (재화/기타는 비어 있음) */
+	virtual void GetTooltipLines(TArray<FLB_TooltipLine>& Out) const {}
+
+	// 아이템 종류 구분용 태그.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	FGameplayTag ItemTypeTag  = TAG_Item_Currency;
 
@@ -32,10 +36,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|UI")
 	FText DisplayName;
 
+	//아이템 이름 아래 보조 문구 (예: "사용시 교환 불가"). 비워두면 툴팁에서 숨김
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|UI")
+	FText SubName;
+
 	//아이템설명
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|UI", meta = (MultiLine = true))
 	FText Description;
- 
+
 	// UI에서 필요할 때만 비동기 로드하도록 Soft로 둠
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|UI")
 	TSoftObjectPtr<UTexture2D> Icon;
@@ -45,7 +53,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Shop", meta = (ClampMin = "0"))
 	float SellPricePercent = 1.0f;
-	
+
 	//인벤토리 내- 최대 소유수
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "1"))
 	int32 MaxStackSize = 1;
@@ -56,12 +64,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item|Shop")
 	int32 GetSellPrice() const { return FMath::FloorToInt(BuyPrice * SellPricePercent); }
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
-	FGameplayTag WeaponTag;   // 무기 DT 행 조회용 (예: Weapon.Dual.Dagger)
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
-	TSoftClassPtr<ALB_Equipment> EquipClass;
-	
 	// Asset Manager용 ID. 타입은 전부 "LBItem"으로 통일하고, 이름은 에셋 이름 사용
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override
 	{

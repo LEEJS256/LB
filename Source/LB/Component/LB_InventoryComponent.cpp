@@ -9,14 +9,13 @@
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/LB_PlayerState.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Data/LB_DA_EquipInfo.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 #include "Data/LB_DA_ItemInfo.h"
-#include  "Data/LB_DT_WeaponInformation.h"
 #include "Engine/World.h"
 #include "Equipment/LB_Equipment.h"
 #include "GameFramework/Pawn.h"
 #include "Object/Item/LB_DropItem.h"
-#include "Tests/ToolMenusTestUtilities.h"
 
 // Sets default values for this component's properties
 ULB_InventoryComponent::ULB_InventoryComponent()
@@ -29,6 +28,11 @@ ULB_InventoryComponent::ULB_InventoryComponent()
 	SetIsReplicatedByDefault(true);
 }
 
+int32 ULB_InventoryComponent::Get_CurrentSlot() const
+{
+	return CurrentSlots;
+}
+
 void ULB_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -39,15 +43,23 @@ void ULB_InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 {
 	AActor* OwnerActor = GetOwner();
-	if (!OwnerActor || !OwnerActor->HasAuthority() || Count <= 0) return Count;
+	if (!OwnerActor || !OwnerActor->HasAuthority() || Count <= 0)
+		return Count;
 
 	const ULB_DA_ItemInfo* Info = GetItemInfo(ItemCode);
-	if (!Info) return Count;
+	if (!Info)
+		return Count;
+
+	// 인벤토리 배열 크기를 현재 해금된 슬롯 수(CurrentSlots)에 맞게 항상 고정 유지
+	if (InventoryItems.Num() < CurrentSlots)
+	{
+		InventoryItems.SetNum(CurrentSlots);
+	}
 
 	const int32 MaxStack = FMath::Max(1, Info->MaxStackSize);
 	int32 Remain = Count;
 
-	// 1. 기존 스택 채우기
+	// 1. 기존에 같은 아이템이 있는 스택 채우기
 	for (FLB_ItemEntry& Entry : InventoryItems)
 	{
 		if (Remain <= 0) break;
@@ -58,19 +70,28 @@ int32 ULB_InventoryComponent::AddItem(FName ItemCode, int32 Count)
 		Remain -= Add;
 	}
 
-	// 2. 새 슬롯
-	while (Remain > 0 && InventoryItems.Num() < MaxSlots)
+	// 2. 비어 있는 슬롯(ItemCode.IsNone())에 새로 채우기
+	for (FLB_ItemEntry& Entry : InventoryItems)
 	{
-		FLB_ItemEntry NewEntry;
-		NewEntry.ItemInstanceId = FGuid::NewGuid();
-		NewEntry.ItemCode = ItemCode;
-		NewEntry.StackCount = FMath::Min(Remain, MaxStack);
-		InventoryItems.Add(NewEntry);
-		Remain -= NewEntry.StackCount;
+		if (Remain <= 0) break;
+		if (!Entry.ItemCode.IsNone()) continue; // 빈 칸이 아니면 패스
+
+		Entry.ItemInstanceId = FGuid::NewGuid();
+		Entry.ItemCode = ItemCode;
+		Entry.StackCount = FMath::Min(Remain, MaxStack);
+		Remain -= Entry.StackCount;
 	}
 
-	if (Remain < Count) OnRep_InventoryItems();   // 서버(리슨서버 호스트)는 OnRep이 안 불려서 수동 호출
-	return Remain;   // 못 넣은 개수
+	// UE_LOG(LogTemp, Warning, TEXT("[AddItem] 결과 Remain=%d Slots=%d/%d MaxStack=%d"),
+	//        Remain, InventoryItems.Num(), CurrentSlots, MaxStack);
+
+	if (Remain < Count)
+	{
+		OwnerActor->ForceNetUpdate();
+		OnRep_InventoryItems(); // 서버(리슨서버 호스트)는 OnRep이 안 불려서 수동 호출
+		OnInventoryUpdated.Broadcast();
+	}
+	return Remain; // 못 넣은 개수
 }
 
 
@@ -102,14 +123,44 @@ bool ULB_InventoryComponent::RemoveItem(FGuid ItemInstanceId, int32 Count)
 			{
 				UnequipItem(ItemInstanceId);
 			}
-			InventoryItems.RemoveAt(Index);
+			TargetItem = FLB_ItemEntry();
+			// InventoryItems.RemoveAt(Index);
 		}
 
-		// OnInventoryUpdated.Broadcast();
+		OnInventoryUpdated.Broadcast();
 		return true;
 	}
 
 	return false;
+}
+
+void ULB_InventoryComponent::Server_MoveItem_Implementation(int32 SrcIndex, int32 DstIndex)
+{
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor || !OwnerActor->HasAuthority())
+		return;
+
+	if (SrcIndex < 0 || SrcIndex >= CurrentSlots || DstIndex < 0 || DstIndex >= CurrentSlots)
+		return;
+	if (SrcIndex == DstIndex)
+		return;
+
+	// 만약 InventoryItems 배열의 크기가 현재 가진 아이템 개수까지만 잡혀있다면, 
+	// MaxSlots 크기까지 빈 슬롯(기본 생성된 빈 FLB_ItemEntry)으로 미리 채워져 있어야 합니다.
+	// 배열 크기가 MaxSlots보다 작다면 빈 칸들을 채워주는 안전장치:
+	while (InventoryItems.Num() < CurrentSlots)
+	{
+		FLB_ItemEntry EmptyEntry;
+		// 빈 칸을 나타내는 식별자나 초기값 설정 (ItemCode가 None이면 빈 칸으로 간주)
+		InventoryItems.Add(EmptyEntry);
+	}
+
+	// 고정 슬롯 방식이므로 두 인덱스의 데이터를 안전하게 교환(Swap)
+	InventoryItems.Swap(SrcIndex, DstIndex);
+
+	OwnerActor->ForceNetUpdate();
+	OnRep_InventoryItems();
+	OnInventoryUpdated.Broadcast();
 }
 
 int32 ULB_InventoryComponent::GetItemCount(FName ItemCode) const
@@ -169,6 +220,20 @@ void ULB_InventoryComponent::Server_DropItem_Implementation(FGuid ItemInstanceId
 	}
 }
 
+void ULB_InventoryComponent::ExpandInventory(int32 AddCount)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+
+	CurrentSlots = FMath::Clamp(CurrentSlots + AddCount, 0, MaxSlots);
+
+	if (InventoryItems.Num() < CurrentSlots)
+	{
+		InventoryItems.SetNum(CurrentSlots);
+	}
+	// UI 갱신을 위해 브로드캐스트
+	OnInventoryUpdated.Broadcast();
+}
+
 bool ULB_InventoryComponent::EquipItem(FGuid ItemInstanceId)
 {
 	AActor* OwnerActor = GetOwner();
@@ -184,7 +249,8 @@ bool ULB_InventoryComponent::EquipItem(FGuid ItemInstanceId)
 
 	if (!TargetItem || TargetItem->bIsEquipped || TargetItem->ItemCode.IsNone()) return false;
 
-	const ULB_DA_ItemInfo* Info = GetItemInfo(TargetItem->ItemCode);
+	const ULB_DA_EquipInfo* Info = Cast<ULB_DA_EquipInfo>(GetItemInfo(TargetItem->ItemCode));
+	
 	if (!Info || !Info->WeaponTag.IsValid() || Info->EquipClass.IsNull()) return false;
 
 	TSubclassOf<ALB_Equipment> EquipClass = Info->EquipClass.LoadSynchronous();
@@ -226,14 +292,22 @@ bool ULB_InventoryComponent::UnequipItem(FGuid ItemInstanceId)
 	}
 
 	TargetItem->bIsEquipped = false;
-	// OnInventoryUpdated.Broadcast();
+	OnInventoryUpdated.Broadcast();
 
 	return true;
 }
 
+
 void ULB_InventoryComponent::OnRep_InventoryItems()
 {
-	// OnInventoryUpdated.Broadcast();
+	UE_LOG(LogTemp, Warning, TEXT("[OnRep] Net=%d Slot0Stack=%d"),
+	       (int32)GetNetMode(), InventoryItems.Num() > 0 ? InventoryItems[0].StackCount : -1);
+	OnInventoryUpdated.Broadcast();
+}
+
+void ULB_InventoryComponent::OnRep_UnlockedSlots()
+{
+	OnInventoryUpdated.Broadcast();
 }
 
 bool ULB_InventoryComponent::UseItem(FGuid ItemInstanceId)
@@ -263,7 +337,7 @@ bool ULB_InventoryComponent::UseItem(FGuid ItemInstanceId)
 			if (!GE) continue;
 			ASC->ApplyGameplayEffectToSelf(GE->GetDefaultObject<UGameplayEffect>(), 1.f, ASC->MakeEffectContext());
 		}
-		return RemoveItem(ItemInstanceId, 1);   // Entry는 이후 사용 금지
+		return RemoveItem(ItemInstanceId, 1); // Entry는 이후 사용 금지
 	}
 	return false;
 }

@@ -5,11 +5,13 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
+#include "GameplayEffectTypes.h" 
 #include "LB_MonsterBase.generated.h"
 
 class UAbilitySystemComponent;
 class ULB_AttributeSet;
 class ULB_MonsterDataAsset;
+class UWidgetComponent;
 
 UCLASS()
 class LB_API ALB_MonsterBase : public ACharacter, public IAbilitySystemInterface
@@ -31,6 +33,24 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	
+#pragma region Monster_UI
+	UPROPERTY(VisibleAnywhere, Category = "UI")
+	TObjectPtr<UWidgetComponent> HPBarComp;
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	float HPBarHideDelay = 3.f;
+
+	FTimerHandle HPBarHideTimer;
+
+	void Set_HPComp();
+	void Begin_HPComp();
+	void OnHealthChanged(const FOnAttributeChangeData& Data);
+	void HideHPBar();
+#pragma  endregion
+
+#pragma region AttributeSet
+	void ApplyDefaultAttributes(const ULB_MonsterDataAsset* Data);
+
 	// 몬스터 자체 ASC (Owner = Avatar = Monster)
 	UPROPERTY(VisibleAnywhere, Category = "LB|GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
@@ -41,6 +61,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "LB|GAS")
 	TObjectPtr<ULB_MonsterDataAsset> MonsterData;
 
+	
+#pragma endregion 
 private:
 	// 서버 전용, 1회만 실행
 	void InitializeMonsterData();

@@ -2,6 +2,7 @@
 #include "LB_PlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "Component/LB_InventoryComponent.h"
+#include "Component/LB_QuickSlotComponent.h"
 #include "Data/LB_PlayerDataAsset.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "Utility/LB_NativeGameplayTag.h"
@@ -15,7 +16,10 @@ ALB_PlayerState::ALB_PlayerState()
 	InventoryComponent = CreateDefaultSubobject<ULB_InventoryComponent>(TEXT("InventoryComponent"));
 	InventoryComponent->SetIsReplicated(true);
 
-	
+	QuickSlotComponent = CreateDefaultSubobject<ULB_QuickSlotComponent>(TEXT("QuickSlotComponent"));
+	QuickSlotComponent->SetIsReplicated(true);
+
+
 	// 같은 액터의 서브오브젝트라 ASC에 자동 등록됨
 	AttributeSet = CreateDefaultSubobject<ULB_AttributeSet>(TEXT("AttributeSet"));
 
@@ -26,6 +30,27 @@ ALB_PlayerState::ALB_PlayerState()
 ULB_InventoryComponent* ALB_PlayerState::Get_InventoryComponent() const
 {
 	return InventoryComponent;
+}
+
+ULB_QuickSlotComponent* ALB_PlayerState::Get_QuickSlotComponent() const
+{
+	return QuickSlotComponent;
+}
+
+void ALB_PlayerState::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (InventoryComponent)
+	{
+		InventoryComponent->OnInventoryUpdated.AddUniqueDynamic(this, &ALB_PlayerState::HandleInventoryUpdated);
+	}
+
+	if (QuickSlotComponent)
+	{
+		QuickSlotComponent->OnQuickSlotUpdated.AddUniqueDynamic(this, &ALB_PlayerState::HandleQuickSlotUpdated);
+	}
+
 }
 
 UAbilitySystemComponent* ALB_PlayerState::GetAbilitySystemComponent() const
@@ -48,7 +73,6 @@ void ALB_PlayerState::InitializePlayerDA()
 	ApplyDefaultAttributes(PlayerDA);
 	AddStateTag(TAG_State_Idle);
 }
-
 
 
 void ALB_PlayerState::AddStateTag(FGameplayTag Tag)
@@ -108,8 +132,21 @@ void ALB_PlayerState::ApplyDefaultAttributes(const ULB_PlayerDataAsset* Data)
 	AttributeSet->SetSpeed(Data->Speed);
 	AttributeSet->SetDashDistance(Data->DashDistance);
 	AttributeSet->SetDashDuration(Data->DashDuration);
+
+
 	
 	
 	AttributeSet->SetSprintWeight(Data->SprintWeight);
 	AttributeSet->Set_PlayerName(Data->Player_Name);
 }
+
+void ALB_PlayerState::HandleInventoryUpdated()
+{
+	OnInventoryUpdated.Broadcast();
+}
+
+void ALB_PlayerState::HandleQuickSlotUpdated(ELB_QuickSlotType SlotType, int32 SlotIndex, FName NewItemCode)
+{
+	OnQuickSlotUpdated.Broadcast(SlotType, SlotIndex, NewItemCode);
+}
+

@@ -10,7 +10,7 @@
 
 
 
-// DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdated);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class LB_API ULB_InventoryComponent : public UActorComponent
@@ -21,6 +21,8 @@ public:
 	// Sets default values for this component's properties
 	ULB_InventoryComponent();
 
+	int32 Get_CurrentSlot() const;
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// ==========================================
@@ -38,6 +40,9 @@ public:
 	void Server_UseItem(FGuid ItemInstanceId);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Inventory")
+	void Server_MoveItem(int32 SrcIndex, int32 DstIndex);
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Inventory")
 	void Server_DropItem(FGuid ItemInstanceId, int32 Count);
 
 	UFUNCTION(BlueprintPure, Category = "Inventory")
@@ -52,6 +57,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	const TArray<FLB_ItemEntry>& GetInventoryItems() const { return InventoryItems; }
 
+	void ExpandInventory(int32 AddCount);
+	
 	// ==========================================
 	// 장착 / 해제 연동
 	// ==========================================
@@ -64,13 +71,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Equip")
 	bool UnequipItem(FGuid ItemInstanceId);
 
-	// UPROPERTY(BlueprintAssignable, Category = "Inventory")
-	// FOnInventoryUpdated OnInventoryUpdated;
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FOnInventoryUpdated OnInventoryUpdated;
 
+	
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_InventoryItems, VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TArray<FLB_ItemEntry> InventoryItems;
 
+	UPROPERTY(ReplicatedUsing = OnRep_UnlockedSlots, EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	int32 CurrentSlots = 16; // 기본 해금 슬롯
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
 	int32 MaxSlots = 30;
 
@@ -80,6 +91,9 @@ protected:
 	UFUNCTION()
 	void OnRep_InventoryItems();
 
+	UFUNCTION()
+	void OnRep_UnlockedSlots();
+	
 private:
 	bool UseItem(FGuid ItemInstanceId);   // 서버 내부용
 	const class ULB_DA_ItemInfo* GetItemInfo(FName ItemCode) const;

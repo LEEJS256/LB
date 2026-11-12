@@ -171,7 +171,7 @@ void ULB_BattleComponent::BeginPlay()
 			// 중복 키 검증
 			if (ComboMap.Contains(MapKey))
 			{
-				UE_LOG(LogTemp, Error, TEXT("Combo 중복 행: %s"), *Key.ToString());
+				//UE_LOG(LogTemp, Error, TEXT("Combo 중복 행: %s"), *Key.ToString());
 				return;
 			}
 			ComboMap.Add(MapKey, Row);
