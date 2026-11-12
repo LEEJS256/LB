@@ -23,8 +23,8 @@ class LB_API ULB_Button : public ULB_SquareBox
 	GENERATED_BODY()
 
 public:
-	ULB_Button();
 
+	ULB_Button(const FObjectInitializer& ObjectInitializer);
 	// ---- 이벤트 ----
 	UPROPERTY(BlueprintAssignable, Category = "LB|Button")
 	FLB_OnButtonClicked OnClicked;

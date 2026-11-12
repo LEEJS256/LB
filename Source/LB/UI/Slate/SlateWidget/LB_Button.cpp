@@ -7,7 +7,8 @@
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Text/STextBlock.h"
 
-ULB_Button::ULB_Button()
+ULB_Button::ULB_Button(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	Font = FCoreStyle::GetDefaultFontStyle("Bold", 16);
 }
@@ -74,6 +75,7 @@ FReply ULB_Button::HandleSlateClicked()
 	return FReply::Handled();
 }
 
+
 void ULB_Button::SetLabelText(const FText& InText)
 {
 	LabelText = InText;
@@ -88,7 +90,7 @@ void ULB_Button::SetFont(const FSlateFontInfo& InFont)
 
 void ULB_Button::SetTextColor(FColor InColor)
 {
-	TextColor = InColor;   // 색은 람다가 매번 읽으니 따로 적용할 것이 없다
+	TextColor = InColor; // 색은 람다가 매번 읽으니 따로 적용할 것이 없다
 }
 
 void ULB_Button::SetBorderColor(FLinearColor InColor)
