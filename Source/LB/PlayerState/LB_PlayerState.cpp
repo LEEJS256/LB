@@ -134,6 +134,8 @@ void ALB_PlayerState::ApplyDefaultAttributes(const ULB_PlayerDataAsset* Data)
 	AttributeSet->SetDashDuration(Data->DashDuration);
 
 
+	
+	
 	AttributeSet->SetSprintWeight(Data->SprintWeight);
 	AttributeSet->Set_PlayerName(Data->Player_Name);
 }
