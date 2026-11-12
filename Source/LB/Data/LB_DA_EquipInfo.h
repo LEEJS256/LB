@@ -6,20 +6,9 @@
 #include "AttributeSet.h"
 #include "GameplayTagContainer.h"
 #include "Data/LB_DA_ItemInfo.h"
+#include "Data/LB_TooltipTypes.h"
 #include "LB_DA_EquipInfo.generated.h"
 class ALB_Equipment;
-
-USTRUCT(BlueprintType)
-struct FLB_StatBonus
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FGameplayAttribute Attribute;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	float Value = 0.f;
-};
 
 UCLASS()
 class LB_API ULB_DA_EquipInfo : public ULB_DA_ItemInfo
@@ -29,9 +18,11 @@ class LB_API ULB_DA_EquipInfo : public ULB_DA_ItemInfo
 public:
 	ULB_DA_EquipInfo() { ItemTypeTag = TAG_Item_Equip; }
 
+	virtual void GetTooltipLines(TArray<FLB_TooltipLine>& Out) const override;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equip")
 	TArray<FLB_StatBonus> BonusStats;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
 	FGameplayTag WeaponTag;   // 무기 DT 행 조회용 (예: Weapon.Dual.Dagger)
 
