@@ -59,9 +59,7 @@ void ULB_InventorySlotEntry::NativeOnListItemObjectSet(UObject* ListItemObject)
 	// 아이콘은 Soft라 여기서 동기 로드. 칸당 한 번이고 로드된 뒤엔 캐시라 가볍다.
 	// 첫 로드 끊김이 거슬리면 나중에 비동기 로드로 바꾼다.
 	UTexture2D* Icon = Info->Icon.LoadSynchronous();
-	InventoryBox->SetItem(Icon, Item->GetStackCount());
-	InventoryBox->SetInfoText(
-		FText::Format(FText::FromString(TEXT("{0}\n{1}")), Info->DisplayName, Info->Description));
+	InventoryBox->SetItem(Icon, Item->GetStackCount(),Item->GetItemCode());
 }
 
 void ULB_InventorySlotEntry::NativeOnEntryReleased()
