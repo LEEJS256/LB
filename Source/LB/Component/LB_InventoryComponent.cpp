@@ -9,14 +9,13 @@
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/LB_PlayerState.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Data/LB_DA_EquipInfo.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 #include "Data/LB_DA_ItemInfo.h"
-#include  "Data/LB_DT_WeaponInformation.h"
 #include "Engine/World.h"
 #include "Equipment/LB_Equipment.h"
 #include "GameFramework/Pawn.h"
 #include "Object/Item/LB_DropItem.h"
-#include "Tests/ToolMenusTestUtilities.h"
 
 // Sets default values for this component's properties
 ULB_InventoryComponent::ULB_InventoryComponent()
@@ -250,7 +249,8 @@ bool ULB_InventoryComponent::EquipItem(FGuid ItemInstanceId)
 
 	if (!TargetItem || TargetItem->bIsEquipped || TargetItem->ItemCode.IsNone()) return false;
 
-	const ULB_DA_ItemInfo* Info = GetItemInfo(TargetItem->ItemCode);
+	const ULB_DA_EquipInfo* Info = Cast<ULB_DA_EquipInfo>(GetItemInfo(TargetItem->ItemCode));
+	
 	if (!Info || !Info->WeaponTag.IsValid() || Info->EquipClass.IsNull()) return false;
 
 	TSubclassOf<ALB_Equipment> EquipClass = Info->EquipClass.LoadSynchronous();
