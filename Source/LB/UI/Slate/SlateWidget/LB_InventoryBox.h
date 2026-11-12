@@ -28,9 +28,10 @@ class LB_API ULB_InventoryBox : public ULB_SquareBox
 	GENERATED_BODY()
 
 public:
+	ULB_InventoryBox(const FObjectInitializer& ObjectInitializer);
 	// ---- 런타임 세터 ----
 	UFUNCTION(BlueprintCallable, Category = "LB|InventoryBox")
-	void SetItem(UTexture2D* InIcon, int32 InCount);
+	void SetItem(UTexture2D* InIcon, int32 InCount, FName InItemCode);
 
 	UFUNCTION(BlueprintCallable, Category = "LB|InventoryBox")
 	void ClearItem();
@@ -67,7 +68,10 @@ public:
 
 	virtual void SynchronizeProperties() override;
 
-protected:
+	protected:
+	virtual const ULB_DA_ItemInfo* GetCurrentItemInfo() const override;
+
+	
 	virtual TSharedRef<SLB_SquareBox> CreateSquareBox() override;
 
 	/** 인벤토리 / 퀵슬롯 구분용 */
@@ -108,4 +112,6 @@ private:
 
 	int32 Count = 0;
 	FText InfoText;
+
+	FName ItemCode = NAME_None;
 };

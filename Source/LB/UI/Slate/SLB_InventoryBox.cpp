@@ -103,7 +103,7 @@ void SLB_InventoryBox::Construct(const FArguments& InArgs)
 
 		]);
 
-	SetToolTipText(InArgs._InfoText);
+	// SetToolTipText(InArgs._InfoText);
 }
 
 void SLB_InventoryBox::SetItem(const FSlateBrush& InBrush, int32 InCount)
@@ -121,7 +121,7 @@ void SLB_InventoryBox::ClearItem()
 
 void SLB_InventoryBox::SetInfoText(const FText& InText)
 {
-	SetToolTipText(InText);
+	// SetToolTipText(InText);
 }
 
 void SLB_InventoryBox::SetTestCount(int32 InTestCount)

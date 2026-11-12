@@ -5,14 +5,22 @@
 
 #include "../SLB_InventoryBox.h"
 #include "Engine/Texture2D.h"
+#include "Subsystem/LB_GISubsystem_Data.h"
+
+ULB_InventoryBox::ULB_InventoryBox(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	ItemTooltipClass = FindDefaultTooltipClass();
+}
+
 
 TSharedRef<SLB_SquareBox> ULB_InventoryBox::CreateSquareBox()
 {
 	return SNew(SLB_InventoryBox)
 		.Group(Group)
 		.SlotIndex(SlotIndex)
-		.CountTextFont(CountTextFont)     
-		.HotkeyTextFont(HotkeyTextFont)   
+		.CountTextFont(CountTextFont)
+		.HotkeyTextFont(HotkeyTextFont)
 		.OnSlotDropped(FLB_OnSlotDropped::CreateUObject(this, &ULB_InventoryBox::HandleSlotDropped))
 		.OnUse(FLB_OnSlotUse::CreateUObject(this, &ULB_InventoryBox::HandleUse));
 }
@@ -26,6 +34,18 @@ void ULB_InventoryBox::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
 	ApplyState();
+}
+
+
+const ULB_DA_ItemInfo* ULB_InventoryBox::GetCurrentItemInfo() const
+{
+	if (ItemCode.IsNone())
+	{
+		return nullptr;
+	}
+
+	const ULB_GISubsystem_Data* Data = ULB_GISubsystem_Data::Get_Subsystem_Data(this);
+	return Data ? Data->GetItemInfo(ItemCode) : nullptr;
 }
 
 void ULB_InventoryBox::ApplyState()
@@ -49,7 +69,7 @@ void ULB_InventoryBox::ApplyState()
 	{
 		Box->ClearTestCount();
 	}
-	
+
 	if (Icon)
 	{
 		FSlateBrush Brush;
@@ -63,9 +83,11 @@ void ULB_InventoryBox::ApplyState()
 	}
 }
 
-void ULB_InventoryBox::SetItem(UTexture2D* InIcon, int32 InCount)
+
+void ULB_InventoryBox::SetItem(UTexture2D* InIcon, int32 InCount, FName InItemCode)
 {
 	Icon = InIcon;
+	ItemCode = InItemCode;
 	Count = InCount;
 	ApplyState();
 }
@@ -74,6 +96,7 @@ void ULB_InventoryBox::ClearItem()
 {
 	Icon = nullptr;
 	Count = 0;
+	ItemCode = NAME_None;
 	ApplyState();
 }
 
