@@ -1,5 +1,7 @@
 #include "SLB_SquareBox.h"
 #include "Styling/CoreStyle.h"
+#include "Widgets/SToolTip.h"
+#include "Components/Widget.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SBorder.h"
 
@@ -66,6 +68,8 @@ void SLB_SquareBox::SetContent(const TSharedRef<SWidget>& InContent)
 		FillBorder->SetContent(InContent);
 	}
 }
+
+
 
 FSlateColor SLB_SquareBox::GetFillColor() const
 {

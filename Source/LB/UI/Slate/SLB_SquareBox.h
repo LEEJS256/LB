@@ -4,6 +4,7 @@
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 #include "FLB_SquareBoxStyle.h"
+#include "Components/Widget.h"
 
 class SBox;
 class SBorder;
@@ -44,6 +45,7 @@ public:
 	void SetContent(const TSharedRef<SWidget>& InContent);
 	void SetSelected(bool bInSelected) { SelectedAttr.Set(bInSelected); }
 
+	
 protected:
 	void SetPressed(bool bInPressed) { bPressed = bInPressed; }
 	void SetHighlighted(bool bInHighlighted) { bHighlighted = bInHighlighted; }
