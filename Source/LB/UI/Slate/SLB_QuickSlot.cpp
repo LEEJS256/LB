@@ -96,7 +96,7 @@ void SLB_QuickSlot::Construct(const FArguments& InArgs)
 			]
 		]);
 	
-	SetToolTipText(InArgs._InfoText);
+	// SetToolTipText(InArgs._InfoText);
 }
 
 void SLB_QuickSlot::SetItem(const FSlateBrush& InBrush, int32 InCount)
@@ -114,7 +114,7 @@ void SLB_QuickSlot::ClearItem()
 
 void SLB_QuickSlot::SetInfoText(const FText& InText)
 {
-	SetToolTipText(InText);
+	// SetToolTipText(InText);
 }
 
 void SLB_QuickSlot::SetHotkeyStyle(const FLB_QuickSlotTextStyle& InStyle)

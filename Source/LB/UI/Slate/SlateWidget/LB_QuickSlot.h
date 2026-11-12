@@ -24,6 +24,8 @@ class LB_API ULB_QuickSlot : public ULB_SquareBox
 	GENERATED_BODY()
 
 public:
+	
+	ULB_QuickSlot(const FObjectInitializer& ObjectInitializer);
 	/** 패널이 생성 직후 호출 */
 	UFUNCTION(BlueprintCallable, Category = "LB|QuickSlot")
 	void Setup(ELB_QuickSlotType InType, int32 InIndex, const FText& InHotkeyText);
@@ -43,6 +45,9 @@ public:
 	virtual void SynchronizeProperties() override;
 
 protected:
+	virtual const ULB_DA_ItemInfo* GetCurrentItemInfo() const override;
+	
+
 	virtual TSharedRef<SLB_SquareBox> CreateSquareBox() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|QuickSlot")
