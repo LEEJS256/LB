@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
-#include "FLB_SquareBoxStyle.h"
+#include "UI/UI_Utility/FLB_SquareBoxStyle.h"
 #include "Components/Widget.h"
 
 class SBox;
@@ -55,6 +55,10 @@ protected:
 
 private:
 	FSlateColor GetFillColor() const;
+	FSlateColor GetBorderColor() const;
+	const FSlateBrush* GetFillBrush() const;
+	const FSlateBrush* GetBorderBrush() const;
+	bool IsMaterialTintOff() const { return bUseMaterial && !bTintMaterialWithStateColors; }
 
 	TSharedPtr<SBox> SizeBox;
 	TSharedPtr<SBorder> OuterBorder;
@@ -66,4 +70,14 @@ private:
 	FLinearColor SelectedColor;
 	FLinearColor HighlightColor;
 	TAttribute<bool> SelectedAttr;
+
+	FLinearColor BorderColor;
+
+	// ---- 머티리얼 모드 ----
+	bool bUseMaterial = false; //머티리얼 사용여부
+	bool bTintMaterialWithStateColors = false; //이게 온이면 Color들이 곱해지도록함
+	FSlateBrush FillMaterialBrush;    // 머티리얼은 UMG 쪽 Style(UPROPERTY)이 잡고 있음
+	FSlateBrush BorderMaterialBrush;
+	bool bHasFillMaterial = false;
+	bool bHasBorderMaterial = false;
 };
