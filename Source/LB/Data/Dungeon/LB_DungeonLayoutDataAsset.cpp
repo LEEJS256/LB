@@ -2,7 +2,7 @@
 
 #include "Data/Dungeon/LB_DungeonLayoutDataAsset.h"
 
-namespace LB_DungeonAssembly
+namespace LB_DungeonRoute
 {
 	static bool IsIdentifierChar(TCHAR C)
 	{
@@ -11,34 +11,9 @@ namespace LB_DungeonAssembly
 			|| (C >= TEXT('0') && C <= TEXT('9'))
 			|| C == TEXT('_');
 	}
-
-	static bool ValidateTransform(const FTransform& InTransform, FString& OutError)
-	{
-		const FVector Location = InTransform.GetLocation();
-		if (!FMath::IsFinite(Location.X) || !FMath::IsFinite(Location.Y) || !FMath::IsFinite(Location.Z))
-		{
-			OutError = TEXT("location is not finite");
-			return false;
-		}
-
-		// NaN이 섞이면 Equals가 false이므로 비유한 회전/스케일도 함께 거부된다.
-		if (!InTransform.GetRotation().Equals(FQuat::Identity, KINDA_SMALL_NUMBER))
-		{
-			OutError = TEXT("rotation must be zero");
-			return false;
-		}
-
-		if (!InTransform.GetScale3D().Equals(FVector::OneVector, KINDA_SMALL_NUMBER))
-		{
-			OutError = TEXT("scale must be 1");
-			return false;
-		}
-
-		return true;
-	}
 }
 
-bool FLB_DungeonAssemblyState::IsValidIdentifier(const FName& InName)
+bool FLB_DungeonRouteState::IsValidIdentifier(const FName& InName)
 {
 	if (InName.IsNone())
 	{
@@ -53,7 +28,7 @@ bool FLB_DungeonAssemblyState::IsValidIdentifier(const FName& InName)
 
 	for (const TCHAR C : NameString)
 	{
-		if (!LB_DungeonAssembly::IsIdentifierChar(C))
+		if (!LB_DungeonRoute::IsIdentifierChar(C))
 		{
 			return false;
 		}
@@ -61,54 +36,48 @@ bool FLB_DungeonAssemblyState::IsValidIdentifier(const FName& InName)
 	return true;
 }
 
-bool FLB_DungeonAssemblyState::ValidatePieces(const TArray<FLB_DungeonPiecePlacement>& InPieces, FString& OutError)
+bool FLB_DungeonRouteState::ValidateRooms(const TArray<FLB_DungeonRoomDefinition>& InRooms, FString& OutError)
 {
 	OutError.Reset();
 
-	if (InPieces.Num() < 1 || InPieces.Num() > MaxPieces)
+	if (InRooms.Num() < 1 || InRooms.Num() > MaxRooms)
 	{
-		OutError = FString::Printf(TEXT("Piece count %d out of range [1, %d]"), InPieces.Num(), MaxPieces);
+		OutError = FString::Printf(TEXT("Room count %d out of range [1, %d]"), InRooms.Num(), MaxRooms);
 		return false;
 	}
 
 	TSet<FName> SeenIds;
-	SeenIds.Reserve(InPieces.Num());
+	SeenIds.Reserve(InRooms.Num());
 
-	for (int32 Index = 0; Index < InPieces.Num(); ++Index)
+	for (int32 Index = 0; Index < InRooms.Num(); ++Index)
 	{
-		const FLB_DungeonPiecePlacement& Piece = InPieces[Index];
+		const FLB_DungeonRoomDefinition& Room = InRooms[Index];
 
-		if (Piece.PieceId.IsNone())
+		if (Room.RoomId.IsNone())
 		{
-			OutError = FString::Printf(TEXT("Piece[%d]: PieceId is None"), Index);
+			OutError = FString::Printf(TEXT("Room[%d]: RoomId is None"), Index);
 			return false;
 		}
 
-		if (!IsValidIdentifier(Piece.PieceId))
+		if (!IsValidIdentifier(Room.RoomId))
 		{
-			OutError = FString::Printf(TEXT("Piece[%d]: PieceId '%s' must contain only letters, digits, underscore"),
-				Index, *Piece.PieceId.ToString());
+			OutError = FString::Printf(TEXT("Room[%d]: RoomId '%s' must contain only letters, digits, underscore"),
+				Index, *Room.RoomId.ToString());
 			return false;
 		}
 
 		bool bAlreadyInSet = false;
-		SeenIds.Add(Piece.PieceId, &bAlreadyInSet);
+		SeenIds.Add(Room.RoomId, &bAlreadyInSet);
 		if (bAlreadyInSet)
 		{
-			OutError = FString::Printf(TEXT("Piece[%d]: duplicate PieceId '%s'"), Index, *Piece.PieceId.ToString());
+			OutError = FString::Printf(TEXT("Room[%d]: duplicate RoomId '%s'"), Index, *Room.RoomId.ToString());
 			return false;
 		}
 
-		if (Piece.Level.IsNull())
+		// 같은 맵을 다른 RoomId로 반복 사용하는 것은 허용하므로 Level 중복은 검사하지 않는다.
+		if (Room.Level.IsNull())
 		{
-			OutError = FString::Printf(TEXT("Piece[%d] '%s': Level is null"), Index, *Piece.PieceId.ToString());
-			return false;
-		}
-
-		FString TransformError;
-		if (!LB_DungeonAssembly::ValidateTransform(Piece.Transform, TransformError))
-		{
-			OutError = FString::Printf(TEXT("Piece[%d] '%s': %s"), Index, *Piece.PieceId.ToString(), *TransformError);
+			OutError = FString::Printf(TEXT("Room[%d] '%s': Level is null"), Index, *Room.RoomId.ToString());
 			return false;
 		}
 	}
@@ -116,7 +85,7 @@ bool FLB_DungeonAssemblyState::ValidatePieces(const TArray<FLB_DungeonPiecePlace
 	return true;
 }
 
-bool FLB_DungeonAssemblyState::Validate(FString& OutError) const
+bool FLB_DungeonRouteState::Validate(FString& OutError) const
 {
 	OutError.Reset();
 
@@ -127,15 +96,15 @@ bool FLB_DungeonAssemblyState::Validate(FString& OutError) const
 		return false;
 	}
 
-	return ValidatePieces(Pieces, OutError);
+	return ValidateRooms(Rooms, OutError);
 }
 
 bool ULB_DungeonLayoutDataAsset::ValidateLayout(FString& OutError) const
 {
-	FString PieceError;
-	if (!FLB_DungeonAssemblyState::ValidatePieces(Pieces, PieceError))
+	FString RoomError;
+	if (!FLB_DungeonRouteState::ValidateRooms(Rooms, RoomError))
 	{
-		OutError = FString::Printf(TEXT("Layout '%s': %s"), *GetName(), *PieceError);
+		OutError = FString::Printf(TEXT("Layout '%s': %s"), *GetName(), *RoomError);
 		return false;
 	}
 
@@ -143,9 +112,9 @@ bool ULB_DungeonLayoutDataAsset::ValidateLayout(FString& OutError) const
 	return true;
 }
 
-bool ULB_DungeonLayoutDataAsset::BuildAssembly(FName InstanceKey, FLB_DungeonAssemblyState& OutState, FString& OutError) const
+bool ULB_DungeonLayoutDataAsset::BuildRoute(FName InstanceKey, FLB_DungeonRouteState& OutRoute, FString& OutError) const
 {
-	OutState = FLB_DungeonAssemblyState();
+	OutRoute = FLB_DungeonRouteState();
 	OutError.Reset();
 
 	if (!ValidateLayout(OutError))
@@ -153,18 +122,18 @@ bool ULB_DungeonLayoutDataAsset::BuildAssembly(FName InstanceKey, FLB_DungeonAss
 		return false;
 	}
 
-	// 원본 배열을 복사한 독립 State. Layout 참조는 넣지 않는다.
-	FLB_DungeonAssemblyState Candidate;
+	// 원본 배열을 값 복사한 독립 Route. Layout 참조는 넣지 않는다.
+	FLB_DungeonRouteState Candidate;
 	Candidate.InstanceKey = InstanceKey;
-	Candidate.Pieces = Pieces;
+	Candidate.Rooms = Rooms;
 
-	FString StateError;
-	if (!Candidate.Validate(StateError))
+	FString RouteError;
+	if (!Candidate.Validate(RouteError))
 	{
-		OutError = FString::Printf(TEXT("Layout '%s': %s"), *GetName(), *StateError);
+		OutError = FString::Printf(TEXT("Layout '%s': %s"), *GetName(), *RouteError);
 		return false;
 	}
 
-	OutState = MoveTemp(Candidate);
+	OutRoute = MoveTemp(Candidate);
 	return true;
 }
