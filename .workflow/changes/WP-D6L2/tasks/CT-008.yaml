@@ -1,0 +1,25 @@
+id: CT-008
+title: 과반수 카운트다운과 파티 방 전환
+goal: |
+  ALB_GameMode에 ExitCountdownSeconds(양수 기본 5초), FadeOutDuration/FadeInDuration, PartyEntrySpacing을 EditDefaultsOnly로 추가한다. Pending 방 Barrier 완료 시 표시된 ULevel에서 ALB_DungeonRoomEntry와 ALB_DungeonExit가 정확히 하나씩인지 검증하고, Fade Out 후 서버가 참가 파티 Pawn 전부를 Entry 기준 Y 간격 위치로 Teleport한 뒤 GameState의 Pending 승격·이전 방 해제·Fade In을 수행한다. 첫 방 진입도 같은 경로를 사용한다.
+  안정된 Current 방의 Exit OnExitPresenceChanged를 서버에서 구독한다. 전환 대상은 유효 PlayerState와 Pawn을 가진 비관전자 Controller이며 Nearby는 활성 Exit가 추적한 Pawn의 Controller와 일치하는 대상만 센다. RequiredPlayers는 TotalPlayers / 2 + 1이다.
+  평가 우선순위는 TotalPlayers>0이고 NearbyPlayers==TotalPlayers면 진행 중 Countdown Timer를 취소하고 즉시 다음 방 LoadingNextRoom을 잠그는 것이다. 전원 미만이면서 NearbyPlayers>=RequiredPlayers면 CountingDown과 CountdownEndServerTime=GameState 서버 시간+Duration을 한 번 시작/유지하고, 과반수 미만이면 Timer와 종료 시간을 취소해 Waiting으로 돌아간다.
+  Countdown Timer 완료 시 인원을 다시 평가해 여전히 과반수면 전환을 잠근다. 전원이 카운트다운 도중 들어오거나 Timer와 같은 프레임에 겹쳐도 TransitionSerial/Phase 가드로 다음 방 요청은 한 번만 실행한다. 잠긴 뒤 Exit 이탈은 무시하고 출구 밖을 포함한 캡처된 파티 전체를 이동한다.
+  PostLogin/Logout과 Pawn 무효화로 카운트다운 대상이 변하면 잠기기 전에는 같은 우선순위를 재평가한다. 마지막 방에는 Exit를 활성화하지 않는다. CountingDown 이외 Phase에서는 카운트다운 UI 상태를 숨기며 전원 진입 전용 문구나 0초 메시지는 만들지 않는다.
+done_when:
+  - "서버가 전원 즉시 전환을 엄밀한 과반수 카운트다운보다 우선 평가한다"
+  - "과반수 이탈은 취소하고 Timer 완료·전원 진입 경쟁에서도 전환이 한 번만 잠긴다"
+  - "다음 방 준비 후 Fade와 서버 파티 전체 Teleport·Pending 승격·이전 방 해제가 순서대로 실행된다"
+  - "Entry/Exit 누락·중복·마지막 방·참가자 변화가 잘못된 전환이나 남은 Timer를 만들지 않는다"
+  - "전원 진입 메시지 없이 CountingDown 상태에서만 UI용 인원·종료 시간이 유지된다"
+allow:
+  - Source/LB/GameMode/LB_GameMode.h
+  - Source/LB/GameMode/LB_GameMode.cpp
+context:
+  - Source/LB/GameMode/LB_GameState.h
+  - Source/LB/Controller/LB_PlayerController.h
+  - Source/LB/Dungeon/LB_DungeonRoomMarkers.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 전원 우선·과반수 공식·취소/경쟁 가드·파티 전체 서버 이동·Fade 순서를 확인했다

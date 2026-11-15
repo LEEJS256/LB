@@ -1,0 +1,20 @@
+id: CT-006
+title: PlayerController 준비 보고와 Fade
+goal: |
+  ALB_PlayerController가 로컬 GameState의 방 준비 delegate에 바인딩하고 ServerReportDungeonRoomReady(FName InstanceKey, int32 RoomIndex, int32 TransitionSerial) Reliable RPC로 보고한다. 서버 구현은 자신의 Controller 포인터와 입력을 ALB_GameState::ReceiveClientRoomReady에 전달하며 임의 Room 선택이나 전환 확정을 하지 않는다.
+  Reliable ClientSetDungeonFade(bool bFadeOut, float Duration) RPC를 추가한다. 로컬 Controller에서만 PlayerCameraManager::StartCameraFade를 사용하고 Fade Out은 현재 알파에서 1, Fade In은 1에서 0으로 진행한다. 중복 요청은 현재 방향/세대의 표현을 안전하게 갱신하고 서버 Pawn 위치를 로컬에서 변경하지 않는다.
+  BeginPlay/OnRep_PlayerState/EndPlay에서 GameState delegate의 지연 도착과 정리를 처리한다. 전환 Snapshot의 Phase가 CountingDown일 때만 BlueprintImplementableEvent 또는 BlueprintNativeEvent로 인원·종료 서버 시간 변경을 전달하고 다른 Phase에서는 숨김 이벤트를 보내며 전원 진입 전용 메시지나 0초 메시지는 추가하지 않는다.
+done_when:
+  - "소유 Client의 현재 방 준비만 Server RPC로 보고되고 GameState가 키·방·세대를 검증한다"
+  - "Fade는 로컬 카메라 표현만 담당하고 서버 이동 권한을 침범하지 않는다"
+  - "카운트다운 표현은 CountingDown에서만 노출되고 전원 진입 메시지 없이 즉시 숨겨진다"
+  - "PlayerState/GameState 도착 순서와 EndPlay에서 delegate가 중복되거나 남지 않는다"
+allow:
+  - Source/LB/Controller/LB_PlayerController.h
+  - Source/LB/Controller/LB_PlayerController.cpp
+context:
+  - Source/LB/GameMode/LB_GameState.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 소유 RPC·Fade 방향·카운트다운 표시 조건·delegate 정리를 확인했다

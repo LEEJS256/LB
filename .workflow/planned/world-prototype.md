@@ -1,4 +1,4 @@
-# 월드 오브젝트·던전 조립 예정 작업
+# 월드 오브젝트·던전 방 전환 예정 작업
 
 > 상태: 예정 계획. 2026-10-29 origin/master@2b59a69 기준. 코드·에셋·빌드·PIE 미실행.
 
@@ -15,7 +15,7 @@ Codex가 설계와 WP/CT를 작성하고 Claude Code가 코드 구현을 진행�
 | 순서 | WP | 브랜치 | CT | 사람 확인 |
 | --- | --- | --- | --- | --- |
 | 1 | [WP-P9D4](../changes/WP-P9D4/package.yaml) 항아리 파괴·Loot | feature/destructible-loot | 5 | E01 임시 외형/표현 → E02 기본 공격 → E03 Loot/Pickup → E99 네트워크·Chaos |
-| 2 | [WP-D6L2](../changes/WP-D6L2/package.yaml) 정적 던전 조립 | feature/dungeon-layout | 4 | E01 조각/DA → E02 로컬 로드 → E99 네트워크 |
+| 2 | [WP-D6L2](../changes/WP-D6L2/package.yaml) 파티 방 전환 | feature/dungeon-layout | 8 | CT-002 Route 전환 → E01 방/Route → E02 로더 → E03 Marker → E99 3인 전환 |
 
 표의 번호는 표시 순서이며 WP 사이 실행 의존성이 아니다. 두 WP는 공통 계획을 포함한 master에서 각각 시작하고 한쪽 구현의 Merge를 기다리지 않아도 된다.
 현재 브랜치에는 두 계획을 함께 작성했다. 공통 계획은 별도로 검토·공유한 뒤 구현 브랜치에서 사용하며, 위 브랜치명은 실행 계획이지 생성 완료 기록이 아니다.
@@ -28,7 +28,7 @@ CT Commit이나 PR 생성만으로 WP를 완료 처리하지 않는다. 실제 P
 | 소유 WP | C++ 수정 범위 | 새 테스트 콘텐츠 루트 | 테스트 맵 |
 | --- | --- | --- | --- |
 | WP-P9D4 | Object/Destructible, Data/Loot, MeleeHitboxComponent, GA_NormalAttack | /Game/LB/Tests/Destructible | Lvl_DestructibleTest |
-| WP-D6L2 | Dungeon, Data/Dungeon, LB_GameMode, LB_GameState | /Game/LB/Tests/Dungeon | Lvl_DungeonAssemblyTest |
+| WP-D6L2 | Dungeon, Data/Dungeon, LB_GameMode, LB_GameState, LB_PlayerController | /Game/LB/Tests/Dungeon | Lvl_DungeonTransitionTest |
 
 각 CT의 allow가 정확한 파일 권한이며 다른 WP의 코드 경로는 package.yaml의 protected로도 분리한다.
 테스트 BP·Data Asset·Geometry Collection·맵 조각·테스트 전용 GameMode는 각 콘텐츠 루트 안에 생성한다.
@@ -47,11 +47,11 @@ CT Commit이나 PR 생성만으로 WP를 완료 처리하지 않는다. 실제 P
 - Content/Config/Build.cs/uproject 보호 규칙을 유지한다.
 - 항아리 C++은 Geometry Collection을 직접 소유하지 않는다. BP 이벤트에서 Chaos 표현을 연결한다.
 - 기존 ItemCode·MasterItem·ALB_DropItem을 재사용한다. 새 Pickup/Inventory는 만들지 않는다.
-- 던전 조각은 정적 non-World Partition 맵으로 시작한다. 게임플레이 Actor 복제와 Spawn은 별도 WP다.
+- 던전 방은 서로 붙지 않는 정적 non-World Partition 맵으로 시작하고 두 스트리밍 슬롯 사이를 Fade/서버 Teleport로 전환한다. 게임플레이 Actor 복제와 Spawn은 별도 WP다.
 - 코드만 빌드된 상태와 에셋 연결 및 PIE 완료를 구분한다. 사용자가 합의한 설계 방향은 Accepted이며 구현·검증 완료를 뜻하지 않는다.
 
 ## 기준 문서
 
 - [항아리 설계](../../../LB-wiki/world/destructible-prop.md)
-- [던전 조립 설계](../../../LB-wiki/world/dungeon-layout.md)
+- [던전 방 전환 설계](../../../LB-wiki/world/dungeon-layout.md)
 - 기존 Workflow Manager 작성 기준: LB-wiki의 workflow/workflow-task-authoring.md

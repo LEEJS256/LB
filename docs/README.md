@@ -6,7 +6,7 @@
 
 기능별 코드 진입 색인은 별도 [LB-wiki README](../../LB-wiki/README.md)의 `기능별 코드 조회 시작점`을 사용한다.
 플레이어·전투·AI·아이템 상세 문서도 위키를 우선 확인한다. 형제 디렉터리 링크는 로컬 체크아웃 기준이다.
-항아리·던전 설계 원본도 위키로 통합했다. 아래 World 항목은 원본 안내이며 실행 WP는 LB에서 관리한다. 같은 색인을 양쪽에 복제하지 않는다.
+항아리·던전 설계 원본도 위키로 통합했다. 아래 World 항목은 원본 안내이며 실행 WP는 LB에서 관리한다. 2026-11-15 던전 기준은 연속 조각 조립에서 파티 방 전환으로 변경됐다. 같은 색인을 양쪽에 복제하지 않는다.
 색인의 코드 기준 커밋과 현재 변경 파일을 대조하고 필요한 심볼만 읽는다. `계획` 항목을 구현 파일로 찾지 않는다.
 
 ## 문서 구성
@@ -72,4 +72,4 @@
 ### World
 
 - [Destructible Prop](world/destructible-prop.md) — `Superseded` — 항아리 단발 파괴, 로컬 Chaos 표현과 ItemCode Loot 드롭 / WP-P9D4
-- [Dungeon Layout](world/dungeon-layout.md) — `Superseded` — Data Asset 기반 정적 맵 조각 배치와 각 World의 로드 수명 / WP-D6L2
+- [Dungeon Layout](world/dungeon-layout.md) — `Superseded` — Data Asset 기반 순서형 방, 과반수 카운트다운과 파티 Fade 전환 / WP-D6L2

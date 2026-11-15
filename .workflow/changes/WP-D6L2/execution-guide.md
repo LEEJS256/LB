@@ -1,55 +1,91 @@
-# WP-D6L2 던전 조각 조립 실행 지침
+# WP-D6L2 파티 방 전환 실행 지침
 
-사람용 문서다. Claude context에 넣지 않는다. 예정 계획이며 코드·에셋·빌드·PIE는 미실행이다.
+사람용 문서다. Claude context에 넣지 않는다. 2026-11-15 합의로 기존의 연속 정적 조각 조립 계획을 방 단위 Fade 전환으로 교체했다.
 
 ## 목표와 범위
 
-정적 환경만 담은 non-World Partition 맵 조각 2~3개를 Data Asset의 월드 위치에 조립한다.
-동일 맵을 서로 다른 PieceId로 반복 배치한다. 첫 버전의 회전은 0, Scale은 1로 고정한다.
-몬스터·항아리·Pickup 같은 게임플레이 Actor, Level Blueprint BeginPlay 스폰은 조각에서 제외한다.
-플레이어는 조립 영역 밖의 고정 테스트 플랫폼에서 시작한다. 로드 중 진입 차단 기능은 이번 WP에 없다.
+별도 non-World Partition `.umap`인 방 A와 B를 순서형 Layout Data Asset으로 로드한다.
+활성 방 Exit에 파티 과반수가 들어오면 카운트다운하고, 전원이 들어오면 대기 또는 카운트다운 중에도 즉시 다음 방 전환을 잠근다.
+다음 방이 서버와 참가 Client에 준비된 뒤 Fade Out, 서버 파티 전체 Teleport, 이전 방 해제, Fade In을 수행한다.
+
+몬스터·항아리·Pickup·방 클리어·랜덤 방 선택·사망 참가 규칙·실패 재시도 UX는 포함하지 않는다.
+
+## 현재 기준과 재시작 주의
+
+- 브랜치는 `feature/dungeon-layout`이다.
+- 2026-11-15 현재 기존 연속 조립 계약의 CT-001이 `feature/dungeon-layout@a3902b4`에 Commit됐다.
+- 기존 CT-001은 완료 기록으로 유지한다. 새 CT-002가 Piece/Transform 타입을 Room/Route 타입으로 교체하며 기존 Commit을 임의로 되돌리지 않는다.
+- `ALB_GameMode`와 `ALB_GameState`는 빈 골격이며 `ALB_PlayerController`에 던전 Fade·준비 보고 경로는 없다.
+- 첫 재실행 전에 일반 LBEditor 기준 빌드와 기존 오류/Warning을 기록한다.
 
 ## 설계 근거
 
-- 기준은 2026-10-29 origin/master@2b59a69. 던전 조립 코드는 없다.
-- 로컬 UE 5.8 LevelStreamingDynamic.h에서 soft UWorld/FTransform 오버로드와 서버·Client 이름 일치 요구를 확인했다.
-- 서버 GameMode가 Layout을 InstanceKey/Pieces로 복사하고 GameState가 확정 목록을 복제한다. 각 World의 비복제 조립기는 Layout을 읽지 않고 목록만 로드한다.
-- OnLevelShown은 로컬 가시성 완료다. 서버 Ready를 모든 Client 준비 완료로 취급하지 않는다.
-- 설계 원본은 LB-wiki의 world/dungeon-layout.md다. LB docs/world/dungeon-layout.md는 안내 링크다.
+- 방은 서로 지형으로 접합하지 않고 두 런타임 슬롯을 번갈아 사용한다.
+- Layout은 RoomId·soft UWorld 순서만 작성하고 슬롯 Transform과 진행 상태는 런타임 책임이다.
+- 전환 권한은 서버 GameMode, 공유 상태와 로컬 로더 수명은 GameState, 준비 보고와 Fade 표현은 PlayerController가 맡는다.
+- 엄밀한 과반수는 `Total / 2 + 1`이다. 2인 파티에서는 전원 조건과 같아 카운트다운이 발생하지 않는다.
+- 전원 진입은 카운트다운보다 우선하며 별도 안내 문구 없이 전환 준비로 넘어간다.
+- 설계 원본은 LB-wiki의 `world/dungeon-layout.md`다.
 
 ## 앱에서 실행하는 순서
 
 | 순서 | CT | 다음 확인 |
 | --- | --- | --- |
-| 1 | CT-001 Layout/검증 | E01 정적 조각 규격과 DA |
-| 2 | CT-002 로컬 조립 수명 | E02 수동 요청·완료/실패·정리 |
-| 3 | CT-003 GameState 복제·로컬 실행 | 빌드와 Diff 확인 |
-| 4 | CT-004 GameMode 고정 Layout 게시 | E99 동일 배치와 늦은 접속 |
+| 1 | CT-001 기존 연속 조립 데이터 | 완료 기록 유지, 재실행하지 않음 |
+| 2 | CT-002 Room Route 전환 | E01 방 A/B와 Layout DA |
+| 3 | CT-003 단일 방 로더 | E02 수동 로드·완료/실패·해제 |
+| 4 | CT-004 Entry/Exit Marker | E03 방 Marker·Overlap |
+| 5 | CT-005 GameState Route·두 슬롯 | 빌드와 Diff 확인 |
+| 6 | CT-006 PlayerController 준비/Fade | E04 로컬 Fade·카운트다운 표현 |
+| 7 | CT-007 GameMode Route·Barrier | E05 첫 방 준비 Barrier |
+| 8 | CT-008 과반수 파티 전환 | E99 3인 최종 네트워크 검증 |
 
-이 WP는 항아리 WP의 코드 API에 의존하지 않지만 현재 계획 보관 브랜치에서 실행하지 않는다.
-공통 계획을 포함한 master에서 feature/dungeon-layout을 시작한다. 항아리 WP의 Merge는 선행 조건이 아니며 별도 체크아웃에서 독립적으로 실행할 수 있다.
-계획 파일 보유 여부와 기준 차이를 시작 전에 확인하고 던전 WP만 선택한다. 다른 WP 경로는 package.yaml protected와 CT allow로 분리한다.
-계획 예약 Commit, CT별 승인 Commit, 사람 에셋 작업, 최종 통합 검증과 PR은 기존 앱 흐름을 따른다.
-Codex는 계획을 담당하고 Claude Code가 코드를 구현한다. 자동 Commit/Push/PR은 하지 않는다.
+항아리 WP Merge는 선행 조건이 아니다. 공용 `BP_GameMode`, `Lvl_GameplayTest`, 플레이어 BP와 Config는 수정하지 않는다.
+Codex는 계획과 정합성 확인을 담당하고 Claude Code가 C++을 구현한다. 자동 Commit·Push·PR은 하지 않는다.
 
-## 이번 WP 확인 항목
+## 에셋 구성
 
-첫 Claude 실행 전 기준 커밋의 일반 LBEditor 빌드와 기존 오류/Warning을 기록한다. 현재 editor-guide의 CT 이후 게이트가 이 사전 조건을 자동 강제하는 것은 아니다.
-새 맵 /Game/LB/Tests/Dungeon/Lvl_DungeonAssemblyTest와 조각·Layout DA·테스트 BP는 모두 /Game/LB/Tests/Dungeon에 둔다.
-공용 BP_GameMode·Lvl_GameplayTest·플레이어 BP·Config는 수정하지 않는다. 별도 BP_DungeonTestGameMode에서 설정을 지정하고 전용 맵의 World Settings GameMode Override만 변경한다.
+모든 테스트 에셋은 `/Game/LB/Tests/Dungeon` 아래에 둔다.
 
-E01/E02/E99의 정확한 절차는 editor-guide.yaml을 따른다.
-원점 기준 바닥 높이와 X 진행축을 통일하고 문/벽 겹침은 제작 단계에서 확인한다.
-CT-002 테스트 때만 조립기를 수동 배치한다. 최종 단계에서는 GameState가 Persistent Level에 로컬 조립기를 생성하므로 수동 배치 조립기를 제거한다.
-BP_DungeonTestGameMode의 GameStateClass가 ALB_GameState인지 확인하고 StartupDungeonLayout을 연결한다. 조립기는 월드 Transform을 그대로 사용한다.
-고정 Layout→확정 배치 목록의 변환만 현재 구현한다. 향후 서버 랜덤 생성은 같은 목록을 만들고 GameState/조립기는 재사용한다.
-프로토타입은 조각 1..32개와 World당 게시 1회다. 대규모 목록 분할 전송·런타임 교체·복잡한 생성기는 만들지 않는다.
-LoadLevelInstance 반환 성공과 실제 표시 완료를 별도로 확인한다.
-테스트용 짧은 Timeout으로 실패 정리 후 남은 Streaming 객체가 제거되는지 확인한다.
-Cook/패키지의 Soft 맵 포함 여부는 별도 확인 대상이다. PIE 통과를 패키지 검증으로 기록하지 않는다.
+```text
+Maps/Lvl_DungeonTransitionTest
+Maps/Lvl_DungeonRoom_A
+Maps/Lvl_DungeonRoom_B
+Data/DA_DungeonRouteTest
+Blueprint/BP_DungeonTestGameState
+Blueprint/BP_DungeonTestGameMode
+Blueprint/BP_DungeonRoomLoaderTest  # CT-003 수동 확인 때만 필요
+UI/WBP_DungeonCountdownTest
+```
 
-## 후속 PIE와 제외 범위
+방 A/B는 서로 붙이지 않는다. 각 방의 로컬 원점과 바닥 기준은 통일하고 `ALB_DungeonRoomEntry` 하나, `ALB_DungeonExit` 하나를 둔다.
+Persistent 테스트 맵에는 조립된 방을 미리 배치하지 않고 안전 플랫폼·PlayerStart·전역 조명만 둔다.
+`BP_DungeonTestGameState`의 Slot A/B Transform은 방 크기보다 충분히 떨어뜨리고, 동일 값이 서버와 Client에서 사용되게 한다.
 
-런타임 재조립, 랜덤 Seed/가중치, 연결 포트/겹침 탐지, NavMesh/전투 Spawn,
-복제 Actor가 포함된 조각, 전원 준비 배리어/입력 잠금, World Partition 통합은 후속이다.
-게임플레이 Actor를 넣기 전에 별도 작은 WP에서 동적 레벨의 Actor 복제/늦은 접속/해제 수명을 검증한다.
+## 카운트다운과 UI 확인
+
+카운트다운은 3인 테스트가 필요하다. Listen Server 1명과 Client 2명을 사용한다.
+
+- 1/3명 Exit: 대기, 카운트다운 없음
+- 2/3명 Exit: 카운트다운 시작
+- 2명 중 1명 이탈: 즉시 취소와 UI 숨김
+- 다시 2/3명: 전체 시간으로 재시작
+- 2/3명 상태로 Timer 완료: Exit 밖 1명을 포함한 전원 이동
+- 카운트다운 중 3/3명: Timer 취소 후 즉시 전환 잠금
+- 대기 중 3/3명: 카운트다운 없이 즉시 전환 잠금
+
+UI는 CountingDown일 때만 현재/전체 인원과 남은 시간을 보여 준다. "모든 파티원이 모였습니다"와 `0초` 문구는 만들지 않는다.
+
+## 로드와 이동 확인
+
+RoomLoader 반환 성공과 실제 `OnLevelShown` 완료를 구분한다.
+다음 방은 현재 방과 다른 슬롯에 준비한 뒤 Fade·서버 Teleport·이전 방 해제 순서로 처리한다.
+서버와 모든 참가 Client의 준비 보고가 모이기 전에 Pawn을 이동하거나 Fade In하지 않는다.
+로드 실패·Timeout은 Failed 상태와 로그로 드러나야 하며 파티를 빈 공간으로 이동시키지 않는다.
+첫 방과 이후 방 모두 Entry가 도착 기준이며 여러 Pawn은 설정된 Y 간격으로 배치한다.
+
+## 제외 범위와 후속
+
+전환 중 새 접속자는 현재 Barrier에 추가하지 않는다. 안정된 현재 방을 복구하는 늦은 접속만 확인한다.
+사망·관전자·부활 규칙, 방 클리어 잠금, 실패 재시도, 강제 퇴장, 랜덤 Route, 게임플레이 Actor 수명과 방별 NavMesh는 후속이다.
+Cook/패키지의 Soft 맵 포함 여부도 별도 확인 대상이며 PIE 통과를 패키지 검증으로 기록하지 않는다.
