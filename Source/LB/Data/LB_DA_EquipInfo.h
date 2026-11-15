@@ -26,6 +26,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
 	FGameplayTag WeaponTag;   // 무기 DT 행 조회용 (예: Weapon.Dual.Dagger)
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip", meta = (Categories = "Equip"))
+	FGameplayTag EquipSlotTag;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
 	TSoftClassPtr<ALB_Equipment> EquipClass;
 
