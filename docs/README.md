@@ -73,3 +73,4 @@
 
 - [Destructible Prop](world/destructible-prop.md) — `Superseded` — 항아리 단발 파괴, 로컬 Chaos 표현과 ItemCode Loot 드롭 / WP-P9D4
 - [Dungeon Layout](world/dungeon-layout.md) — `Superseded` — Data Asset 기반 Room/Exit 분기 Graph, 과반수 카운트다운과 파티 Fade 전환 / WP-D6L2
+- [Dungeon Room State](world/dungeon-room-state.md) — `Superseded` — RoomId·SpawnId 기반 몬스터/파괴 오브젝트 결과 유지와 Exit 잠금 / WP-R8K3

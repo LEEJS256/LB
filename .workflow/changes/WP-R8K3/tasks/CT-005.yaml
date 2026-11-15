@@ -1,0 +1,19 @@
+id: CT-005
+title: 몬스터 생존 중 Exit 비활성화
+goal: |
+  ALB_DungeonExit에 서버 전용 void SetExitEnabled(bool bEnabled)와 bool IsExitEnabled() const를 추가한다. 비활성화할 때 ExitTrigger Collision을 NoCollision로 바꾸고 추적 Pawn 집합을 비운 뒤 실제 Presence가 바뀌면 OnExitPresenceChanged를 한 번 알린다. 활성화할 때 QueryOnly와 기존 Pawn Overlap 응답을 복구한다.
+  Begin/End Overlap과 현재 목록 조회는 비활성 상태를 무시하며, 중복 Set 호출은 delegate나 충돌 갱신을 반복하지 않는다. 기본값은 활성이고 과반수·몬스터 검색·방 상태 판단은 Exit에 넣지 않는다.
+  문/잠금 연출과 Client RPC는 추가하지 않는다.
+done_when:
+  - "서버가 Exit를 멱등 활성/비활성화하고 잠길 때 기존 Presence를 안전하게 비운다"
+  - "비활성 Exit는 새 Pawn을 추적하지 않고 다시 활성화하면 기존 Overlap 계약을 복구한다"
+  - "Exit가 몬스터 검색이나 방 클리어 정책을 소유하지 않는다"
+allow:
+  - Source/LB/Dungeon/LB_DungeonRoomMarkers.h
+  - Source/LB/Dungeon/LB_DungeonRoomMarkers.cpp
+context:
+  - Source/LB/Dungeon/LB_DungeonRoomRuntimeManager.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 서버 멱등 잠금·Presence 정리·재활성화와 정책 분리를 확인했다

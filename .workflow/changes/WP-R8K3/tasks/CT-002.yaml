@@ -1,0 +1,19 @@
+id: CT-002
+title: 파괴 오브젝트 서버 파괴 완료 신호
+goal: |
+  ALB_DestructibleProp에 자신과 확정된 FLB_PropBreakState를 전달하는 네이티브 OnPropBroken delegate와 구독 접근 API를 추가한다. TryBreak 서버 성공 경로에서 BreakState·충돌 해제·수명 예약을 먼저 확정한 뒤 SpawnBreakLoot보다 앞서 한 번 발행한다.
+  bBreakNotified 가드로 BP 재진입·중복 타격·Client OnRep·직접 Destroy가 신호를 만들지 않게 한다. 기존 Loot는 신호 뒤에도 파괴당 한 번만 실행하고 ForceNetUpdate·OnBreakPresentation 순서를 유지한다.
+  SpawnId·방 상태 저장·미획득 DropItem 보존은 추가하지 않는다.
+done_when:
+  - "서버의 최초 TryBreak 성공만 확정 BreakState와 함께 파괴 완료를 한 번 알린다"
+  - "방 상태 구독자가 Loot/BP 외부 호출 전에 파괴 결과를 기록할 수 있는 순서다"
+  - "기존 단일 Loot 추첨·복제·표현과 직접 Destroy 무보상 정책을 유지한다"
+allow:
+  - Source/LB/Object/Destructible/LB_DestructibleProp.h
+  - Source/LB/Object/Destructible/LB_DestructibleProp.cpp
+context:
+  - Source/LB/Data/Loot/LB_LootTableDataAsset.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 파괴 가드→완료 신호→Loot→복제/표현 순서와 중복 차단을 확인했다
