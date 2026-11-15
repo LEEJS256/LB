@@ -14,6 +14,8 @@ public class LB : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
+			//MortionWarp
+			"MotionWarping",
 			// AI
 			"AIModule",
 			"NavigationSystem",
