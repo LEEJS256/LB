@@ -1,5 +1,5 @@
 id: WP-D6L2
-title: 파티 출구 카운트다운과 방 스트리밍 전환
+title: 분기형 파티 출구 카운트다운과 방 스트리밍 전환
 branch: feature/dungeon-layout
 base: master
 protected:
@@ -10,11 +10,11 @@ protected:
   - Source/LB/GAS/GA/LB_GA_NormalAttack.h
   - Source/LB/GAS/GA/LB_GA_NormalAttack.cpp
 description: |
-  Layout Data Asset의 순서형 방 목록을 스트리밍하고 출구 과반수 카운트다운 또는 전원 진입으로 파티 전체를 다음 방에 이동한다.
-  서버 GameMode가 전환을 확정하고 GameState가 Route·진행 상태를 공유하며 각 World는 같은 방·슬롯·이름을 로드한다.
-  랜덤 Route·방 클리어·사망 참가 규칙·게임플레이 Actor 배치·전환 실패 재시도 UX는 제외한다.
+  Layout Data Asset의 Room/Exit 연결 그래프를 스트리밍하고 선택 Exit의 과반수 카운트다운 또는 전원 진입으로 파티 전체를 목적지 방에 이동한다.
+  서버 GameMode가 선택 분기와 전환을 확정하고 GameState가 Route·진행 상태를 공유하며 각 World는 같은 방·슬롯·이름을 로드한다.
+  랜덤 Route·순환/되돌아가기·방 클리어·사망 참가 규칙·게임플레이 Actor 배치·전환 실패 재시도 UX는 제외한다.
 verify:
   - name: 에디터 종료 후 LBEditor 통합 빌드
     use: build-editor
-  - manual: E01·E02에서 독립 방·Entry/Exit·두 슬롯 로드 완료와 실패 정리를 확인했다
-  - manual: E99에서 3인 과반수 카운트다운·전원 즉시 전환·파티 전체 이동·Fade·종료 정리를 확인했다
+  - manual: E01·E02에서 3방 분기 Route·독립 방·두 슬롯 로드 완료와 실패 정리를 확인했다
+  - manual: E99에서 Left/Right Exit별 3인 과반수·전원 즉시 전환·목적지 선택·Fade·종료 정리를 확인했다

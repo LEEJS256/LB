@@ -1,20 +1,21 @@
 id: CT-004
-title: 방 Entry와 Exit 영역
+title: 단일 방 로더 수명
 goal: |
-  Dungeon의 LB_DungeonRoomMarkers.h/.cpp에 AActor 파생 ALB_DungeonRoomEntry와 ALB_DungeonExit를 정의한다. Entry는 SceneComponent Root와 서버 Pawn 이동에 사용할 Transform 조회 API를 제공하고 Tick·복제·자동 로직을 갖지 않는다.
-  Exit는 SceneComponent Root와 EditAnywhere UBoxComponent ExitTrigger를 소유한다. 서버에서만 Pawn Begin/End Overlap을 TSet<TWeakObjectPtr<APawn>>으로 추적하고 정리된 현재 목록을 조회하는 API와 네이티브 OnExitPresenceChanged delegate를 제공한다. 중복 Begin, 누락 End, Destroy된 Pawn을 안전하게 처리한다.
-  Exit는 과반수·파티·카운트다운·다음 RoomId를 판단하지 않고 현재 방을 소유한 GameMode가 delegate를 구독하도록 한다. Client 독립 판정, 거리 Tick, Door 애니메이션과 방 클리어 조건은 추가하지 않는다.
+  AActor 파생 ALB_DungeonRoomLoader를 Dungeon에 추가한다. bReplicates=false·Tick 비활성으로 두고 bool LoadRoomLocal(FName InstanceKey, int32 TransitionSerial, const FLB_DungeonRoomDefinition& Room, const FTransform& SlotTransform), void UnloadRoomLocal()을 제공한다.
+  입력 Route 키·양수 세대·Room을 검증한 뒤 ULevelStreamingDynamic::LoadLevelInstanceBySoftObjectPtr의 Transform 오버로드로 한 방만 로드한다. 이름 Override는 LB_<InstanceKey>_<TransitionSerial>_<RoomId>로 만들고 서버와 Client가 같은 입력에서 같은 이름을 사용한다. 로더 Actor Transform은 합성하지 않는다.
+  OnLevelShown과 현재 상태로 표시 완료를 집계해 BlueprintAssignable OnRoomReady를 한 번 발행하고 표시된 ULevel을 읽는 const 조회 API를 제공한다. 초기 호출 실패 또는 타이머 기반 LoadTimeoutSeconds(기본 30초) 초과 시 OnRoomFailed를 한 번 발행하고 해당 Streaming 객체·delegate·timer를 정리한다.
+  동일 요청 재호출은 중복 로드하지 않고 기존 수락 결과를 반환하며 다른 방 요청은 거부한다. UnloadRoomLocal/EndPlay는 ShouldBeVisible/ShouldBeLoaded=false와 SetIsRequestingUnloadAndRemoval(true)로 해제를 요청하고 해제 중 재사용하지 않는다. Route 선택·두 슬롯 관리·Fade·Pawn 이동·FlushLevelStreaming은 추가하지 않는다.
 done_when:
-  - "방 맵에 배치할 Entry Transform과 서버 전용 Exit Overlap 목록이 분리된다"
-  - "Exit가 중복/무효 Pawn을 제거하고 실제 목록 변화 때만 delegate를 알린다"
-  - "과반수·Route·전환 정책이 Marker Actor에 들어가지 않는다"
-  - "Actor Tick과 복제를 추가하지 않는다"
+  - "한 로더가 Route 키·전환 세대·RoomId 이름과 슬롯 Transform으로 선택된 한 방만 비동기 로드한다"
+  - "요청 수락과 표시 완료를 구분하고 Ready/Failed를 종료 경로별 한 번만 발행한다"
+  - "동일 요청은 멱등하고 다른 요청·해제 중 재사용은 거부한다"
+  - "실패·Timeout·EndPlay가 Streaming·delegate·timer를 정리한다"
 allow:
-  - Source/LB/Dungeon/LB_DungeonRoomMarkers.h
-  - Source/LB/Dungeon/LB_DungeonRoomMarkers.cpp
+  - Source/LB/Dungeon/LB_DungeonRoomLoader.h
+  - Source/LB/Dungeon/LB_DungeonRoomLoader.cpp
 context:
-  - Source/LB/Character/LB_PlayerCharacter.h
+  - Source/LB/Data/Dungeon/LB_DungeonRoomTypes.h
 verify:
   - name: 에디터 종료 후 LBEditor 빌드
     use: build-editor
-  - manual: Diff에서 Entry/Exit 책임 분리·서버 Overlap·중복/무효 Pawn 정리를 확인했다
+  - manual: Diff에서 단일 방 수명·표시 완료·실패 정리·동일 요청 중복 방지를 확인했다

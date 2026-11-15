@@ -15,7 +15,7 @@ Codex가 설계와 WP/CT를 작성하고 Claude Code가 코드 구현을 진행�
 | 순서 | WP | 브랜치 | CT | 사람 확인 |
 | --- | --- | --- | --- | --- |
 | 1 | [WP-P9D4](../changes/WP-P9D4/package.yaml) 항아리 파괴·Loot | feature/destructible-loot | 5 | E01 임시 외형/표현 → E02 기본 공격 → E03 Loot/Pickup → E99 네트워크·Chaos |
-| 2 | [WP-D6L2](../changes/WP-D6L2/package.yaml) 파티 방 전환 | feature/dungeon-layout | 8 | CT-002 Route 전환 → E01 방/Route → E02 로더 → E03 Marker → E99 3인 전환 |
+| 2 | [WP-D6L2](../changes/WP-D6L2/package.yaml) 분기형 파티 방 전환 | feature/dungeon-layout | 9 | CT-002 순서형 Route 완료 → CT-003 Graph 확장 → E01 3방/분기 → E02 로더 → E03 Exit Marker → E99 3인 분기 전환 |
 
 표의 번호는 표시 순서이며 WP 사이 실행 의존성이 아니다. 두 WP는 공통 계획을 포함한 master에서 각각 시작하고 한쪽 구현의 Merge를 기다리지 않아도 된다.
 현재 브랜치에는 두 계획을 함께 작성했다. 공통 계획은 별도로 검토·공유한 뒤 구현 브랜치에서 사용하며, 위 브랜치명은 실행 계획이지 생성 완료 기록이 아니다.

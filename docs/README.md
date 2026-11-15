@@ -72,4 +72,4 @@
 ### World
 
 - [Destructible Prop](world/destructible-prop.md) — `Superseded` — 항아리 단발 파괴, 로컬 Chaos 표현과 ItemCode Loot 드롭 / WP-P9D4
-- [Dungeon Layout](world/dungeon-layout.md) — `Superseded` — Data Asset 기반 순서형 방, 과반수 카운트다운과 파티 Fade 전환 / WP-D6L2
+- [Dungeon Layout](world/dungeon-layout.md) — `Superseded` — Data Asset 기반 Room/Exit 분기 Graph, 과반수 카운트다운과 파티 Fade 전환 / WP-D6L2

@@ -1,34 +1,34 @@
 steps:
   - id: E01
-    after: CT-002
-    title: 독립 방과 Route Data Asset 제작
+    after: CT-003
+    title: 독립 3방과 분기 Graph Data Asset 제작
     items:
-      - action: 에디터를 재시작하고 /Game/LB/Tests/Dungeon/Maps 아래에 non-World Partition Lvl_DungeonRoom_A, Lvl_DungeonRoom_B와 Persistent Lvl_DungeonTransitionTest를 만든다. 방 A/B는 서로 접합하지 않고 로컬 바닥 기준만 통일하며 기본 도형과 정적 충돌로 구성한다.
+      - action: 에디터를 재시작하고 /Game/LB/Tests/Dungeon/Maps 아래에 non-World Partition Lvl_DungeonRoom_A, Lvl_DungeonRoom_B, Lvl_DungeonRoom_C와 Persistent Lvl_DungeonTransitionTest를 만든다. 방들은 서로 접합하지 않고 로컬 바닥 기준만 통일하며 기본 도형과 정적 충돌로 구분한다.
         expected: 방 맵에 PlayerStart·GameMode 의존·Level Blueprint BeginPlay Spawn·몬스터·항아리·Pickup이 없고 각각 독립적으로 열린다.
         restart_editor: true
-      - action: /Game/LB/Tests/Dungeon/Data의 DA_DungeonRouteTest에 Room_A와 Room_B의 고유 영문숫자/underscore RoomId와 soft 맵 참조를 순서대로 입력한다. 작성용 Transform은 입력하지 않는다.
-        expected: Room Route가 2개 방을 순서대로 가리키고 같은 맵을 다른 RoomId로 반복할 수 있으며 None·중복·무효 참조는 검증에서 거부된다.
+      - action: /Game/LB/Tests/Dungeon/Data의 DA_DungeonRouteTest에서 StartRoomId=Room_A로 두고 Room_A에 Exit_Left→Room_B, Exit_Right→Room_C를 입력한다. Room_B와 Room_C는 Exits가 빈 종료 방으로 두며 작성용 Transform은 입력하지 않는다.
+        expected: 3방 Graph가 A에서 B/C로 분기하고 모든 방이 Start에서 도달 가능하다. None·중복·무효 목적지·Self Link·Cycle·도달 불가는 검증에서 거부된다.
   - id: E02
-    after: CT-003
+    after: CT-004
     title: 단일 방 로더 완료와 실패 정리
     items:
       - target: /Game/LB/Tests/Dungeon/Maps/Lvl_DungeonTransitionTest
-        action: 같은 테스트 루트의 ALB_DungeonRoomLoader 파생 BP를 Identity Transform에 임시 배치하고 Room_A를 Slot A Transform으로 두 번 요청한다.
+        action: 같은 테스트 루트의 ALB_DungeonRoomLoader 파생 BP를 Identity Transform에 임시 배치하고 같은 TransitionSerial과 Room_A를 Slot A Transform으로 두 번 요청한다.
         expected: 요청 수락과 표시 완료가 구분되고 동일 요청은 Streaming 인스턴스를 중복 생성하지 않으며 Ready는 한 번 발생한다.
         restart_editor: true
       - action: None 키·잘못된 인덱스·무효 Room·짧은 Timeout을 시험하고 로드 중 UnloadRoomLocal 및 PIE 종료를 수행한다.
         expected: 실패가 로그/이벤트로 드러나고 Streaming 객체·timer·delegate가 정리되며 해제 중 다른 방 요청을 받지 않는다.
   - id: E03
-    after: CT-004
-    title: 방 Entry와 Exit Overlap 제작
+    after: CT-005
+    title: 방 Entry와 분기 Exit Overlap 제작
     items:
-      - action: Lvl_DungeonRoom_A와 B에 ALB_DungeonRoomEntry와 ALB_DungeonExit를 정확히 하나씩 배치한다. Entry는 안전한 바닥 위치, Exit Box는 방 끝의 파티 대기 영역으로 설정한다.
-        expected: Entry Transform에 여러 Pawn이 설 수 있고 Exit Box의 보이는 범위와 실제 Collision 범위가 일치한다.
+      - action: Lvl_DungeonRoom_A에 ALB_DungeonRoomEntry 하나와 ExitId가 Exit_Left/Exit_Right인 ALB_DungeonExit 두 개를 서로 떨어진 영역에 배치한다. Room_B/C에는 Entry 하나씩만 두고 Exit는 두지 않는다.
+        expected: Entry Transform에 여러 Pawn이 설 수 있고 Room_A의 두 ExitId/Collision 영역이 Graph의 Exit 집합과 정확히 일치하며 종료 방에는 Exit가 없다.
         restart_editor: true
-      - action: 서버 PIE에서 Pawn의 진입·이탈·재진입과 Exit 안에서 Pawn 제거를 시험한다.
-        expected: 실제 목록 변화마다 한 번만 Presence 변경이 발생하고 Client 독립 판정이나 거리 Tick이 없다.
+      - action: 서버 PIE에서 Left/Right 각각 Pawn의 진입·이탈·재진입과 Exit 안에서 Pawn 제거를 시험한다.
+        expected: ExitId별 실제 목록 변화마다 한 번만 Presence 변경이 발생하고 다른 Exit 목록과 섞이지 않으며 Client 독립 판정이나 거리 Tick이 없다.
   - id: E04
-    after: CT-006
+    after: CT-007
     title: Fade와 카운트다운 표현 연결
     items:
       - action: /Game/LB/Tests/Dungeon/UI에 WBP_DungeonCountdownTest를 만들고 테스트 PlayerController BP에서 CountingDown 이벤트에만 현재/전체 인원과 서버 종료 시간 기준 남은 시간을 표시하며 다른 Phase에는 숨긴다.
@@ -37,27 +37,29 @@ steps:
       - action: 테스트 이벤트로 Fade Out과 Fade In을 각각 호출해 로컬 화면만 변하는지 확인한다.
         expected: 서버 Pawn 위치는 Fade 호출만으로 바뀌지 않고 각 로컬 PlayerController 화면에만 적용된다.
   - id: E05
-    after: CT-007
+    after: CT-008
     title: 두 슬롯과 첫 방 준비 Barrier
     items:
       - action: BP_DungeonTestGameState를 만들고 서로 겹치지 않는 Slot A/B Transform을 설정한다. BP_DungeonTestGameMode에 이 GameStateClass와 DA_DungeonRouteTest를 지정하고 Lvl_DungeonTransitionTest의 GameMode Override로 사용한다.
-        expected: 공용 BP_GameMode·Lvl_GameplayTest·Config를 수정하지 않고 서버와 Client가 같은 이름·Slot A에 Room_A를 한 번 로드한다.
+        expected: 공용 BP_GameMode·Lvl_GameplayTest·Config를 수정하지 않고 서버와 Client가 StartRoomId의 Room_A를 같은 이름·Slot A에 한 번 로드한다.
         restart_editor: true
       - action: Listen Server와 Client 1에서 한 Client의 준비 보고를 지연·누락시키고 짧은 Timeout도 시험한다.
         expected: 서버 World와 참가 Client 전부가 준비되기 전 Barrier가 완료되지 않으며 Timeout은 Failed로 남고 빈 방 Teleport나 Fade를 실행하지 않는다.
   - id: E99
     before: PR
-    title: 과반수 카운트다운과 파티 전체 최종 전환
+    title: Exit별 과반수와 분기 목적지 최종 전환
     items:
       - target: /Game/LB/Tests/Dungeon/Maps/Lvl_DungeonTransitionTest
         action: 임시 수동 RoomLoader와 테스트 Fade 이벤트를 제거한다. Listen Server 1과 Client 2, 총 3명으로 Room_A에 진입한다.
-        expected: Room_A가 Slot A에 하나만 있고 세 World의 Route·현재 인덱스·TransitionSerial이 일치한다.
+        expected: Room_A가 Slot A에 하나만 있고 세 World의 Graph·CurrentRoomId·TransitionSerial이 일치한다.
         restart_editor: true
-      - action: 1/3명, 2/3명, 2명 중 1명 이탈, 다시 2/3명을 순서대로 시험한다.
-        expected: 1명은 대기, 2명은 카운트다운, 과반수 미달은 즉시 취소, 재진입은 전체 시간으로 재시작하며 UI는 CountingDown에서만 보인다.
-      - action: 2/3명 상태로 카운트다운을 완료한다.
-        expected: 다음 Room_B가 Slot B에 준비된 뒤 세 명 전부 Fade Out·서버 Teleport·Fade In되고 Exit 밖 1명도 함께 이동하며 Room_A는 해제된다.
-      - action: 다시 시작해 대기 중 3/3명과 카운트다운 중 3/3명을 각각 시험한다.
-        expected: 두 경우 모두 별도 전원 메시지나 0초 표시 없이 Timer가 취소되고 다음 방 전환이 한 번만 잠긴다.
-      - action: 로드 지연·무효 Entry/Exit·Client 퇴장·PIE 종료를 시험하고 안정된 방에서 늦은 Client를 접속시킨다.
-        expected: 준비 전 이동, 중복 전환과 남은 Timer가 없고 실패/종료에서 로더·delegate가 정리되며 늦은 Client는 현재 방을 한 번 복구한다.
+      - action: Exit_Left에서 1/3명, 2/3명, 2명 중 1명 이탈, 다시 2/3명을 순서대로 시험한다.
+        expected: 1명은 대기, 2명은 Left 카운트다운, 과반수 미달은 즉시 취소, 재진입은 전체 시간으로 재시작하며 UI는 CountingDown에서만 보인다.
+      - action: Exit_Left 2/3명 상태로 카운트다운을 완료한다.
+        expected: Graph 목적지 Room_B가 Slot B에 준비된 뒤 세 명 전부 Fade Out·서버 Teleport·Fade In되고 Exit 밖 1명도 함께 이동하며 Room_A는 해제된다.
+      - action: 다시 시작해 Exit_Right 2/3명 카운트다운 완료와 3/3명 즉시 진입을 각각 시험한다.
+        expected: 두 경우 모두 Room_C만 선택된다. 전원 진입은 별도 메시지나 0초 표시 없이 Timer를 취소하고 한 번만 전환을 잠근다.
+      - action: Left/Right에 인원을 나눠 2/3 과반수가 없는 상태와 Active Exit 변경을 시험한다.
+        expected: 서로 다른 Exit 인원이 합산되지 않고 Active Exit가 과반수를 잃으면 취소되며 다른 Exit가 과반수를 얻으면 전체 시간으로 다시 시작한다.
+      - action: 로드 지연·Graph와 불일치하는 ExitId·무효 Entry·Client 퇴장·PIE 종료를 시험하고 안정된 방에서 늦은 Client를 접속시킨다.
+        expected: 준비 전 이동, 잘못된 목적지·중복 전환과 남은 Timer가 없고 실패/종료에서 로더·delegate가 정리되며 늦은 Client는 선택된 현재 방을 한 번 복구한다.

@@ -1,21 +1,22 @@
 id: CT-003
-title: 단일 방 로더 수명
+title: 순서형 Route의 Room Exit Graph 확장
 goal: |
-  AActor 파생 ALB_DungeonRoomLoader를 Dungeon에 추가한다. bReplicates=false·Tick 비활성으로 두고 bool LoadRoomLocal(FName InstanceKey, int32 RoomIndex, const FLB_DungeonRoomDefinition& Room, const FTransform& SlotTransform), void UnloadRoomLocal()을 제공한다.
-  입력 Route 키·인덱스·Room을 검증한 뒤 ULevelStreamingDynamic::LoadLevelInstanceBySoftObjectPtr의 Transform 오버로드로 한 방만 로드한다. 이름 Override는 LB_<InstanceKey>_<RoomIndex>_<RoomId>로 만들고 서버와 Client가 같은 입력에서 같은 이름을 사용한다. 로더 Actor Transform은 합성하지 않는다.
-  OnLevelShown과 현재 상태로 표시 완료를 집계해 BlueprintAssignable OnRoomReady를 한 번 발행하고 표시된 ULevel을 읽는 const 조회 API를 제공한다. 초기 호출 실패 또는 타이머 기반 LoadTimeoutSeconds(기본 30초) 초과 시 OnRoomFailed를 한 번 발행하고 해당 Streaming 객체·delegate·timer를 정리한다.
-  동일 요청 재호출은 중복 로드하지 않고 기존 수락 결과를 반환하며 다른 방 요청은 거부한다. UnloadRoomLocal/EndPlay는 ShouldBeVisible/ShouldBeLoaded=false와 SetIsRequestingUnloadAndRemoval(true)로 해제를 요청하고 해제 중 재사용하지 않는다. Route 선택·두 슬롯 관리·Fade·Pawn 이동·FlushLevelStreaming은 추가하지 않는다.
+  CT-002의 LB_DungeonRoomTypes.h에 BlueprintType FLB_DungeonExitLink(ExitId, TargetRoomId)를 추가하고 FLB_DungeonRoomDefinition에 TArray Exits, FLB_DungeonRouteState와 ULB_DungeonLayoutDataAsset에 StartRoomId를 추가한다.
+  기존 InstanceKey·RoomId·1..32개·Level 검증을 유지한다. 모든 ID는 영문숫자/underscore만 허용하고 StartRoomId는 존재해야 한다. 방별 Exit는 0..4개이며 ExitId는 해당 방에서 None/중복 금지, TargetRoomId는 존재하는 다른 방이어야 한다.
+  StartRoomId에서 모든 방이 도달 가능해야 하고 방향 Cycle·Self Link는 거부한다. 분기 후 다시 합쳐지는 DAG와 같은 맵을 다른 RoomId로 사용하는 것은 허용하며 종료 방은 Exits가 비어 있다.
+  ValidateLayout/BuildRoute는 StartRoomId와 Exit Graph를 함께 검사·값 복사한다. 실패 시 OutRoute를 기본값으로 유지하고 Data Asset을 수정하지 않는다. 랜덤 선택·Seed·현재 방·슬롯 Transform·되돌아가기는 만들지 않는다.
 done_when:
-  - "한 로더가 명시적 이름과 슬롯 Transform으로 한 방만 비동기 로드한다"
-  - "요청 수락과 표시 완료를 구분하고 Ready/Failed를 종료 경로별 한 번만 발행한다"
-  - "동일 요청은 멱등하고 다른 요청·해제 중 재사용은 거부한다"
-  - "실패·Timeout·EndPlay가 Streaming·delegate·timer를 정리한다"
+  - "CT-002 순서 목록이 StartRoom/Room/Exit Graph로 확장되고 기존 Room 검증을 보존한다"
+  - "방별 0..4 Exit·고유 ID·목적지 참조를 검증한다"
+  - "도달 불가·Self Link·Cycle은 거부하고 분기 후 합류하는 DAG는 허용한다"
+  - "BuildRoute가 실패 출력을 초기화하고 성공 시 독립 Graph 복사본을 만든다"
 allow:
-  - Source/LB/Dungeon/LB_DungeonRoomLoader.h
-  - Source/LB/Dungeon/LB_DungeonRoomLoader.cpp
+  - Source/LB/Data/Dungeon/LB_DungeonRoomTypes.h
+  - Source/LB/Data/Dungeon/LB_DungeonLayoutDataAsset.h
+  - Source/LB/Data/Dungeon/LB_DungeonLayoutDataAsset.cpp
 context:
   - Source/LB/Data/Dungeon/LB_DungeonRoomTypes.h
 verify:
   - name: 에디터 종료 후 LBEditor 빌드
     use: build-editor
-  - manual: Diff에서 단일 방 수명·표시 완료·실패 정리·동일 요청 중복 방지를 확인했다
+  - manual: Diff에서 StartRoom/Exit Graph·도달성/Cycle 검증·기존 Route 호환을 확인했다
