@@ -13,6 +13,7 @@ class ULB_GasComponent;
 class ULB_EquipComponent;
 class ULB_MeleeHitboxComponent;
 class ULB_BattleComponent;
+class UMotionWarpingComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UAbilitySystemComponent;
@@ -102,6 +103,9 @@ protected:
 #pragma endregion
 
 #pragma region COMPONENT_AREA
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="LB|Combat")
+	TObjectPtr<class UMotionWarpingComponent> MotionWarpingComp;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Compoent|Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
 
