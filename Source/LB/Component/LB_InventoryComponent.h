@@ -80,10 +80,10 @@ protected:
 	TArray<FLB_ItemEntry> InventoryItems;
 
 	UPROPERTY(ReplicatedUsing = OnRep_UnlockedSlots, EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
-	int32 CurrentSlots = 16; // 기본 해금 슬롯
+	int32 CurrentSlots = 35; // 기본 해금 슬롯
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
-	int32 MaxSlots = 30;
+	int32 MaxSlots = 90;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
 	TSubclassOf<class ALB_DropItem> DropItemClass;
