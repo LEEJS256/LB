@@ -18,6 +18,9 @@ class LB_API ULB_AnimNotifyState_MeleeHitWindow : public UAnimNotifyState
 	GENERATED_BODY()
 
 public:
+	virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+	                        float FrameDeltaTime, const FAnimNotifyEventReference& EventReference) override;
+	
 	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration,
 		const FAnimNotifyEventReference& EventReference) override;
 
@@ -31,6 +34,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|Hitbox", meta = (ShowOnlyInnerProperties))
 	FLB_MeleeHitboxSettings HitboxSettings;
 
+protected:
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, Category = "LB|Hitbox|Preview")
+	bool bDrawPreview = true;
+
+	// 캐릭터 축 기준 박스를 왼쪽 공격(-1)으로 미리보기
+	UPROPERTY(EditAnywhere, Category = "LB|Hitbox|Preview")
+	bool bPreviewMirrorX = false;
+
+	// 캐릭터 BP에서 Mesh의 Relative Transform과 똑같이 맞출 것
+	UPROPERTY(EditAnywhere, Category = "LB|Hitbox|Preview")
+	FTransform PreviewMeshRelativeTransform = FTransform(FRotator(0.f, -90.f, 0.f), FVector(0.f, 0.f, -88.f));
+#endif
+	
 private:
 	static ULB_MeleeHitboxComponent* FindHitbox(const USkeletalMeshComponent* MeshComp);
 };
