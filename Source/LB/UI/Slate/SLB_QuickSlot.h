@@ -1,9 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "LB_QuickSlotTextStyle.h"
+#include "UI/UI_Utility/LB_QuickSlotTextStyle.h"
 #include "SLB_SquareBox.h"
-#include "SLB_InventoryBox.h" // FLB_SlotDragDropOp, FLB_OnSlotDropped 재사용
+#include "UI/UI_Utility/LB_SlotDragDropOp.h" // FLB_SlotDragDropOp, FLB_OnSlotDropped
 
 DECLARE_DELEGATE(FLB_OnQuickSlotClear);
 

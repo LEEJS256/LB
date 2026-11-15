@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ContentWidget.h"
-#include "UI/Slate/FLB_SquareBoxStyle.h"
+#include "UI/UI_Utility/FLB_SquareBoxStyle.h"
 #include "LB_SquareBox.generated.h"
 
 class SLB_SquareBox;

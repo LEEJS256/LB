@@ -3,8 +3,8 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Component/LB_QuickSlotComponent.h"
-#include "Slate/FLB_SquareBoxStyle.h"
-#include "Slate/LB_QuickSlotTextStyle.h"
+#include "UI/UI_Utility/FLB_SquareBoxStyle.h"
+#include "UI/UI_Utility/LB_QuickSlotTextStyle.h"
 #include "LB_QuickSlotPanel.generated.h"
 
 class UHorizontalBox;

@@ -1,6 +1,6 @@
 // LB_MonsterHPBar.cpp
 #include "LB_MonsterHPBar.h"
-#include "UI/Slate/SlateWidget/LB_NeonProgressBar.h" 
+#include "UI/SlateWidget/LB_NeonProgressBar.h" 
 
 void ULB_MonsterHPBar::SetHealth(float Current, float Max)
 {

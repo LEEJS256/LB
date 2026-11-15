@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "LB_SquareBox.h"
 #include "Component/LB_QuickSlotComponent.h"
-#include "UI/Slate/LB_QuickSlotTextStyle.h"
+#include "UI/UI_Utility/LB_QuickSlotTextStyle.h"
 #include "LB_QuickSlot.generated.h"
 
 class SLB_QuickSlot;

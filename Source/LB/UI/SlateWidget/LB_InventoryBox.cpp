@@ -3,7 +3,7 @@
 
 #include "LB_InventoryBox.h"
 
-#include "../SLB_InventoryBox.h"
+#include "UI/Slate/SLB_InventoryBox.h"
 #include "Engine/Texture2D.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 

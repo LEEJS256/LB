@@ -7,7 +7,7 @@
 #include "TimerManager.h"
 #include "Blueprint/SlateBlueprintLibrary.h"
 #include "Component/LB_InventoryComponent.h"
-#include "Slate/SlateWidget/LB_Button.h"
+#include "SlateWidget/LB_Button.h"
 #include "Components/TileView.h"
 #include "PlayerState/LB_PlayerState.h"
 

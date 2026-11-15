@@ -1,12 +1,12 @@
 #include "LB_SquareBox.h"
 
-#include "../SLB_SquareBox.h"
+#include "UI/Slate/SLB_SquareBox.h"
 #include "Components/Widget.h"
 #include "Data/LB_DA_ItemInfo.h"
 #include "UI/LB_ItemTooltip.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Widgets/SNullWidget.h"
-#include "Widgets/SToolTip.h"
+
 
 
 ULB_SquareBox::ULB_SquareBox(const FObjectInitializer& ObjectInitializer)

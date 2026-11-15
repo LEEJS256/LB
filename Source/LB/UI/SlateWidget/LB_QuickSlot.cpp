@@ -1,6 +1,6 @@
 #include "LB_QuickSlot.h"
 
-#include "../SLB_QuickSlot.h"
+#include "UI/Slate/SLB_QuickSlot.h"
 #include "Component/LB_InventoryComponent.h"
 #include "Data/LB_DA_ItemInfo.h"
 #include "Engine/Texture2D.h"

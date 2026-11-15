@@ -4,7 +4,7 @@
 #include "LB_InventorySlotEntry.h"
 
 #include "LB_InventoryItemObject.h"
-#include "UI/Slate/SlateWidget/LB_InventoryBox.h"
+#include "UI/SlateWidget/LB_InventoryBox.h"
 #include "Component/LB_InventoryComponent.h"
 #include "Data/LB_DA_ItemInfo.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
@@ -92,8 +92,8 @@ void ULB_InventorySlotEntry::ApplySlotColors()
 	if (!InventoryBox) return;
 
 	FLB_SquareBoxStyle S = InventoryBox->Style;
-	S.BorderColor = FLinearColor::FromSRGBColor(BorderColor);
-	S.NormalColor = FLinearColor::FromSRGBColor(FillColor);
+	// S.BorderColor = FLinearColor::FromSRGBColor(BorderColor);
+	// S.NormalColor = FLinearColor::FromSRGBColor(FillColor);
 	InventoryBox->SetStyle(S);
 }
 
