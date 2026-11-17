@@ -29,6 +29,13 @@ public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 
+	/**
+	 * 서버: 호출 시점에 접속한 파티로 던전을 시작한다(Route 게시 + 첫 방 전환).
+	 * Authority·미시작·Route 미게시·참가자 1명 이상일 때만 성공하며, 한 번 성공(또는 Route 게시) 후에는 다시 실행되지 않는다.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dungeon")
+	bool StartDungeon();
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -115,6 +122,7 @@ private:
 	void HandleFadeOutFinished(int32 Serial);
 	void HandleFadeInFinished(int32 Serial);
 	void TeleportPartyToEntry(const ALB_DungeonRoomEntry* Entry);
+	static bool TeleportControllerToEntry(APlayerController* PC, const ALB_DungeonRoomEntry* Entry, float OffsetY);
 	void ClearTransitionTimers();
 	void BindGameStateDelegates();
 	void UnbindGameStateDelegates();
@@ -123,6 +131,13 @@ private:
 	void HandleClientPendingRoomReady(ALB_PlayerController* Reporter, FName RoomId, int32 TransitionSerial);
 	void HandleLocalPendingRoomFailed(FName RoomId, int32 TransitionSerial);
 	void HandleRoomReadyTimeout();
+
+	// ---- 안정 상태 늦은 합류 ----
+
+	// GameState가 검증한 안정 상태 Current 방 준비 보고. Reporter 한 명만 현재 Entry로 옮긴다.
+	void HandleClientCurrentRoomReady(ALB_PlayerController* Reporter, FName RoomId, int32 TransitionSerial);
+	// 보관한 안정 Entry가 현재 방/세대와 맞으면 사용하고, 아니면 서버 Current Level에서 다시 검증한다.
+	ALB_DungeonRoomEntry* ResolveCurrentRoomEntry();
 
 	static bool IsBarrierParticipantCandidate(const APlayerController* PC);
 	bool IsBarrierReport(FName RoomId, int32 TransitionSerial) const;
@@ -136,6 +151,10 @@ private:
 	FDelegateHandle ServerReadyHandle;
 	FDelegateHandle ClientReadyHandle;
 	FDelegateHandle LocalFailedHandle;
+	FDelegateHandle CurrentReadyHandle;
+
+	// StartDungeon 성공(Route 게시) 후 true. 중복 시작을 막는다.
+	bool bDungeonStarted = false;
 
 	FTimerHandle RoomReadyTimeoutHandle;
 
@@ -171,4 +190,12 @@ private:
 
 	// Barrier 완료 시 검증한 Pending 방 Entry.
 	TWeakObjectPtr<ALB_DungeonRoomEntry> PendingEntry;
+
+	// 승격 완료된 Current 방 Entry와 그 방/세대. 이전 방 해제로 파괴되면 Weak 포인터가 무효가 된다.
+	TWeakObjectPtr<ALB_DungeonRoomEntry> CurrentEntry;
+	FName CurrentEntryRoomId = NAME_None;
+	int32 CurrentEntrySerial = INDEX_NONE;
+
+	// 현재 방 Entry에 이미 배치된 Controller(파티 Teleport 성공 + 늦은 합류 완료). 중복 합류 보고를 무시한다.
+	TSet<TWeakObjectPtr<APlayerController>> CurrentRoomPlaced;
 };

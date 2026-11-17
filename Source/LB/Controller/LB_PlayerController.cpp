@@ -140,6 +140,8 @@ void ALB_PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		GameStateSetHandle.Reset();
 	}
 
+	ResetDungeonReportCache();
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -186,6 +188,7 @@ void ALB_PlayerController::TryBindDungeonGameState()
 
 	BoundDungeonGameState = GS;
 	LocalPendingRoomReadyHandle = GS->OnLocalPendingRoomReady.AddUObject(this, &ThisClass::HandleLocalPendingRoomReady);
+	LocalCurrentRoomReadyHandle = GS->OnLocalCurrentRoomReady.AddUObject(this, &ThisClass::HandleLocalCurrentRoomReady);
 	GS->OnDungeonTransitionChanged.AddUniqueDynamic(this, &ThisClass::HandleDungeonTransitionChanged);
 
 	// 바인딩 이전에 이미 일어난 상태를 따라잡는다.
@@ -199,6 +202,12 @@ void ALB_PlayerController::TryBindDungeonGameState()
 		{
 			ReportRoomReadyOnce(GS->GetDungeonRoute().InstanceKey, Snapshot.PendingRoomId, Snapshot.TransitionSerial);
 		}
+
+		// 안정 상태 Current 방이 이미 표시됐다면 놓친 합류 보고를 보낸다.
+		if (!HasAuthority() && GS->IsLocalStableCurrentRoomReady())
+		{
+			ReportCurrentRoomReadyOnce(GS->GetDungeonRoute().InstanceKey, Snapshot.CurrentRoomId, Snapshot.TransitionSerial);
+		}
 	}
 }
 
@@ -207,9 +216,11 @@ void ALB_PlayerController::UnbindDungeonGameState()
 	if (ALB_GameState* GS = BoundDungeonGameState.Get())
 	{
 		GS->OnLocalPendingRoomReady.Remove(LocalPendingRoomReadyHandle);
+		GS->OnLocalCurrentRoomReady.Remove(LocalCurrentRoomReadyHandle);
 		GS->OnDungeonTransitionChanged.RemoveDynamic(this, &ThisClass::HandleDungeonTransitionChanged);
 	}
 	LocalPendingRoomReadyHandle.Reset();
+	LocalCurrentRoomReadyHandle.Reset();
 	BoundDungeonGameState.Reset();
 }
 
@@ -248,6 +259,48 @@ void ALB_PlayerController::ServerReportDungeonRoomReady_Implementation(FName Ins
 	{
 		GS->ReceiveClientRoomReady(this, InstanceKey, RoomId, TransitionSerial);
 	}
+}
+
+void ALB_PlayerController::HandleLocalCurrentRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	ReportCurrentRoomReadyOnce(InstanceKey, RoomId, TransitionSerial);
+}
+
+void ALB_PlayerController::ReportCurrentRoomReadyOnce(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	if (!IsLocalController() || HasAuthority() || InstanceKey.IsNone() || RoomId.IsNone())
+	{
+		return;
+	}
+
+	if (LastReportedCurrentInstanceKey == InstanceKey && LastReportedCurrentRoomId == RoomId && LastReportedCurrentSerial == TransitionSerial)
+	{
+		return;
+	}
+
+	LastReportedCurrentInstanceKey = InstanceKey;
+	LastReportedCurrentRoomId = RoomId;
+	LastReportedCurrentSerial = TransitionSerial;
+	ServerReportDungeonCurrentRoomReady(InstanceKey, RoomId, TransitionSerial);
+}
+
+void ALB_PlayerController::ServerReportDungeonCurrentRoomReady_Implementation(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	// 검증은 GameState, 배치는 GameMode 몫. 여기서는 보고자와 입력만 전달한다.
+	if (ALB_GameState* GS = GetWorld() ? GetWorld()->GetGameState<ALB_GameState>() : nullptr)
+	{
+		GS->ReceiveClientCurrentRoomReady(this, InstanceKey, RoomId, TransitionSerial);
+	}
+}
+
+void ALB_PlayerController::ResetDungeonReportCache()
+{
+	LastReportedInstanceKey = NAME_None;
+	LastReportedRoomId = NAME_None;
+	LastReportedSerial = INDEX_NONE;
+	LastReportedCurrentInstanceKey = NAME_None;
+	LastReportedCurrentRoomId = NAME_None;
+	LastReportedCurrentSerial = INDEX_NONE;
 }
 
 void ALB_PlayerController::HandleDungeonTransitionChanged(const FLB_DungeonTransitionSnapshot& Snapshot)

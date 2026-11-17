@@ -35,6 +35,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerReportDungeonRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial);
 
+	// 소유 Client의 안정 상태 Current 방 표시 완료 보고(늦은 합류). 서버는 검증을 GameState에 위임만 한다.
+	UFUNCTION(Server, Reliable)
+	void ServerReportDungeonCurrentRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial);
+
 	// 로컬 카메라 Fade 표현만 담당한다. Pawn 위치는 건드리지 않는다.
 	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Dungeon|Transition")
 	void ClientSetDungeonFade(bool bFadeOut, float Duration);
@@ -149,17 +153,27 @@ private:
 	void HandleLocalPendingRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial);
 	void ReportRoomReadyOnce(FName InstanceKey, FName RoomId, int32 TransitionSerial);
 
+	void HandleLocalCurrentRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial);
+	void ReportCurrentRoomReadyOnce(FName InstanceKey, FName RoomId, int32 TransitionSerial);
+	void ResetDungeonReportCache();
+
 	UFUNCTION()
 	void HandleDungeonTransitionChanged(const FLB_DungeonTransitionSnapshot& Snapshot);
 
 	TWeakObjectPtr<ALB_GameState> BoundDungeonGameState;
 	FDelegateHandle LocalPendingRoomReadyHandle;
+	FDelegateHandle LocalCurrentRoomReadyHandle;
 	FDelegateHandle GameStateSetHandle;
 
 	// 중복 보고 방지.
 	FName LastReportedInstanceKey = NAME_None;
 	FName LastReportedRoomId = NAME_None;
 	int32 LastReportedSerial = INDEX_NONE;
+
+	// 안정 상태 Current 방 중복 보고 방지.
+	FName LastReportedCurrentInstanceKey = NAME_None;
+	FName LastReportedCurrentRoomId = NAME_None;
+	int32 LastReportedCurrentSerial = INDEX_NONE;
 
 	// 카운트다운 표현 상태.
 	bool bDungeonCountdownVisible = false;

@@ -38,6 +38,10 @@ void ALB_GameState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	ReleaseLoader(CurrentRoomLoader);
 	CurrentRoomSerial = INDEX_NONE;
 
+	NotifiedCurrentInstanceKey = NAME_None;
+	NotifiedCurrentRoomId = NAME_None;
+	NotifiedCurrentSerial = INDEX_NONE;
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -144,6 +148,76 @@ void ALB_GameState::ReceiveClientRoomReady(ALB_PlayerController* Reporter, FName
 	OnClientPendingRoomReady.Broadcast(Reporter, RoomId, TransitionSerial);
 }
 
+void ALB_GameState::ReceiveClientCurrentRoomReady(ALB_PlayerController* Reporter, FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	if (!HasAuthority() || !IsValid(Reporter) || !HasDungeonRoute())
+	{
+		return;
+	}
+
+	if (InstanceKey != Route.InstanceKey
+		|| !TransitionSnapshot.PendingRoomId.IsNone()
+		|| TransitionSnapshot.CurrentRoomId.IsNone()
+		|| RoomId != TransitionSnapshot.CurrentRoomId
+		|| TransitionSerial != TransitionSnapshot.TransitionSerial
+		|| !IsStableDungeonPhase(TransitionSnapshot.Phase))
+	{
+		UE_LOG(LogLB, Verbose, TEXT("ReceiveClientCurrentRoomReady: stale report ignored (%s/%s/%d)."),
+			*InstanceKey.ToString(), *RoomId.ToString(), TransitionSerial);
+		return;
+	}
+
+	OnClientCurrentRoomReady.Broadcast(Reporter, RoomId, TransitionSerial);
+}
+
+bool ALB_GameState::IsStableDungeonPhase(ELB_DungeonTransitionPhase Phase)
+{
+	return Phase == ELB_DungeonTransitionPhase::Waiting || Phase == ELB_DungeonTransitionPhase::CountingDown;
+}
+
+bool ALB_GameState::IsLocalStableCurrentRoomReady() const
+{
+	const FLB_DungeonTransitionSnapshot& Snapshot = TransitionSnapshot;
+	return HasDungeonRoute()
+		&& Snapshot.PendingRoomId.IsNone()
+		&& !Snapshot.CurrentRoomId.IsNone()
+		&& IsStableDungeonPhase(Snapshot.Phase)
+		&& IsValid(CurrentRoomLoader)
+		&& CurrentRoomLoader->IsRoomReady()
+		&& CurrentRoomLoader->GetRequestedRoomId() == Snapshot.CurrentRoomId
+		&& CurrentRoomSerial == Snapshot.TransitionSerial;
+}
+
+void ALB_GameState::TryNotifyLocalCurrentRoomReady()
+{
+	// 서버 World는 보고 주체가 아니다(Listen 호스트는 파티 Teleport로 이동).
+	if (HasAuthority() || !IsLocalStableCurrentRoomReady())
+	{
+		return;
+	}
+
+	const FName InstanceKey = Route.InstanceKey;
+	const FName RoomId = TransitionSnapshot.CurrentRoomId;
+	const int32 Serial = TransitionSnapshot.TransitionSerial;
+	if (NotifiedCurrentInstanceKey == InstanceKey && NotifiedCurrentRoomId == RoomId && NotifiedCurrentSerial == Serial)
+	{
+		return;
+	}
+
+	NotifiedCurrentInstanceKey = InstanceKey;
+	NotifiedCurrentRoomId = RoomId;
+	NotifiedCurrentSerial = Serial;
+	OnLocalCurrentRoomReady.Broadcast(InstanceKey, RoomId, Serial);
+}
+
+void ALB_GameState::HandleCurrentRoomReady(ALB_DungeonRoomLoader* Loader)
+{
+	if (Loader && Loader == CurrentRoomLoader)
+	{
+		TryNotifyLocalCurrentRoomReady();
+	}
+}
+
 const FLB_DungeonRoomDefinition* ALB_GameState::FindRoomDefinition(FName RoomId) const
 {
 	if (RoomId.IsNone())
@@ -192,6 +266,8 @@ void ALB_GameState::ApplyDungeonStateLocal()
 		PendingRoomLoader->OnRoomReady.RemoveAll(this);
 		PendingRoomLoader->OnRoomFailed.RemoveAll(this);
 		PendingRoomLoader->OnRoomFailed.AddDynamic(this, &ALB_GameState::HandleCurrentRoomFailed);
+		// 전환 중 접속해 아직 표시 전인 Client도 승격 후 표시 완료를 받을 수 있게 한다(이미 Ready면 아래 3)에서 처리).
+		PendingRoomLoader->OnRoomReady.AddDynamic(this, &ALB_GameState::HandleCurrentRoomReady);
 
 		CurrentRoomLoader = PendingRoomLoader;
 		CurrentRoomSerial = PendingRoomSerial;
@@ -229,6 +305,7 @@ void ALB_GameState::ApplyDungeonStateLocal()
 				{
 					CurrentRoomSerial = Snapshot.TransitionSerial;
 					CurrentRoomLoader->OnRoomFailed.AddDynamic(this, &ALB_GameState::HandleCurrentRoomFailed);
+					CurrentRoomLoader->OnRoomReady.AddDynamic(this, &ALB_GameState::HandleCurrentRoomReady);
 					CurrentRoomLoader->LoadRoomLocal(Route.InstanceKey, CurrentRoomSerial, RoomCopy, GetSlotTransformForSerial(CurrentRoomSerial));
 				}
 			}
@@ -237,6 +314,9 @@ void ALB_GameState::ApplyDungeonStateLocal()
 				UE_LOG(LogLB, Error, TEXT("ApplyDungeonStateLocal: CurrentRoomId %s not in route."), *Snapshot.CurrentRoomId.ToString());
 			}
 		}
+
+		// 이미 표시된 Current(승격된 Pending 포함)가 안정 Phase에 도달하면 한 번 알린다.
+		TryNotifyLocalCurrentRoomReady();
 		return;
 	}
 

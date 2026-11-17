@@ -22,6 +22,10 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(FLB_OnLocalPendingRoomReady, FName /*Inst
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FLB_OnClientPendingRoomReady, ALB_PlayerController* /*Reporter*/, FName /*RoomId*/, int32 /*TransitionSerial*/);
 // 로컬 World의 Pending 방 로드 실패(RoomId, TransitionSerial). 재시도 정책은 소유하지 않는다.
 DECLARE_MULTICAST_DELEGATE_TwoParams(FLB_OnLocalPendingRoomFailed, FName /*RoomId*/, int32 /*TransitionSerial*/);
+// Client World: 안정 상태(Pending 없음·Waiting/CountingDown)의 Current 방 표시 완료. (InstanceKey, RoomId, TransitionSerial)당 한 번.
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FLB_OnLocalCurrentRoomReady, FName /*InstanceKey*/, FName /*RoomId*/, int32 /*TransitionSerial*/);
+// 서버: 검증을 통과한 Client의 안정 상태 Current 방 준비 보고(늦은 합류).
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FLB_OnClientCurrentRoomReady, ALB_PlayerController* /*Reporter*/, FName /*RoomId*/, int32 /*TransitionSerial*/);
 
 /**
  * 던전 Route Graph와 전환 Snapshot을 복제하고, 각 World에서 두 방 슬롯(A/B)의 로더 수명을 관리한다.
@@ -49,7 +53,17 @@ public:
 	// Client 준비 보고 검증. 현재 InstanceKey/PendingRoomId/TransitionSerial과 일치하면 OnClientPendingRoomReady 발행.
 	void ReceiveClientRoomReady(ALB_PlayerController* Reporter, FName InstanceKey, FName RoomId, int32 TransitionSerial);
 
+	// 안정 상태 Current 방 준비 보고 검증. InstanceKey/CurrentRoomId/TransitionSerial 일치, PendingRoomId=None, 안정 Phase이면
+	// OnClientCurrentRoomReady 발행.
+	void ReceiveClientCurrentRoomReady(ALB_PlayerController* Reporter, FName InstanceKey, FName RoomId, int32 TransitionSerial);
+
 	// ---- 조회 ----
+
+	// 늦은 합류를 받는 안정 Phase(Waiting/CountingDown).
+	static bool IsStableDungeonPhase(ELB_DungeonTransitionPhase Phase);
+
+	// 로컬 World에서 안정 상태 Current 방이 Snapshot과 같은 방/세대로 표시 완료됐는지.
+	bool IsLocalStableCurrentRoomReady() const;
 
 	const FLB_DungeonRouteState& GetDungeonRoute() const { return Route; }
 	const FLB_DungeonTransitionSnapshot& GetDungeonTransition() const { return TransitionSnapshot; }
@@ -79,6 +93,8 @@ public:
 	FLB_OnLocalPendingRoomReady OnLocalPendingRoomReady;
 	FLB_OnClientPendingRoomReady OnClientPendingRoomReady;
 	FLB_OnLocalPendingRoomFailed OnLocalPendingRoomFailed;
+	FLB_OnLocalCurrentRoomReady OnLocalCurrentRoomReady;
+	FLB_OnClientCurrentRoomReady OnClientCurrentRoomReady;
 
 protected:
 	virtual void BeginPlay() override;
@@ -113,6 +129,12 @@ private:
 	UFUNCTION()
 	void HandleCurrentRoomFailed(ALB_DungeonRoomLoader* Loader);
 
+	UFUNCTION()
+	void HandleCurrentRoomReady(ALB_DungeonRoomLoader* Loader);
+
+	// Client: 안정 상태 Current 방 표시 완료를 (Key, Room, Serial)당 한 번 알린다.
+	void TryNotifyLocalCurrentRoomReady();
+
 	UPROPERTY(ReplicatedUsing = OnRep_Route)
 	FLB_DungeonRouteState Route;
 
@@ -130,4 +152,9 @@ private:
 	int32 PendingRoomSerial = INDEX_NONE;
 
 	bool bPendingReadyNotified = false;
+
+	// 마지막으로 알린 안정 Current 방(중복 알림 방지).
+	FName NotifiedCurrentInstanceKey = NAME_None;
+	FName NotifiedCurrentRoomId = NAME_None;
+	int32 NotifiedCurrentSerial = INDEX_NONE;
 };

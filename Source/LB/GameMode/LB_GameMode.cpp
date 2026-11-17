@@ -17,7 +17,6 @@
 
 void ALB_GameMode::StartPlay()
 {
-	// 기본 StartPlay에서 매치가 시작되며 Pawn이 스폰되므로 Barrier 참가자 캡처 전에 호출한다.
 	Super::StartPlay();
 
 	DungeonGameState = GetGameState<ALB_GameState>();
@@ -34,15 +33,40 @@ void ALB_GameMode::StartPlay()
 		WatchPartyController(It->Get());
 	}
 
-	if (!StartupDungeonLayout)
-	{
-		return;
-	}
+	// 던전 시작(Route 게시·첫 방 전환)은 StartDungeon() 명시 호출로만 수행한다.
+	// Listen Server PIE에서는 원격 Client의 PostLogin보다 StartPlay가 먼저 실행되기 때문이다.
+}
 
+bool ALB_GameMode::StartDungeon()
+{
+	if (!HasAuthority())
+	{
+		UE_LOG(LogLB, Warning, TEXT("StartDungeon rejected: no authority."));
+		return false;
+	}
+	if (bDungeonStarted)
+	{
+		UE_LOG(LogLB, Warning, TEXT("StartDungeon rejected: already started."));
+		return false;
+	}
+	if (!DungeonGameState || !StartupDungeonLayout)
+	{
+		UE_LOG(LogLB, Warning, TEXT("StartDungeon rejected: GameState %s, StartupDungeonLayout %s."),
+			DungeonGameState ? TEXT("valid") : TEXT("null"), StartupDungeonLayout ? TEXT("valid") : TEXT("null"));
+		return false;
+	}
 	if (DungeonGameState->HasDungeonRoute())
 	{
-		UE_LOG(LogLB, Warning, TEXT("ALB_GameMode::StartPlay: Route already published."));
-		return;
+		UE_LOG(LogLB, Warning, TEXT("StartDungeon rejected: Route already published."));
+		return false;
+	}
+
+	// 호출 시점의 접속 파티(유효 PlayerState·Pawn을 가진 비관전자)를 첫 전환 대상으로 잠근다.
+	CaptureTransitionParty();
+	if (TransitionParty.IsEmpty())
+	{
+		UE_LOG(LogLB, Warning, TEXT("StartDungeon rejected: no party participants."));
+		return false;
 	}
 
 	const FName InstanceKey(*FGuid::NewGuid().ToString(EGuidFormats::Digits));
@@ -50,19 +74,27 @@ void ALB_GameMode::StartPlay()
 	FString Error;
 	if (!StartupDungeonLayout->BuildRoute(InstanceKey, NewRoute, Error))
 	{
-		UE_LOG(LogLB, Error, TEXT("ALB_GameMode::StartPlay: BuildRoute failed: %s"), *Error);
-		return;
+		UE_LOG(LogLB, Error, TEXT("StartDungeon: BuildRoute failed: %s"), *Error);
+		TransitionParty.Reset();
+		return false;
 	}
 
 	if (!DungeonGameState->PublishDungeonRoute(NewRoute))
 	{
-		UE_LOG(LogLB, Error, TEXT("ALB_GameMode::StartPlay: PublishDungeonRoute failed."));
-		return;
+		UE_LOG(LogLB, Error, TEXT("StartDungeon: PublishDungeonRoute failed."));
+		TransitionParty.Reset();
+		return false;
 	}
 
-	// StartRoom 진입도 Exit 전환과 같은 잠금·Fade·Teleport 경로를 사용한다.
-	CaptureTransitionParty();
+	// Route가 게시되면 이후 결과와 무관하게 다시 시작하지 않는다.
+	bDungeonStarted = true;
+
+	// StartRoom 진입도 Exit 전환과 같은 잠금·Barrier·Fade·Teleport 경로를 사용한다.
 	bTransitionLocked = true;
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(ReevaluateHandle);
+	}
 
 	FLB_DungeonTransitionSnapshot Snapshot;
 	Snapshot.CurrentRoomId = NAME_None;
@@ -71,10 +103,19 @@ void ALB_GameMode::StartPlay()
 	Snapshot.TransitionSerial = 1;
 	Snapshot.Phase = ELB_DungeonTransitionPhase::LoadingNextRoom;
 	Snapshot.TotalPlayers = TransitionParty.Num();
-	if (!BeginRoomTransition(Snapshot) && DungeonGameState->GetDungeonTransition().Phase != ELB_DungeonTransitionPhase::Failed)
+
+	UE_LOG(LogLB, Log, TEXT("StartDungeon: instance %s, start room %s, party %d."),
+		*InstanceKey.ToString(), *NewRoute.StartRoomId.ToString(), TransitionParty.Num());
+
+	if (!BeginRoomTransition(Snapshot))
 	{
-		FailRoomTransition(TEXT("start room publish failed"));
+		if (DungeonGameState->GetDungeonTransition().Phase != ELB_DungeonTransitionPhase::Failed)
+		{
+			FailRoomTransition(TEXT("start room publish failed"));
+		}
+		return false;
 	}
+	return true;
 }
 
 void ALB_GameMode::PostLogin(APlayerController* NewPlayer)
@@ -93,6 +134,7 @@ void ALB_GameMode::Logout(AController* Exiting)
 	{
 		UnwatchPartyController(ExitingPC);
 		TransitionParty.Remove(ExitingPC);
+		CurrentRoomPlaced.Remove(ExitingPC);
 	}
 	// Controller가 아직 Iterator에 남아 있으므로 다음 Tick에 재평가한다.
 	RequestExitReevaluation();
@@ -128,7 +170,12 @@ void ALB_GameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 	TransitionParty.Reset();
 	PendingEntry.Reset();
+	CurrentEntry.Reset();
+	CurrentEntryRoomId = NAME_None;
+	CurrentEntrySerial = INDEX_NONE;
+	CurrentRoomPlaced.Reset();
 	bTransitionLocked = false;
+	bDungeonStarted = false;
 	UnbindGameStateDelegates();
 	DungeonGameState = nullptr;
 
@@ -258,6 +305,7 @@ void ALB_GameMode::BindGameStateDelegates()
 	ServerReadyHandle = DungeonGameState->OnServerPendingRoomReady.AddUObject(this, &ALB_GameMode::HandleServerPendingRoomReady);
 	ClientReadyHandle = DungeonGameState->OnClientPendingRoomReady.AddUObject(this, &ALB_GameMode::HandleClientPendingRoomReady);
 	LocalFailedHandle = DungeonGameState->OnLocalPendingRoomFailed.AddUObject(this, &ALB_GameMode::HandleLocalPendingRoomFailed);
+	CurrentReadyHandle = DungeonGameState->OnClientCurrentRoomReady.AddUObject(this, &ALB_GameMode::HandleClientCurrentRoomReady);
 }
 
 void ALB_GameMode::UnbindGameStateDelegates()
@@ -267,10 +315,12 @@ void ALB_GameMode::UnbindGameStateDelegates()
 		DungeonGameState->OnServerPendingRoomReady.Remove(ServerReadyHandle);
 		DungeonGameState->OnClientPendingRoomReady.Remove(ClientReadyHandle);
 		DungeonGameState->OnLocalPendingRoomFailed.Remove(LocalFailedHandle);
+		DungeonGameState->OnClientCurrentRoomReady.Remove(CurrentReadyHandle);
 	}
 	ServerReadyHandle.Reset();
 	ClientReadyHandle.Reset();
 	LocalFailedHandle.Reset();
+	CurrentReadyHandle.Reset();
 }
 
 bool ALB_GameMode::IsBarrierParticipantCandidate(const APlayerController* PC)
@@ -362,6 +412,100 @@ void ALB_GameMode::HandleRoomReadyTimeout()
 		*BarrierRoomId.ToString(), BarrierSerial, bServerRoomReady ? TEXT("true") : TEXT("false"),
 		ReadyParticipants.Num(), BarrierParticipants.Num());
 	FailRoomTransition(TEXT("timeout"));
+}
+
+// ============================================================================
+// 안정 상태 늦은 합류
+// ============================================================================
+
+void ALB_GameMode::HandleClientCurrentRoomReady(ALB_PlayerController* Reporter, FName RoomId, int32 TransitionSerial)
+{
+	// GameState가 InstanceKey/CurrentRoomId/Serial/Pending=None/안정 Phase를 검증했다. 여기서는 서버 진행 상태를 다시 확인한다.
+	if (!DungeonGameState || !bDungeonStarted || bTransitionLocked || bBarrierActive)
+	{
+		return;
+	}
+	const FLB_DungeonTransitionSnapshot& Snapshot = DungeonGameState->GetDungeonTransition();
+	if (!Snapshot.PendingRoomId.IsNone()
+		|| Snapshot.CurrentRoomId != RoomId
+		|| Snapshot.TransitionSerial != TransitionSerial
+		|| !ALB_GameState::IsStableDungeonPhase(Snapshot.Phase))
+	{
+		return;
+	}
+
+	// 원격 Client의 비관전자 Controller이고 Pawn이 있어야 한다.
+	if (!IsPartyCandidate(Reporter) || Reporter->IsLocalController())
+	{
+		UE_LOG(LogLB, Verbose, TEXT("Late join report ignored: reporter not eligible."));
+		return;
+	}
+
+	// 이미 현재 방 Entry로 이동한 파티원/합류 완료자의 보고는 무시한다.
+	const TWeakObjectPtr<APlayerController> Key(Reporter);
+	if (CurrentRoomPlaced.Contains(Key))
+	{
+		return;
+	}
+
+	ALB_DungeonRoomEntry* Entry = ResolveCurrentRoomEntry();
+	if (!Entry)
+	{
+		UE_LOG(LogLB, Error, TEXT("Late join ignored: current room %s (serial %d) entry unavailable."),
+			*RoomId.ToString(), TransitionSerial);
+		return;
+	}
+
+	// Reporter 한 명에게만 즉시 Fade Out → Teleport → Fade In. 파티 전체 전환은 재실행하지 않는다.
+	Reporter->ClientSetDungeonFade(true, 0.f);
+	if (!TeleportControllerToEntry(Reporter, Entry, 0.f))
+	{
+		Reporter->ClientSetDungeonFade(false, FadeInDuration);
+		return;
+	}
+	Reporter->ClientSetDungeonFade(false, FadeInDuration);
+	CurrentRoomPlaced.Add(Key);
+
+	UE_LOG(LogLB, Log, TEXT("Late join placed at entry: %s in %s (serial %d)."),
+		*Reporter->GetName(), *RoomId.ToString(), TransitionSerial);
+
+	// 위치가 바뀌었으므로 Exit 인원을 다시 평가한다.
+	RequestExitReevaluation();
+}
+
+ALB_DungeonRoomEntry* ALB_GameMode::ResolveCurrentRoomEntry()
+{
+	if (!DungeonGameState)
+	{
+		return nullptr;
+	}
+	const FLB_DungeonTransitionSnapshot& Snapshot = DungeonGameState->GetDungeonTransition();
+
+	ALB_DungeonRoomEntry* Entry = CurrentEntry.Get();
+	if (IsValid(Entry) && CurrentEntryRoomId == Snapshot.CurrentRoomId && CurrentEntrySerial == Snapshot.TransitionSerial)
+	{
+		return Entry;
+	}
+
+	// 보관 Entry가 무효/다른 세대면 서버 Current Level에서 정확히 하나를 다시 검증한다.
+	CurrentEntry.Reset();
+	CurrentEntryRoomId = NAME_None;
+	CurrentEntrySerial = INDEX_NONE;
+
+	const FLB_DungeonRoomDefinition* Room = DungeonGameState->FindRoomDefinition(Snapshot.CurrentRoomId);
+	FString Error;
+	Entry = nullptr;
+	if (!Room || !ValidateRoomMarkers(DungeonGameState->GetCurrentRoomLevel(), *Room, Entry, Error))
+	{
+		UE_LOG(LogLB, Error, TEXT("ResolveCurrentRoomEntry: room %s (serial %d) invalid: %s"),
+			*Snapshot.CurrentRoomId.ToString(), Snapshot.TransitionSerial, Room ? *Error : TEXT("room not in route"));
+		return nullptr;
+	}
+
+	CurrentEntry = Entry;
+	CurrentEntryRoomId = Snapshot.CurrentRoomId;
+	CurrentEntrySerial = Snapshot.TransitionSerial;
+	return Entry;
 }
 
 void ALB_GameMode::TryCompleteRoomBarrier()
@@ -1060,11 +1204,24 @@ void ALB_GameMode::HandleFadeOutFinished(int32 Serial)
 	TeleportPartyToEntry(Entry);
 	PendingEntry.Reset();
 
+	// 이전 방 Entry는 곧 해제되므로 먼저 버린다.
+	CurrentEntry.Reset();
+	CurrentEntryRoomId = NAME_None;
+	CurrentEntrySerial = INDEX_NONE;
+
 	// 2) Pending 승격 + 이전 방 해제.
 	if (!DungeonGameState->CompleteDungeonTransition())
 	{
 		FailRoomTransition(TEXT("promote failed"));
 		return;
+	}
+
+	// 승격된 방 Entry를 안정 상태 Entry로 보관한다(늦은 합류용).
+	{
+		const FLB_DungeonTransitionSnapshot& Promoted = DungeonGameState->GetDungeonTransition();
+		CurrentEntry = Entry;
+		CurrentEntryRoomId = Promoted.CurrentRoomId;
+		CurrentEntrySerial = Promoted.TransitionSerial;
 	}
 
 	// 3) Fade In.
@@ -1125,9 +1282,6 @@ void ALB_GameMode::HandleFadeInFinished(int32 Serial)
 
 void ALB_GameMode::TeleportPartyToEntry(const ALB_DungeonRoomEntry* Entry)
 {
-	const FTransform EntryTransform = Entry->GetEntryTransform();
-	const FRotator EntryRotation = Entry->GetEntryRotation();
-
 	TArray<APlayerController*> Movers;
 	for (const TWeakObjectPtr<APlayerController>& WeakPC : TransitionParty)
 	{
@@ -1138,27 +1292,46 @@ void ALB_GameMode::TeleportPartyToEntry(const ALB_DungeonRoomEntry* Entry)
 		}
 	}
 
+	// 새 방 기준으로 배치 완료 집합을 다시 만든다(전환 중 접속자는 포함되지 않음 → 안정 후 늦은 합류).
+	CurrentRoomPlaced.Reset();
+
 	// Entry 로컬 Y축을 따라 중앙 정렬로 간격 배치한다.
 	const int32 Count = Movers.Num();
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		APlayerController* PC = Movers[Index];
-		APawn* Pawn = PC->GetPawn();
 		const float OffsetY = (static_cast<float>(Index) - (Count - 1) * 0.5f) * PartyEntrySpacing;
-		const FVector Location = EntryTransform.TransformPosition(FVector(0.f, OffsetY, 0.f));
-
-		if (!Pawn->TeleportTo(Location, EntryRotation))
+		if (TeleportControllerToEntry(PC, Entry, OffsetY))
 		{
-			if (!Pawn->TeleportTo(Location, EntryRotation, false, true))
-			{
-				UE_LOG(LogLB, Warning, TEXT("TeleportPartyToEntry: failed to teleport %s."), *Pawn->GetName());
-				continue;
-			}
+			CurrentRoomPlaced.Add(PC);
 		}
-		PC->SetControlRotation(EntryRotation);
-		PC->ClientSetRotation(EntryRotation, true);
 	}
 	UE_LOG(LogLB, Log, TEXT("Party teleported to entry: %d pawns."), Count);
+}
+
+bool ALB_GameMode::TeleportControllerToEntry(APlayerController* PC, const ALB_DungeonRoomEntry* Entry, float OffsetY)
+{
+	APawn* Pawn = IsValid(PC) ? PC->GetPawn() : nullptr;
+	if (!IsValid(Pawn) || !IsValid(Entry))
+	{
+		return false;
+	}
+
+	const FTransform EntryTransform = Entry->GetEntryTransform();
+	const FRotator EntryRotation = Entry->GetEntryRotation();
+	const FVector Location = EntryTransform.TransformPosition(FVector(0.f, OffsetY, 0.f));
+
+	if (!Pawn->TeleportTo(Location, EntryRotation))
+	{
+		if (!Pawn->TeleportTo(Location, EntryRotation, false, true))
+		{
+			UE_LOG(LogLB, Warning, TEXT("TeleportControllerToEntry: failed to teleport %s."), *Pawn->GetName());
+			return false;
+		}
+	}
+	PC->SetControlRotation(EntryRotation);
+	PC->ClientSetRotation(EntryRotation, true);
+	return true;
 }
 
 void ALB_GameMode::ClearTransitionTimers()
