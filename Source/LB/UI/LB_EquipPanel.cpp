@@ -119,7 +119,7 @@ void ULB_EquipPanel::RefreshFromEquipped(const TMap<FLB_EquipSlotKey, FName>& Eq
 
 		if (Info)
 		{
-			// TODO: 아이콘이 많아지면 비동기 로드로 교체
+			
 			EquipSlot->SetItem(Info->Icon.LoadSynchronous(), *ItemCode);
 		}
 		else
@@ -214,8 +214,10 @@ void ULB_EquipPanel::HandleInventoryUpdated()
 {
 	if (!Inventory.IsValid()) return;
 
-	// TODO: 장착 데이터가 생기면 여기서 컴포넌트의 장착 맵을 받아서 갱신
-	// RefreshFromEquipped(Inventory->GetEquippedItems());
+	// 인벤토리/장비 어느 쪽이 바뀌어도 같은 델리게이트로 온다
+	TMap<FLB_EquipSlotKey, FName> Equipped;
+	Inventory->GetEquippedMap(Equipped);
+	RefreshFromEquipped(Equipped);
 }
 
 FName ULB_EquipPanel::ResolveInventoryItemCode(int32 InventoryIndex) const
@@ -235,14 +237,14 @@ const ULB_DA_EquipInfo* ULB_EquipPanel::ResolveEquipInfo(FName ItemCode) const
 }
 
 // ============================================================
-// 컴포넌트 요청 — 장착 데이터 작업 때 서버 RPC로 연결
+// 컴포넌트 요청 (서버 RPC). 결과는 OnInventoryUpdated로 돌아와서 다시 그린다
 // ============================================================
 
 void ULB_EquipPanel::RequestEquip(int32 InventoryIndex, const FLB_EquipSlotKey& DstKey)
 {
 	if (!Inventory.IsValid()) return;
 
-	// TODO: Inventory->Server_EquipToSlot(InventoryIndex, DstKey);
+	Inventory->Server_EquipToSlot(InventoryIndex, DstKey);
 	UE_LOG(LogTemp, Log, TEXT("[EquipPanel] RequestEquip Inv[%d] -> %s[%d]"),
 		InventoryIndex, *DstKey.SlotTag.ToString(), DstKey.Index);
 }
@@ -251,7 +253,7 @@ void ULB_EquipPanel::RequestUnequip(const FLB_EquipSlotKey& Key)
 {
 	if (!Inventory.IsValid()) return;
 
-	// TODO: Inventory->Server_UnequipSlot(Key);
+	Inventory->Server_UnequipSlot(Key);
 	UE_LOG(LogTemp, Log, TEXT("[EquipPanel] RequestUnequip %s[%d]"), *Key.SlotTag.ToString(), Key.Index);
 }
 
@@ -259,7 +261,7 @@ void ULB_EquipPanel::RequestSwap(const FLB_EquipSlotKey& A, const FLB_EquipSlotK
 {
 	if (!Inventory.IsValid()) return;
 
-	// TODO: Inventory->Server_SwapEquipSlots(A, B);
+	Inventory->Server_SwapEquipSlots(A, B);
 	UE_LOG(LogTemp, Log, TEXT("[EquipPanel] RequestSwap %s[%d] <-> %s[%d]"),
 		*A.SlotTag.ToString(), A.Index, *B.SlotTag.ToString(), B.Index);
 }
