@@ -168,7 +168,7 @@ ULevel* ALB_GameState::GetCurrentRoomLevel() const
 
 const FTransform& ALB_GameState::GetSlotTransformForSerial(int32 TransitionSerial) const
 {
-	return (TransitionSerial % 2 == 0) ? RoomSlotATransform : RoomSlotBTransform;
+	return (TransitionSerial % 2 != 0) ? RoomSlotATransform : RoomSlotBTransform;
 }
 
 void ALB_GameState::ApplyDungeonStateLocal()

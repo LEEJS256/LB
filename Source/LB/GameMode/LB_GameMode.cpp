@@ -120,6 +120,8 @@ bool ALB_GameMode::BeginRoomTransition(const FLB_DungeonTransitionSnapshot& NewS
 	BarrierRoomId = NewSnapshot.PendingRoomId;
 	BarrierSerial = NewSnapshot.TransitionSerial;
 	bServerRoomReady = false;
+	UE_LOG(LogLB, Log, TEXT("Room barrier opened: %s serial %d, client participants %d."),
+		*BarrierRoomId.ToString(), BarrierSerial, BarrierParticipants.Num());
 
 	FLB_DungeonTransitionSnapshot Snapshot = NewSnapshot;
 	if (Snapshot.TotalPlayers <= 0)
@@ -209,7 +211,9 @@ void ALB_GameMode::UnbindGameStateDelegates()
 
 bool ALB_GameMode::IsBarrierParticipantCandidate(const APlayerController* PC)
 {
-	if (!IsValid(PC) || !IsValid(PC->GetPawn()))
+	// Listen Server의 로컬 플레이어는 서버 World 준비로 대표한다.
+	// 원격 Client의 서버 측 Controller도 Authority이므로 HasAuthority가 아니라 Local 여부로 구분한다.
+	if (!IsValid(PC) || PC->IsLocalController() || !IsValid(PC->GetPawn()))
 	{
 		return false;
 	}
@@ -239,6 +243,8 @@ void ALB_GameMode::HandleServerPendingRoomReady(FName RoomId, int32 TransitionSe
 		return;
 	}
 	bServerRoomReady = true;
+	UE_LOG(LogLB, Log, TEXT("Room barrier server ready: %s serial %d, clients %d/%d."),
+		*RoomId.ToString(), TransitionSerial, ReadyParticipants.Num(), BarrierParticipants.Num());
 	TryCompleteRoomBarrier();
 }
 
@@ -262,6 +268,8 @@ void ALB_GameMode::HandleClientPendingRoomReady(ALB_PlayerController* Reporter, 
 	{
 		return;
 	}
+	UE_LOG(LogLB, Log, TEXT("Room barrier client ready: %s serial %d, clients %d/%d."),
+		*RoomId.ToString(), TransitionSerial, ReadyParticipants.Num(), BarrierParticipants.Num());
 	TryCompleteRoomBarrier();
 }
 
@@ -286,6 +294,9 @@ void ALB_GameMode::HandleRoomReadyTimeout()
 	{
 		return;
 	}
+	UE_LOG(LogLB, Error, TEXT("Room barrier timeout: %s serial %d, server ready %s, clients %d/%d."),
+		*BarrierRoomId.ToString(), BarrierSerial, bServerRoomReady ? TEXT("true") : TEXT("false"),
+		ReadyParticipants.Num(), BarrierParticipants.Num());
 	FailRoomTransition(TEXT("timeout"));
 }
 

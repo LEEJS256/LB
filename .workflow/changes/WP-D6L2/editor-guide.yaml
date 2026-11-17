@@ -41,10 +41,10 @@ steps:
     title: 두 슬롯과 첫 방 준비 Barrier
     items:
       - action: BP_DungeonTestGameState를 만들고 서로 겹치지 않는 Slot A/B Transform을 설정한다. BP_DungeonTestGameMode에 이 GameStateClass와 DA_DungeonRouteTest를 지정하고 Lvl_DungeonTransitionTest의 GameMode Override로 사용한다.
-        expected: 공용 BP_GameMode·Lvl_GameplayTest·Config를 수정하지 않고 서버와 Client가 StartRoomId의 Room_A를 같은 이름·Slot A에 한 번 로드한다.
+        expected: 공용 BP_GameMode·Lvl_GameplayTest·Config를 수정하지 않고 TransitionSerial 1의 StartRoomId Room_A가 Slot A에 한 번 로드된다.
         restart_editor: true
-      - action: Listen Server와 Client 1에서 한 Client의 준비 보고를 지연·누락시키고 짧은 Timeout도 시험한다.
-        expected: 서버 World와 참가 Client 전부가 준비되기 전 Barrier가 완료되지 않으며 Timeout은 Failed로 남고 빈 방 Teleport나 Fade를 실행하지 않는다.
+      - action: Listen Server와 Client 1에서 첫 방을 로드하고 Barrier 시작·서버 준비·완료 로그와 Client의 안정 상태 복구를 확인한다.
+        expected: 서버 World 준비가 호스트를 대표해 호스트 Controller는 Client 참가자에 포함되지 않는다. StartPlay 뒤 접속한 Client는 진행 중 Barrier에 추가되지 않고 복제된 안정 상태로 같은 Room_A를 한 번 로드하며 빈 방 Teleport나 Fade가 없다.
   - id: E99
     before: PR
     title: Exit별 과반수와 분기 목적지 최종 전환
@@ -59,6 +59,8 @@ steps:
         expected: Graph 목적지 Room_B가 Slot B에 준비된 뒤 세 명 전부 Fade Out·서버 Teleport·Fade In되고 Exit 밖 1명도 함께 이동하며 Room_A는 해제된다.
       - action: 다시 시작해 Exit_Right 2/3명 카운트다운 완료와 3/3명 즉시 진입을 각각 시험한다.
         expected: 두 경우 모두 Room_C만 선택된다. 전원 진입은 별도 메시지나 0초 표시 없이 Timer를 취소하고 한 번만 전환을 잠근다.
+      - action: 모든 Client가 접속한 안정 상태에서 다음 방 전환의 Client 준비 보고 하나를 지연·누락시키고 짧은 Room Ready Timeout도 시험한다.
+        expected: 서버 World와 전환 시작 시 캡처된 원격 Client 전부가 준비되기 전 Barrier가 완료되지 않는다. Timeout은 Failed로 남고 빈 방 Teleport·Fade·자동 재시도를 실행하지 않는다.
       - action: Left/Right에 인원을 나눠 2/3 과반수가 없는 상태와 Active Exit 변경을 시험한다.
         expected: 서로 다른 Exit 인원이 합산되지 않고 Active Exit가 과반수를 잃으면 취소되며 다른 Exit가 과반수를 얻으면 전체 시간으로 다시 시작한다.
       - action: 로드 지연·Graph와 불일치하는 ExitId·무효 Entry·Client 퇴장·PIE 종료를 시험하고 안정된 방에서 늦은 Client를 접속시킨다.
