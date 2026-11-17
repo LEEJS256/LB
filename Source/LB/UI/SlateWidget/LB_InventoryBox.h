@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "LB_SquareBox.h"
+#include "UI/UI_Utility/LB_EquipSlotKey.h"   
 #include "LB_InventoryBox.generated.h"
 
 
@@ -11,6 +12,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLB_OnInventoryBoxDropped, FName, SrcGroup, int32, SrcIndex, int32, DstIndex);
 /** 우클릭 사용 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLB_OnInventoryBoxUse, int32, SlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLB_OnInventoryBoxEquipDropped, FLB_EquipSlotKey, Key, int32, DstIndex);
 
 class SLB_InventoryBox;
 class UPaperSprite;
@@ -66,6 +68,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "LB|InventoryBox")
 	FLB_OnInventoryBoxUse OnUse;
 
+	UPROPERTY(BlueprintAssignable, Category = "LB|InventoryBox")
+	FLB_OnInventoryBoxEquipDropped OnEquipDropped;
+	
 	virtual void SynchronizeProperties() override;
 
 	protected:
@@ -103,7 +108,8 @@ private:
 	void ApplyState();
 	void HandleSlotDropped(FName SrcGroup, int32 SrcIndex, int32 DstIndex);
 	void HandleUse(int32 InSlotIndex);
-
+	void HandleEquipDropped(const FLB_EquipSlotKey& Key, int32 DstIndex);
+	
 	TSharedPtr<SLB_InventoryBox> GetInventoryBox() const;
 
 	// Slate 브러시는 UObject를 약하게 들고 있어서 GC 방지용으로 여기서 잡는다

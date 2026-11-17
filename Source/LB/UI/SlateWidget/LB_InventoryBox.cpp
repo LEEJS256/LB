@@ -22,7 +22,8 @@ TSharedRef<SLB_SquareBox> ULB_InventoryBox::CreateSquareBox()
 		.CountTextFont(CountTextFont)
 		.HotkeyTextFont(HotkeyTextFont)
 		.OnSlotDropped(FLB_OnSlotDropped::CreateUObject(this, &ULB_InventoryBox::HandleSlotDropped))
-		.OnUse(FLB_OnSlotUse::CreateUObject(this, &ULB_InventoryBox::HandleUse));
+		.OnUse(FLB_OnSlotUse::CreateUObject(this, &ULB_InventoryBox::HandleUse))
+		.OnEquipDropped(FLB_OnEquipDroppedToSlot::CreateUObject(this, &ULB_InventoryBox::HandleEquipDropped));
 }
 
 TSharedPtr<SLB_InventoryBox> ULB_InventoryBox::GetInventoryBox() const
@@ -137,4 +138,9 @@ void ULB_InventoryBox::HandleSlotDropped(FName SrcGroup, int32 SrcIndex, int32 D
 void ULB_InventoryBox::HandleUse(int32 InSlotIndex)
 {
 	OnUse.Broadcast(InSlotIndex);
+}
+
+void ULB_InventoryBox::HandleEquipDropped(const FLB_EquipSlotKey& Key, int32 DstIndex)
+{
+	OnEquipDropped.Broadcast(Key,DstIndex);
 }
