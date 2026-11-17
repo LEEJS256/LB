@@ -105,7 +105,12 @@ void ALB_PlayerCharacter::GiveDefaultWeapon()
 	if (!Inv)
 		return;
 
-	// PlayerState는 리스폰해도 유지되니까 이미 있으면 AddItem 생략
+	// 장착하면 인벤토리에서 빠져서 장비창(EquippedItems)으로 가는 구조.
+	// 리스폰이면 이미 장착 중인 무기가 있으니 새 Pawn에 무기 액터만 다시 붙인다 (GE는 PS의 ASC라 유지됨)
+	if (Inv->ReattachEquippedWeapon())
+		return;
+
+	// PlayerState는 리스폰해도 유지되니까 인벤에 이미 있으면 AddItem 생략
 	FGuid Id;
 	if (!Inv->FindFirstEntryByCode(DefaultWeaponItemCode, Id))
 	{
@@ -115,13 +120,6 @@ void ALB_PlayerCharacter::GiveDefaultWeapon()
 			return;
 	}
 
-	// 리스폰이면 bIsEquipped가 true로 남아 있어서 EquipItem이 막히니까 먼저 해제
-	const FLB_ItemEntry* Entry = Inv->GetInventoryItems().FindByPredicate(
-		[&](const FLB_ItemEntry& E) { return E.ItemInstanceId == Id; });
-	if (Entry && Entry->bIsEquipped)
-	{
-		Inv->UnequipItem(Id);
-	}
 	Inv->EquipItem(Id);
 }
 
