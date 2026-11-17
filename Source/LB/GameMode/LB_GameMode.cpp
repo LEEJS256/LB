@@ -98,14 +98,16 @@ bool ALB_GameMode::StartDungeon()
 
 	FLB_DungeonTransitionSnapshot Snapshot;
 	Snapshot.CurrentRoomId = NAME_None;
+	Snapshot.CurrentEntryId = NAME_None;
 	Snapshot.PendingRoomId = NewRoute.StartRoomId;
+	Snapshot.PendingEntryId = NewRoute.StartEntryId;
 	Snapshot.ActiveExitId = NAME_None;
 	Snapshot.TransitionSerial = 1;
 	Snapshot.Phase = ELB_DungeonTransitionPhase::LoadingNextRoom;
 	Snapshot.TotalPlayers = TransitionParty.Num();
 
-	UE_LOG(LogLB, Log, TEXT("StartDungeon: instance %s, start room %s, party %d."),
-		*InstanceKey.ToString(), *NewRoute.StartRoomId.ToString(), TransitionParty.Num());
+	UE_LOG(LogLB, Log, TEXT("StartDungeon: instance %s, start room %s entry %s, party %d."),
+		*InstanceKey.ToString(), *NewRoute.StartRoomId.ToString(), *NewRoute.StartEntryId.ToString(), TransitionParty.Num());
 
 	if (!BeginRoomTransition(Snapshot))
 	{
@@ -135,6 +137,7 @@ void ALB_GameMode::Logout(AController* Exiting)
 		UnwatchPartyController(ExitingPC);
 		TransitionParty.Remove(ExitingPC);
 		CurrentRoomPlaced.Remove(ExitingPC);
+		RemovePawnSuppressions(ExitingPC->GetPawn());
 	}
 	// Controller가 아직 Iterator에 남아 있으므로 다음 Tick에 재평가한다.
 	RequestExitReevaluation();
@@ -172,8 +175,11 @@ void ALB_GameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	PendingEntry.Reset();
 	CurrentEntry.Reset();
 	CurrentEntryRoomId = NAME_None;
+	CurrentEntryMarkerId = NAME_None;
 	CurrentEntrySerial = INDEX_NONE;
 	CurrentRoomPlaced.Reset();
+	ArrivingPawns.Reset();
+	SuppressedExitPawns.Reset();
 	bTransitionLocked = false;
 	bDungeonStarted = false;
 	UnbindGameStateDelegates();
@@ -271,10 +277,11 @@ void ALB_GameMode::HandleRoomBarrierReady()
 	{
 		Error = TEXT("pending room not in route");
 	}
-	if (!Room || !ValidateRoomMarkers(DungeonGameState->GetPendingRoomLevel(), *Room, Entry, Error))
+	// 목적지 Level에서 PendingEntryId와 정확히 일치하는 Entry를 고른다. 실패하면 Teleport 없이 현재 방에 남고 Failed.
+	if (!Room || !ValidateRoomMarkers(DungeonGameState->GetPendingRoomLevel(), *Room, Snapshot.PendingEntryId, Entry, Error))
 	{
-		UE_LOG(LogLB, Error, TEXT("Room %s (serial %d) markers invalid: %s"),
-			*Snapshot.PendingRoomId.ToString(), Snapshot.TransitionSerial, *Error);
+		UE_LOG(LogLB, Error, TEXT("Room %s entry %s (serial %d) markers invalid: %s"),
+			*Snapshot.PendingRoomId.ToString(), *Snapshot.PendingEntryId.ToString(), Snapshot.TransitionSerial, *Error);
 		FailRoomTransition(TEXT("room markers invalid"));
 		return;
 	}
@@ -457,19 +464,30 @@ void ALB_GameMode::HandleClientCurrentRoomReady(ALB_PlayerController* Reporter, 
 	}
 
 	// Reporter 한 명에게만 즉시 Fade Out → Teleport → Fade In. 파티 전체 전환은 재실행하지 않는다.
+	// 도착 표시를 Teleport 전에 걸어 동기 Overlap callback에서 집계되지 않게 한다(다른 플레이어 집계는 그대로).
+	APawn* ArrivingPawn = Reporter->GetPawn();
+	MarkArrivingPawn(ArrivingPawn);
 	Reporter->ClientSetDungeonFade(true, 0.f);
-	if (!TeleportControllerToEntry(Reporter, Entry, 0.f))
+	const bool bTeleported = TeleportControllerToEntry(Reporter, Entry, 0.f);
+	if (bTeleported)
 	{
-		Reporter->ClientSetDungeonFade(false, FadeInDuration);
-		return;
+		FinishPawnArrival(ArrivingPawn, Entry);
+	}
+	else
+	{
+		ArrivingPawns.Remove(ArrivingPawn);
 	}
 	Reporter->ClientSetDungeonFade(false, FadeInDuration);
+	if (!bTeleported)
+	{
+		return;
+	}
 	CurrentRoomPlaced.Add(Key);
 
-	UE_LOG(LogLB, Log, TEXT("Late join placed at entry: %s in %s (serial %d)."),
-		*Reporter->GetName(), *RoomId.ToString(), TransitionSerial);
+	UE_LOG(LogLB, Log, TEXT("Late join placed at entry: %s in %s entry %s (serial %d)."),
+		*Reporter->GetName(), *RoomId.ToString(), *Snapshot.CurrentEntryId.ToString(), TransitionSerial);
 
-	// 위치가 바뀌었으므로 Exit 인원을 다시 평가한다.
+	// Waiting/CountingDown 중이면 늘어난 Total/Required와 Nearby를 다시 평가한다(진행 중 카운트다운은 재시작하지 않음).
 	RequestExitReevaluation();
 }
 
@@ -482,28 +500,35 @@ ALB_DungeonRoomEntry* ALB_GameMode::ResolveCurrentRoomEntry()
 	const FLB_DungeonTransitionSnapshot& Snapshot = DungeonGameState->GetDungeonTransition();
 
 	ALB_DungeonRoomEntry* Entry = CurrentEntry.Get();
-	if (IsValid(Entry) && CurrentEntryRoomId == Snapshot.CurrentRoomId && CurrentEntrySerial == Snapshot.TransitionSerial)
+	if (IsValid(Entry)
+		&& CurrentEntryRoomId == Snapshot.CurrentRoomId
+		&& CurrentEntryMarkerId == Snapshot.CurrentEntryId
+		&& CurrentEntrySerial == Snapshot.TransitionSerial
+		&& Entry->GetEntryId() == Snapshot.CurrentEntryId)
 	{
 		return Entry;
 	}
 
-	// 보관 Entry가 무효/다른 세대면 서버 Current Level에서 정확히 하나를 다시 검증한다.
+	// 보관 Entry가 무효/다른 방·Entry·세대면 서버 Current Level에서 CurrentEntryId Marker를 다시 검증한다.
 	CurrentEntry.Reset();
 	CurrentEntryRoomId = NAME_None;
+	CurrentEntryMarkerId = NAME_None;
 	CurrentEntrySerial = INDEX_NONE;
 
 	const FLB_DungeonRoomDefinition* Room = DungeonGameState->FindRoomDefinition(Snapshot.CurrentRoomId);
 	FString Error;
 	Entry = nullptr;
-	if (!Room || !ValidateRoomMarkers(DungeonGameState->GetCurrentRoomLevel(), *Room, Entry, Error))
+	if (!Room || !ValidateRoomMarkers(DungeonGameState->GetCurrentRoomLevel(), *Room, Snapshot.CurrentEntryId, Entry, Error))
 	{
-		UE_LOG(LogLB, Error, TEXT("ResolveCurrentRoomEntry: room %s (serial %d) invalid: %s"),
-			*Snapshot.CurrentRoomId.ToString(), Snapshot.TransitionSerial, Room ? *Error : TEXT("room not in route"));
+		UE_LOG(LogLB, Error, TEXT("ResolveCurrentRoomEntry: room %s entry %s (serial %d) invalid: %s"),
+			*Snapshot.CurrentRoomId.ToString(), *Snapshot.CurrentEntryId.ToString(), Snapshot.TransitionSerial,
+			Room ? *Error : TEXT("room not in route"));
 		return nullptr;
 	}
 
 	CurrentEntry = Entry;
 	CurrentEntryRoomId = Snapshot.CurrentRoomId;
+	CurrentEntryMarkerId = Snapshot.CurrentEntryId;
 	CurrentEntrySerial = Snapshot.TransitionSerial;
 	return Entry;
 }
@@ -671,6 +696,8 @@ void ALB_GameMode::HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn)
 
 void ALB_GameMode::HandlePartyPawnDestroyed(AActor* DestroyedActor)
 {
+	// 무효화되는 Pawn의 도착 억제를 모두 정리한다.
+	RemovePawnSuppressions(Cast<APawn>(DestroyedActor));
 	// Destroy 통지 시점에는 Pawn이 아직 유효할 수 있어 다음 Tick에 평가한다.
 	RequestExitReevaluation();
 }
@@ -737,6 +764,8 @@ void ALB_GameMode::BindCurrentRoomExits()
 		}
 		Exit->OnExitPresenceChanged.AddUObject(this, &ALB_GameMode::HandleExitPresenceChanged);
 		BoundExits.Add(Exit);
+		// 바인딩 전(Fade In 중)에 이미 Exit를 벗어난 도착 Pawn의 억제를 해제한다.
+		ReleaseExitSuppressions(Exit);
 	}
 	UE_LOG(LogLB, Log, TEXT("Room %s (serial %d): bound %d exits."), *BoundExitsRoomId.ToString(), BoundExitsSerial, BoundExits.Num());
 }
@@ -749,8 +778,11 @@ void ALB_GameMode::UnbindCurrentRoomExits()
 		{
 			Exit->OnExitPresenceChanged.RemoveAll(this);
 		}
+		// 해제되는 Exit의 도착 억제만 정리한다(아직 바인딩 전인 도착 방 Exit 억제는 유지).
+		SuppressedExitPawns.Remove(WeakExit);
 	}
 	BoundExits.Reset();
+	PruneExitSuppressions();
 	BoundExitsRoomId = NAME_None;
 	BoundExitsSerial = INDEX_NONE;
 
@@ -770,6 +802,8 @@ void ALB_GameMode::HandleExitPresenceChanged(ALB_DungeonExit* Exit)
 	{
 		return;
 	}
+	// 억제 Pawn이 이 Exit를 벗어났으면 이 Exit의 억제만 해제한다(재진입 시 정상 Nearby로 계산).
+	ReleaseExitSuppressions(Exit);
 	EvaluateExit(Exit);
 }
 
@@ -828,11 +862,14 @@ void ALB_GameMode::EvaluateExit(ALB_DungeonExit* Exit)
 	}
 
 	const FName ExitId = Exit->GetExitId();
-	const FName TargetRoomId = FindTargetRoomForExit(ExitId);
-	if (TargetRoomId.IsNone())
+	const FLB_DungeonExitLink* Link = FindCurrentExitLink(ExitId);
+	if (!Link)
 	{
 		return;
 	}
+	// 잠금 중 Route가 바뀌지 않지만 포인터 대신 값으로 들고 간다.
+	const FName TargetRoomId = Link->TargetRoomId;
+	const FName TargetEntryId = Link->TargetEntryId;
 
 	TArray<APlayerController*> Party;
 	GatherParty(Party);
@@ -848,7 +885,7 @@ void ALB_GameMode::EvaluateExit(ALB_DungeonExit* Exit)
 	// 1) 전원 진입: 진행 중 카운트다운보다 우선해 즉시 잠근다.
 	if (Total > 0 && Nearby == Total)
 	{
-		LockRoomTransition(ExitId, TargetRoomId, RoomSerial);
+		LockRoomTransition(ExitId, TargetRoomId, TargetEntryId, RoomSerial);
 		return;
 	}
 
@@ -891,7 +928,9 @@ int32 ALB_GameMode::CountNearbyParty(const ALB_DungeonExit* Exit, const TArray<A
 	int32 Count = 0;
 	for (const APlayerController* PC : Party)
 	{
-		if (Exit->IsPawnInExit(PC->GetPawn()))
+		const APawn* Pawn = PC->GetPawn();
+		// 도착 중이거나 이 Exit에서 도착 억제된 Pawn은 집계하지 않는다.
+		if (Exit->IsPawnInExit(Pawn) && !IsPawnExcludedFromExit(Exit, Pawn))
 		{
 			++Count;
 		}
@@ -899,25 +938,27 @@ int32 ALB_GameMode::CountNearbyParty(const ALB_DungeonExit* Exit, const TArray<A
 	return Count;
 }
 
-FName ALB_GameMode::FindTargetRoomForExit(FName ExitId) const
+const FLB_DungeonExitLink* ALB_GameMode::FindCurrentExitLink(FName ExitId) const
 {
 	if (!DungeonGameState || ExitId.IsNone())
 	{
-		return NAME_None;
+		return nullptr;
 	}
 	const FLB_DungeonRoomDefinition* Room = DungeonGameState->FindRoomDefinition(DungeonGameState->GetDungeonTransition().CurrentRoomId);
 	if (!Room)
 	{
-		return NAME_None;
+		return nullptr;
 	}
-	for (const FLB_DungeonExitLink& Link : Room->Exits)
+	return Room->Exits.FindByPredicate([ExitId](const FLB_DungeonExitLink& Link)
 	{
-		if (Link.ExitId == ExitId)
-		{
-			return Link.TargetRoomId;
-		}
-	}
-	return NAME_None;
+		return Link.ExitId == ExitId;
+	});
+}
+
+FName ALB_GameMode::FindTargetRoomForExit(FName ExitId) const
+{
+	const FLB_DungeonExitLink* Link = FindCurrentExitLink(ExitId);
+	return Link ? Link->TargetRoomId : NAME_None;
 }
 
 ALB_DungeonExit* ALB_GameMode::FindBoundExit(FName ExitId) const
@@ -1023,11 +1064,13 @@ void ALB_GameMode::HandleExitCountdownFinished(FName ExitId, int32 RoomSerial)
 	const int32 Required = Total / 2 + 1;
 	const ALB_DungeonExit* Exit = FindBoundExit(ExitId);
 	const int32 Nearby = CountNearbyParty(Exit, Party);
-	const FName TargetRoomId = FindTargetRoomForExit(ExitId);
+	const FLB_DungeonExitLink* Link = FindCurrentExitLink(ExitId);
 
-	if (Exit && !TargetRoomId.IsNone() && Total > 0 && Nearby >= Required)
+	if (Exit && Link && Total > 0 && Nearby >= Required)
 	{
-		LockRoomTransition(ExitId, TargetRoomId, RoomSerial);
+		const FName TargetRoomId = Link->TargetRoomId;
+		const FName TargetEntryId = Link->TargetEntryId;
+		LockRoomTransition(ExitId, TargetRoomId, TargetEntryId, RoomSerial);
 		return;
 	}
 
@@ -1035,10 +1078,10 @@ void ALB_GameMode::HandleExitCountdownFinished(FName ExitId, int32 RoomSerial)
 	EvaluateAllExits();
 }
 
-void ALB_GameMode::LockRoomTransition(FName ExitId, FName TargetRoomId, int32 RoomSerial)
+void ALB_GameMode::LockRoomTransition(FName ExitId, FName TargetRoomId, FName TargetEntryId, int32 RoomSerial)
 {
 	// TransitionSerial/Phase 가드: 같은 프레임의 Timer 완료·전원 진입 중 하나만 확정한다.
-	if (!DungeonGameState || bTransitionLocked || TargetRoomId.IsNone())
+	if (!DungeonGameState || bTransitionLocked || TargetRoomId.IsNone() || TargetEntryId.IsNone())
 	{
 		return;
 	}
@@ -1063,7 +1106,9 @@ void ALB_GameMode::LockRoomTransition(FName ExitId, FName TargetRoomId, int32 Ro
 
 	FLB_DungeonTransitionSnapshot Next;
 	Next.CurrentRoomId = Snapshot.CurrentRoomId;
+	Next.CurrentEntryId = Snapshot.CurrentEntryId;
 	Next.PendingRoomId = TargetRoomId;
+	Next.PendingEntryId = TargetEntryId;
 	Next.ActiveExitId = ExitId;
 	Next.TransitionSerial = RoomSerial + 1;
 	Next.Phase = ELB_DungeonTransitionPhase::LoadingNextRoom;
@@ -1072,8 +1117,9 @@ void ALB_GameMode::LockRoomTransition(FName ExitId, FName TargetRoomId, int32 Ro
 	Next.RequiredPlayers = 0;
 	Next.CountdownEndServerTime = 0.0;
 
-	UE_LOG(LogLB, Log, TEXT("Room transition locked: %s -[%s]-> %s (serial %d, party %d)."),
-		*Snapshot.CurrentRoomId.ToString(), *ExitId.ToString(), *TargetRoomId.ToString(), Next.TransitionSerial, TransitionParty.Num());
+	UE_LOG(LogLB, Log, TEXT("Room transition locked: %s -[%s]-> %s/%s (serial %d, party %d)."),
+		*Snapshot.CurrentRoomId.ToString(), *ExitId.ToString(), *TargetRoomId.ToString(), *TargetEntryId.ToString(),
+		Next.TransitionSerial, TransitionParty.Num());
 
 	if (!BeginRoomTransition(Next) && DungeonGameState->GetDungeonTransition().Phase != ELB_DungeonTransitionPhase::Failed)
 	{
@@ -1085,7 +1131,7 @@ void ALB_GameMode::LockRoomTransition(FName ExitId, FName TargetRoomId, int32 Ro
 // 진입 연출
 // ============================================================================
 
-bool ALB_GameMode::ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefinition& Room, ALB_DungeonRoomEntry*& OutEntry, FString& OutError)
+bool ALB_GameMode::ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefinition& Room, FName TargetEntryId, ALB_DungeonRoomEntry*& OutEntry, FString& OutError)
 {
 	OutEntry = nullptr;
 	if (!Level)
@@ -1093,9 +1139,13 @@ bool ALB_GameMode::ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefin
 		OutError = TEXT("room level not visible");
 		return false;
 	}
+	if (TargetEntryId.IsNone())
+	{
+		OutError = TEXT("target EntryId is None");
+		return false;
+	}
 
-	int32 EntryCount = 0;
-	ALB_DungeonRoomEntry* FoundEntry = nullptr;
+	TMap<FName, ALB_DungeonRoomEntry*> MarkerEntries;
 	TSet<FName> MarkerExitIds;
 	for (AActor* Actor : Level->Actors)
 	{
@@ -1105,8 +1155,17 @@ bool ALB_GameMode::ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefin
 		}
 		if (ALB_DungeonRoomEntry* Entry = Cast<ALB_DungeonRoomEntry>(Actor))
 		{
-			++EntryCount;
-			FoundEntry = Entry;
+			if (!Entry->HasValidEntryId())
+			{
+				OutError = FString::Printf(TEXT("entry marker %s has invalid EntryId '%s'"), *Entry->GetName(), *Entry->GetEntryId().ToString());
+				return false;
+			}
+			if (MarkerEntries.Contains(Entry->GetEntryId()))
+			{
+				OutError = FString::Printf(TEXT("duplicate entry marker %s"), *Entry->GetEntryId().ToString());
+				return false;
+			}
+			MarkerEntries.Add(Entry->GetEntryId(), Entry);
 			continue;
 		}
 		if (const ALB_DungeonExit* Exit = Cast<ALB_DungeonExit>(Actor))
@@ -1126,9 +1185,14 @@ bool ALB_GameMode::ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefin
 		}
 	}
 
-	if (EntryCount != 1)
+	// Entry Marker 집합은 RoomDefinition.EntryIds와 정확히 일치해야 한다.
+	TSet<FName> DeclaredEntryIds;
+	DeclaredEntryIds.Append(Room.EntryIds);
+	TSet<FName> FoundEntryIds;
+	MarkerEntries.GetKeys(FoundEntryIds);
+	if (DeclaredEntryIds.Num() != FoundEntryIds.Num() || !DeclaredEntryIds.Includes(FoundEntryIds))
 	{
-		OutError = FString::Printf(TEXT("expected exactly one RoomEntry, found %d"), EntryCount);
+		OutError = FString::Printf(TEXT("entry markers (%d) do not match declared EntryIds (%d)"), FoundEntryIds.Num(), DeclaredEntryIds.Num());
 		return false;
 	}
 
@@ -1143,7 +1207,15 @@ bool ALB_GameMode::ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefin
 		return false;
 	}
 
-	OutEntry = FoundEntry;
+	// 선택 Entry는 중복 거부 후 Map에서 정확히 하나로 결정된다.
+	ALB_DungeonRoomEntry* const* Selected = MarkerEntries.Find(TargetEntryId);
+	if (!Selected || !IsValid(*Selected))
+	{
+		OutError = FString::Printf(TEXT("target entry marker %s not found"), *TargetEntryId.ToString());
+		return false;
+	}
+
+	OutEntry = *Selected;
 	return true;
 }
 
@@ -1194,19 +1266,20 @@ void ALB_GameMode::HandleFadeOutFinished(int32 Serial)
 	}
 
 	ALB_DungeonRoomEntry* Entry = PendingEntry.Get();
-	if (!IsValid(Entry))
+	if (!IsValid(Entry) || Entry->GetEntryId() != Snapshot.PendingEntryId)
 	{
 		FailRoomTransition(TEXT("room entry lost"));
 		return;
 	}
 
-	// 1) 서버가 캡처된 파티 전체를 Entry로 Teleport.
+	// 1) 서버가 캡처된 파티 전체를 선택 Entry로 Teleport.
 	TeleportPartyToEntry(Entry);
 	PendingEntry.Reset();
 
 	// 이전 방 Entry는 곧 해제되므로 먼저 버린다.
 	CurrentEntry.Reset();
 	CurrentEntryRoomId = NAME_None;
+	CurrentEntryMarkerId = NAME_None;
 	CurrentEntrySerial = INDEX_NONE;
 
 	// 2) Pending 승격 + 이전 방 해제.
@@ -1221,6 +1294,7 @@ void ALB_GameMode::HandleFadeOutFinished(int32 Serial)
 		const FLB_DungeonTransitionSnapshot& Promoted = DungeonGameState->GetDungeonTransition();
 		CurrentEntry = Entry;
 		CurrentEntryRoomId = Promoted.CurrentRoomId;
+		CurrentEntryMarkerId = Promoted.CurrentEntryId;
 		CurrentEntrySerial = Promoted.TransitionSerial;
 	}
 
@@ -1295,18 +1369,159 @@ void ALB_GameMode::TeleportPartyToEntry(const ALB_DungeonRoomEntry* Entry)
 	// 새 방 기준으로 배치 완료 집합을 다시 만든다(전환 중 접속자는 포함되지 않음 → 안정 후 늦은 합류).
 	CurrentRoomPlaced.Reset();
 
+	// Teleport 전에 모든 이동 Pawn을 도착 중으로 표시한다(Overlap callback 경쟁 방지).
+	for (APlayerController* PC : Movers)
+	{
+		MarkArrivingPawn(PC->GetPawn());
+	}
+
 	// Entry 로컬 Y축을 따라 중앙 정렬로 간격 배치한다.
 	const int32 Count = Movers.Num();
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		APlayerController* PC = Movers[Index];
+		APawn* Pawn = PC->GetPawn();
 		const float OffsetY = (static_cast<float>(Index) - (Count - 1) * 0.5f) * PartyEntrySpacing;
 		if (TeleportControllerToEntry(PC, Entry, OffsetY))
 		{
 			CurrentRoomPlaced.Add(PC);
+			// 도착 직후 실제로 겹친 Exit에서만 억제한다.
+			FinishPawnArrival(Pawn, Entry);
+		}
+		else
+		{
+			ArrivingPawns.Remove(Pawn);
 		}
 	}
-	UE_LOG(LogLB, Log, TEXT("Party teleported to entry: %d pawns."), Count);
+	UE_LOG(LogLB, Log, TEXT("Party teleported to entry %s: %d pawns."), *Entry->GetEntryId().ToString(), Count);
+}
+
+// ============================================================================
+// 도착 Exit 억제
+// ============================================================================
+
+void ALB_GameMode::MarkArrivingPawn(APawn* Pawn)
+{
+	if (IsValid(Pawn))
+	{
+		ArrivingPawns.Add(Pawn);
+	}
+}
+
+void ALB_GameMode::FinishPawnArrival(APawn* Pawn, const ALB_DungeonRoomEntry* Entry)
+{
+	ArrivingPawns.Remove(Pawn);
+	if (!IsValid(Pawn) || !IsValid(Entry))
+	{
+		return;
+	}
+
+	ULevel* Level = Entry->GetLevel();
+	if (!Level)
+	{
+		return;
+	}
+
+	// 도착 Level의 Exit 중 Pawn이 실제로 겹친 Exit에만 Exit별로 독립 억제를 건다.
+	for (AActor* Actor : Level->Actors)
+	{
+		ALB_DungeonExit* Exit = Cast<ALB_DungeonExit>(Actor);
+		if (IsValid(Exit) && Exit->IsPawnInExit(Pawn))
+		{
+			SuppressedExitPawns.FindOrAdd(Exit).Add(Pawn);
+			UE_LOG(LogLB, Log, TEXT("Arrival suppression: %s in exit %s."), *Pawn->GetName(), *Exit->GetExitId().ToString());
+		}
+	}
+}
+
+void ALB_GameMode::ReleaseExitSuppressions(ALB_DungeonExit* Exit)
+{
+	if (!IsValid(Exit))
+	{
+		return;
+	}
+	TSet<TWeakObjectPtr<APawn>>* Suppressed = SuppressedExitPawns.Find(Exit);
+	if (!Suppressed)
+	{
+		return;
+	}
+
+	for (auto It = Suppressed->CreateIterator(); It; ++It)
+	{
+		APawn* Pawn = It->Get();
+		// 도착 처리 중인 Pawn은 FinishPawnArrival에서 결정한다.
+		if (!IsValid(Pawn) || (!Exit->IsPawnInExit(Pawn) && !ArrivingPawns.Contains(*It)))
+		{
+			if (IsValid(Pawn))
+			{
+				UE_LOG(LogLB, Log, TEXT("Arrival suppression released: %s left exit %s."), *Pawn->GetName(), *Exit->GetExitId().ToString());
+			}
+			It.RemoveCurrent();
+		}
+	}
+	if (Suppressed->IsEmpty())
+	{
+		SuppressedExitPawns.Remove(Exit);
+	}
+}
+
+bool ALB_GameMode::IsPawnExcludedFromExit(const ALB_DungeonExit* Exit, const APawn* Pawn) const
+{
+	if (!Pawn)
+	{
+		return false;
+	}
+	const TWeakObjectPtr<APawn> PawnKey(const_cast<APawn*>(Pawn));
+	if (ArrivingPawns.Contains(PawnKey))
+	{
+		return true;
+	}
+	const TSet<TWeakObjectPtr<APawn>>* Suppressed = SuppressedExitPawns.Find(TWeakObjectPtr<ALB_DungeonExit>(const_cast<ALB_DungeonExit*>(Exit)));
+	return Suppressed && Suppressed->Contains(PawnKey);
+}
+
+void ALB_GameMode::RemovePawnSuppressions(const APawn* Pawn)
+{
+	if (Pawn)
+	{
+		const TWeakObjectPtr<APawn> PawnKey(const_cast<APawn*>(Pawn));
+		ArrivingPawns.Remove(PawnKey);
+		for (TPair<TWeakObjectPtr<ALB_DungeonExit>, TSet<TWeakObjectPtr<APawn>>>& Pair : SuppressedExitPawns)
+		{
+			Pair.Value.Remove(PawnKey);
+		}
+	}
+	PruneExitSuppressions();
+}
+
+void ALB_GameMode::PruneExitSuppressions()
+{
+	for (auto It = ArrivingPawns.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+	for (auto MapIt = SuppressedExitPawns.CreateIterator(); MapIt; ++MapIt)
+	{
+		if (!MapIt->Key.IsValid())
+		{
+			MapIt.RemoveCurrent();
+			continue;
+		}
+		for (auto SetIt = MapIt->Value.CreateIterator(); SetIt; ++SetIt)
+		{
+			if (!SetIt->IsValid())
+			{
+				SetIt.RemoveCurrent();
+			}
+		}
+		if (MapIt->Value.IsEmpty())
+		{
+			MapIt.RemoveCurrent();
+		}
+	}
 }
 
 bool ALB_GameMode::TeleportControllerToEntry(APlayerController* PC, const ALB_DungeonRoomEntry* Entry, float OffsetY)

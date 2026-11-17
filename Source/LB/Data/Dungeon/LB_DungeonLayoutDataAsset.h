@@ -21,13 +21,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dungeon")
 	FName StartRoomId = NAME_None;
 
+	// StartRoom 안의 첫 도착 Entry. StartRoom.EntryIds에 선언돼 있어야 한다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dungeon")
+	FName StartEntryId = NAME_None;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dungeon")
 	TArray<FLB_DungeonRoomDefinition> Rooms;
 
 	// StartRoomId와 Room/Exit Graph를 런타임 Route와 같은 규격으로 검사한다.
 	bool ValidateLayout(FString& OutError) const;
 
-	// OutRoute를 기본값으로 초기화한 뒤, 성공 시 StartRoomId/Rooms(Exits 포함)를 값 복사한 독립 Route를 채운다.
+	// OutRoute를 기본값으로 초기화한 뒤, 성공 시 StartRoomId/StartEntryId/Rooms(Entry·Exit 포함)를 값 복사한 독립 Route를 채운다.
 	// Data Asset은 수정하지 않는다. 서버 전용 호출 보장은 호출 측(GameMode) 책임.
 	bool BuildRoute(FName InstanceKey, FLB_DungeonRouteState& OutRoute, FString& OutError) const;
 };

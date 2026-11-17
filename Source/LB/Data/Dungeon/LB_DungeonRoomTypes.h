@@ -21,6 +21,10 @@ struct LB_API FLB_DungeonExitLink
 	// 목적지 방 RoomId. 존재하는 다른 방이어야 한다(Self Link 금지).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dungeon")
 	FName TargetRoomId = NAME_None;
+
+	// 목적지 방 안의 도착 Entry. 목적지 Room.EntryIds에 선언돼 있어야 한다(ExitId 이름으로 추론하지 않는다).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dungeon")
+	FName TargetEntryId = NAME_None;
 };
 
 /**
@@ -40,13 +44,18 @@ struct LB_API FLB_DungeonRoomDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dungeon")
 	TSoftObjectPtr<UWorld> Level;
 
+	// 이 방 맵에 배치된 Entry Marker의 EntryId 집합(1..MaxEntriesPerRoom). 방 안에서만 고유하며 None/중복 금지.
+	// 로드된 맵의 Entry Marker 집합과 정확히 일치해야 한다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dungeon")
+	TArray<FName> EntryIds;
+
 	// 이 방의 출구 목록(0..MaxExitsPerRoom). 비어 있으면 종료 방.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dungeon")
 	TArray<FLB_DungeonExitLink> Exits;
 };
 
 /**
- * 런타임에 확정된 방 Route(StartRoom + Room/Exit DAG).
+ * 런타임에 확정된 방 Route(StartRoom + Room/Exit 방향 그래프, 순환 허용).
  * Layout Data Asset 참조 없이 독립 복사본으로 유지된다.
  */
 USTRUCT(BlueprintType)
@@ -57,6 +66,7 @@ struct LB_API FLB_DungeonRouteState
 	// 작은 고정 던전 프로토타입 경계.
 	static constexpr int32 MaxRooms = 32;
 	static constexpr int32 MaxExitsPerRoom = 4;
+	static constexpr int32 MaxEntriesPerRoom = 8;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
 	FName InstanceKey = NAME_None;
@@ -64,16 +74,24 @@ struct LB_API FLB_DungeonRouteState
 	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
 	FName StartRoomId = NAME_None;
 
+	// StartRoom 안의 첫 도착 Entry.
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	FName StartEntryId = NAME_None;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
 	TArray<FLB_DungeonRoomDefinition> Rooms;
 
-	// InstanceKey, StartRoomId, Room/Exit Graph 전체를 검사한다. 실패 시 OutError에 원인을 남긴다.
+	// InstanceKey, StartRoomId/StartEntryId, Room/Entry/Exit Graph 전체를 검사한다. 실패 시 OutError에 원인을 남긴다.
 	bool Validate(FString& OutError) const;
 
-	// Layout과 Route가 공유하는 방 목록 + Exit Graph 규격 검사.
-	// 방 1..MaxRooms, 방별 Exit 0..MaxExitsPerRoom, ID 형식/고유성, 목적지 존재,
-	// Self Link/Cycle 금지, StartRoomId에서 모든 방 도달 가능. 분기 후 합류하는 DAG는 허용.
-	static bool ValidateGraph(FName InStartRoomId, const TArray<FLB_DungeonRoomDefinition>& InRooms, FString& OutError);
+	// Layout과 Route가 공유하는 방 목록 + Entry/Exit Graph 규격 검사.
+	// 방 1..MaxRooms, 방별 Entry 1..MaxEntriesPerRoom, Exit 0..MaxExitsPerRoom, ID 형식/방 내부 고유성,
+	// StartEntryId ∈ StartRoom.EntryIds, 목적지 방 존재 + TargetEntryId ∈ 목적지 Room.EntryIds,
+	// Self Link 금지, StartRoomId에서 모든 방 도달 가능. 방향 그래프이며 분기·합류와 다른 방을 경유한 순환(A → B → A)을 허용한다.
+	static bool ValidateGraph(FName InStartRoomId, FName InStartEntryId, const TArray<FLB_DungeonRoomDefinition>& InRooms, FString& OutError);
+
+	// Room.EntryIds에 EntryId가 선언돼 있는지(None은 항상 false).
+	static bool RoomHasEntry(const FLB_DungeonRoomDefinition& Room, FName EntryId);
 
 	// 영문/숫자/underscore로만 이루어진 None이 아닌 이름인지 검사.
 	static bool IsValidIdentifier(const FName& InName);
@@ -106,8 +124,16 @@ struct LB_API FLB_DungeonTransitionSnapshot
 	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
 	FName CurrentRoomId = NAME_None;
 
+	// CurrentRoomId 방에서 파티가 도착한 Entry. 늦은 합류 Client도 이 Entry로 배치된다.
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	FName CurrentEntryId = NAME_None;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
 	FName PendingRoomId = NAME_None;
+
+	// PendingRoomId 방의 도착 Entry. 승격 시 CurrentEntryId로 이동하고 None으로 초기화된다.
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	FName PendingEntryId = NAME_None;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
 	FName ActiveExitId = NAME_None;

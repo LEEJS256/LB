@@ -88,16 +88,41 @@ bool ALB_GameState::UpdateDungeonTransition(const FLB_DungeonTransitionSnapshot&
 		return false;
 	}
 
-	if (!NewSnapshot.CurrentRoomId.IsNone() && !FindRoomDefinition(NewSnapshot.CurrentRoomId))
+	// Room/Entry는 쌍으로 검증한다: Room이 None이면 Entry도 None, 아니면 Entry가 그 방 EntryIds에 선언돼 있어야 한다.
+	if (NewSnapshot.CurrentRoomId.IsNone())
 	{
-		UE_LOG(LogLB, Error, TEXT("UpdateDungeonTransition: unknown CurrentRoomId %s."), *NewSnapshot.CurrentRoomId.ToString());
-		return false;
-	}
-	if (!NewSnapshot.PendingRoomId.IsNone())
-	{
-		if (!FindRoomDefinition(NewSnapshot.PendingRoomId) || NewSnapshot.PendingRoomId == NewSnapshot.CurrentRoomId)
+		if (!NewSnapshot.CurrentEntryId.IsNone())
 		{
-			UE_LOG(LogLB, Error, TEXT("UpdateDungeonTransition: invalid PendingRoomId %s."), *NewSnapshot.PendingRoomId.ToString());
+			UE_LOG(LogLB, Error, TEXT("UpdateDungeonTransition: CurrentEntryId %s without CurrentRoomId."), *NewSnapshot.CurrentEntryId.ToString());
+			return false;
+		}
+	}
+	else
+	{
+		const FLB_DungeonRoomDefinition* CurrentRoom = FindRoomDefinition(NewSnapshot.CurrentRoomId);
+		if (!CurrentRoom || !FLB_DungeonRouteState::RoomHasEntry(*CurrentRoom, NewSnapshot.CurrentEntryId))
+		{
+			UE_LOG(LogLB, Error, TEXT("UpdateDungeonTransition: invalid current room/entry %s/%s."),
+				*NewSnapshot.CurrentRoomId.ToString(), *NewSnapshot.CurrentEntryId.ToString());
+			return false;
+		}
+	}
+	if (NewSnapshot.PendingRoomId.IsNone())
+	{
+		if (!NewSnapshot.PendingEntryId.IsNone())
+		{
+			UE_LOG(LogLB, Error, TEXT("UpdateDungeonTransition: PendingEntryId %s without PendingRoomId."), *NewSnapshot.PendingEntryId.ToString());
+			return false;
+		}
+	}
+	else
+	{
+		const FLB_DungeonRoomDefinition* PendingRoom = FindRoomDefinition(NewSnapshot.PendingRoomId);
+		if (!PendingRoom || NewSnapshot.PendingRoomId == NewSnapshot.CurrentRoomId
+			|| !FLB_DungeonRouteState::RoomHasEntry(*PendingRoom, NewSnapshot.PendingEntryId))
+		{
+			UE_LOG(LogLB, Error, TEXT("UpdateDungeonTransition: invalid pending room/entry %s/%s."),
+				*NewSnapshot.PendingRoomId.ToString(), *NewSnapshot.PendingEntryId.ToString());
 			return false;
 		}
 	}
@@ -122,7 +147,9 @@ bool ALB_GameState::CompleteDungeonTransition()
 
 	FLB_DungeonTransitionSnapshot NewSnapshot = TransitionSnapshot;
 	NewSnapshot.CurrentRoomId = TransitionSnapshot.PendingRoomId;
+	NewSnapshot.CurrentEntryId = TransitionSnapshot.PendingEntryId;
 	NewSnapshot.PendingRoomId = NAME_None;
+	NewSnapshot.PendingEntryId = NAME_None;
 	NewSnapshot.ActiveExitId = NAME_None;
 	// TransitionSerial은 유지: 승격된 방의 세대가 된다.
 	return UpdateDungeonTransition(NewSnapshot);

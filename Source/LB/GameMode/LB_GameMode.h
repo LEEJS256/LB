@@ -100,6 +100,8 @@ private:
 	void EvaluateAllExits();
 	void EvaluateExit(ALB_DungeonExit* Exit);
 	int32 CountNearbyParty(const ALB_DungeonExit* Exit, const TArray<APlayerController*>& Party) const;
+	// Current 방 Graph에서 ExitId의 Link(목적지 Room + Entry). 없으면 nullptr.
+	const FLB_DungeonExitLink* FindCurrentExitLink(FName ExitId) const;
 	FName FindTargetRoomForExit(FName ExitId) const;
 	ALB_DungeonExit* FindBoundExit(FName ExitId) const;
 	float GetCountdownDuration() const;
@@ -109,13 +111,14 @@ private:
 	void CancelExitCountdown();
 	void HandleExitCountdownFinished(FName ExitId, int32 RoomSerial);
 
-	// 선택 Exit/목적지 전환을 한 번만 잠근다. RoomSerial은 평가 시점 Current 세대.
-	void LockRoomTransition(FName ExitId, FName TargetRoomId, int32 RoomSerial);
+	// 선택 Exit/목적지 Room+Entry 전환을 한 번만 잠근다. RoomSerial은 평가 시점 Current 세대.
+	void LockRoomTransition(FName ExitId, FName TargetRoomId, FName TargetEntryId, int32 RoomSerial);
 
 	// ---- 진입 연출 ----
 
-	// 표시된 방 Level의 Entry가 하나이고 Exit Marker 집합이 Graph와 정확히 일치하는지 검사한다.
-	static bool ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefinition& Room, ALB_DungeonRoomEntry*& OutEntry, FString& OutError);
+	// 표시된 방 Level의 Entry Marker 집합이 Room.EntryIds와, Exit Marker 집합이 Graph Exits와 정확히 일치하는지 검사하고
+	// TargetEntryId와 일치하는 Entry 하나를 반환한다.
+	static bool ValidateRoomMarkers(ULevel* Level, const FLB_DungeonRoomDefinition& Room, FName TargetEntryId, ALB_DungeonRoomEntry*& OutEntry, FString& OutError);
 
 	void BroadcastDungeonFade(bool bFadeOut, float Duration);
 	void ScheduleTransitionStep(float Delay, void (ALB_GameMode::*Step)(int32), int32 Serial);
@@ -123,6 +126,18 @@ private:
 	void HandleFadeInFinished(int32 Serial);
 	void TeleportPartyToEntry(const ALB_DungeonRoomEntry* Entry);
 	static bool TeleportControllerToEntry(APlayerController* PC, const ALB_DungeonRoomEntry* Entry, float OffsetY);
+
+	// ---- 도착 Exit 억제 ----
+
+	// Teleport 전에 호출: 도착 중 Pawn은 모든 Exit 집계에서 제외된다(Overlap callback 경쟁 방지).
+	void MarkArrivingPawn(APawn* Pawn);
+	// Teleport 후 호출: Entry가 속한 Level에서 Pawn이 실제로 겹친 Exit에만 억제를 남기고 도착 표시를 해제한다.
+	void FinishPawnArrival(APawn* Pawn, const ALB_DungeonRoomEntry* Entry);
+	// 억제된 Pawn이 Exit를 벗어났으면 그 Exit의 억제만 해제한다.
+	void ReleaseExitSuppressions(ALB_DungeonExit* Exit);
+	bool IsPawnExcludedFromExit(const ALB_DungeonExit* Exit, const APawn* Pawn) const;
+	void RemovePawnSuppressions(const APawn* Pawn);
+	void PruneExitSuppressions();
 	void ClearTransitionTimers();
 	void BindGameStateDelegates();
 	void UnbindGameStateDelegates();
@@ -191,10 +206,16 @@ private:
 	// Barrier 완료 시 검증한 Pending 방 Entry.
 	TWeakObjectPtr<ALB_DungeonRoomEntry> PendingEntry;
 
-	// 승격 완료된 Current 방 Entry와 그 방/세대. 이전 방 해제로 파괴되면 Weak 포인터가 무효가 된다.
+	// 승격 완료된 Current 방 Entry와 그 방/EntryId/세대. 이전 방 해제로 파괴되면 Weak 포인터가 무효가 된다.
 	TWeakObjectPtr<ALB_DungeonRoomEntry> CurrentEntry;
 	FName CurrentEntryRoomId = NAME_None;
+	FName CurrentEntryMarkerId = NAME_None;
 	int32 CurrentEntrySerial = INDEX_NONE;
+
+	// Teleport 중인 Pawn(모든 Exit 집계 제외).
+	TSet<TWeakObjectPtr<APawn>> ArrivingPawns;
+	// Exit별 도착 억제 Pawn. 해당 Exit를 한 번 벗어나면 그 Exit에서만 해제된다.
+	TMap<TWeakObjectPtr<ALB_DungeonExit>, TSet<TWeakObjectPtr<APawn>>> SuppressedExitPawns;
 
 	// 현재 방 Entry에 이미 배치된 Controller(파티 Teleport 성공 + 늦은 합류 완료). 중복 합류 보고를 무시한다.
 	TSet<TWeakObjectPtr<APlayerController>> CurrentRoomPlaced;

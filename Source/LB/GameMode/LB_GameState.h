@@ -44,10 +44,10 @@ public:
 	// Route를 한 번만 게시한다(InstanceKey가 None일 때만, Validate 통과 필요).
 	bool PublishDungeonRoute(const FLB_DungeonRouteState& NewRoute);
 
-	// 전환 Snapshot을 갱신한다. Route 게시 후, RoomId가 Route에 있어야 한다.
+	// 전환 Snapshot을 갱신한다. Route 게시 후, RoomId가 Route에 있고 EntryId가 그 방 EntryIds에 선언돼 있어야 한다.
 	bool UpdateDungeonTransition(const FLB_DungeonTransitionSnapshot& NewSnapshot);
 
-	// Pending을 Current로 승격하고 ActiveExitId/PendingRoomId를 초기화한다. 이전 Current 로더는 해제된다.
+	// Pending Room/Entry를 Current로 승격하고 ActiveExitId/PendingRoomId/PendingEntryId를 초기화한다. 이전 Current 로더는 해제된다.
 	bool CompleteDungeonTransition();
 
 	// Client 준비 보고 검증. 현재 InstanceKey/PendingRoomId/TransitionSerial과 일치하면 OnClientPendingRoomReady 발행.

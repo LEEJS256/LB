@@ -12,45 +12,33 @@ namespace LB_DungeonRoute
 			|| C == TEXT('_');
 	}
 
-	enum class EVisitState : uint8
-	{
-		Unvisited,
-		InStack,
-		Done
-	};
-
-	// StartRoom에서 DFS. 방문 상태를 채우고 InStack 노드로 되돌아가는 간선(Cycle)을 발견하면 false.
-	// 방 수가 MaxRooms(32) 이하이므로 재귀 깊이는 제한된다.
-	static bool VisitAcyclic(int32 RoomIndex,
+	// StartRoom에서 도달 가능한 방을 표시한다(방향 그래프, 순환 허용).
+	// 이미 방문한 방은 다시 탐색하지 않으므로 순환이 있어도 종료한다.
+	// 호출 전에 모든 TargetRoomId 존재가 검증되어 있어야 한다.
+	static void MarkReachableRooms(int32 StartIndex,
 		const TArray<FLB_DungeonRoomDefinition>& InRooms,
 		const TMap<FName, int32>& IndexById,
-		TArray<EVisitState>& States,
-		FString& OutError)
+		TArray<bool>& OutVisited)
 	{
-		States[RoomIndex] = EVisitState::InStack;
+		OutVisited.Init(false, InRooms.Num());
 
-		const FLB_DungeonRoomDefinition& Room = InRooms[RoomIndex];
-		for (const FLB_DungeonExitLink& Exit : Room.Exits)
+		TArray<int32> Stack;
+		Stack.Add(StartIndex);
+		OutVisited[StartIndex] = true;
+
+		while (Stack.Num() > 0)
 		{
-			const int32 TargetIndex = IndexById.FindChecked(Exit.TargetRoomId);
-			if (States[TargetIndex] == EVisitState::InStack)
+			const int32 RoomIndex = Stack.Pop(EAllowShrinking::No);
+			for (const FLB_DungeonExitLink& Exit : InRooms[RoomIndex].Exits)
 			{
-				OutError = FString::Printf(TEXT("Room '%s' Exit '%s': cycle detected via '%s'"),
-					*Room.RoomId.ToString(), *Exit.ExitId.ToString(), *Exit.TargetRoomId.ToString());
-				return false;
-			}
-			if (States[TargetIndex] == EVisitState::Unvisited)
-			{
-				if (!VisitAcyclic(TargetIndex, InRooms, IndexById, States, OutError))
+				const int32 TargetIndex = IndexById.FindChecked(Exit.TargetRoomId);
+				if (!OutVisited[TargetIndex])
 				{
-					return false;
+					OutVisited[TargetIndex] = true;
+					Stack.Add(TargetIndex);
 				}
 			}
-			// Done: 분기 후 합류(DAG)이므로 허용.
 		}
-
-		States[RoomIndex] = EVisitState::Done;
-		return true;
 	}
 }
 
@@ -77,7 +65,12 @@ bool FLB_DungeonRouteState::IsValidIdentifier(const FName& InName)
 	return true;
 }
 
-bool FLB_DungeonRouteState::ValidateGraph(FName InStartRoomId, const TArray<FLB_DungeonRoomDefinition>& InRooms, FString& OutError)
+bool FLB_DungeonRouteState::RoomHasEntry(const FLB_DungeonRoomDefinition& Room, FName EntryId)
+{
+	return !EntryId.IsNone() && Room.EntryIds.Contains(EntryId);
+}
+
+bool FLB_DungeonRouteState::ValidateGraph(FName InStartRoomId, FName InStartEntryId, const TArray<FLB_DungeonRoomDefinition>& InRooms, FString& OutError)
 {
 	OutError.Reset();
 
@@ -120,6 +113,34 @@ bool FLB_DungeonRouteState::ValidateGraph(FName InStartRoomId, const TArray<FLB_
 			return false;
 		}
 
+		// EntryId는 방 내부에서만 고유하다(다른 방에서 같은 이름 재사용 허용).
+		if (Room.EntryIds.Num() < 1 || Room.EntryIds.Num() > MaxEntriesPerRoom)
+		{
+			OutError = FString::Printf(TEXT("Room '%s': entry count %d out of range [1, %d]"),
+				*Room.RoomId.ToString(), Room.EntryIds.Num(), MaxEntriesPerRoom);
+			return false;
+		}
+		TSet<FName> SeenEntryIds;
+		SeenEntryIds.Reserve(Room.EntryIds.Num());
+		for (int32 EntryIndex = 0; EntryIndex < Room.EntryIds.Num(); ++EntryIndex)
+		{
+			const FName EntryId = Room.EntryIds[EntryIndex];
+			if (!IsValidIdentifier(EntryId))
+			{
+				OutError = FString::Printf(TEXT("Room '%s' EntryIds[%d]: '%s' must be non-None and contain only letters, digits, underscore"),
+					*Room.RoomId.ToString(), EntryIndex, *EntryId.ToString());
+				return false;
+			}
+			bool bEntryAlreadyInSet = false;
+			SeenEntryIds.Add(EntryId, &bEntryAlreadyInSet);
+			if (bEntryAlreadyInSet)
+			{
+				OutError = FString::Printf(TEXT("Room '%s' EntryIds[%d]: duplicate EntryId '%s'"),
+					*Room.RoomId.ToString(), EntryIndex, *EntryId.ToString());
+				return false;
+			}
+		}
+
 		IndexById.Add(Room.RoomId, Index);
 	}
 
@@ -134,6 +155,20 @@ bool FLB_DungeonRouteState::ValidateGraph(FName InStartRoomId, const TArray<FLB_
 	if (StartIndex == nullptr)
 	{
 		OutError = FString::Printf(TEXT("StartRoomId '%s' does not exist in Rooms"), *InStartRoomId.ToString());
+		return false;
+	}
+
+	// StartEntryId 형식/StartRoom 선언 검사.
+	if (!IsValidIdentifier(InStartEntryId))
+	{
+		OutError = FString::Printf(TEXT("StartEntryId '%s' must be non-None and contain only letters, digits, underscore"),
+			*InStartEntryId.ToString());
+		return false;
+	}
+	if (!RoomHasEntry(InRooms[*StartIndex], InStartEntryId))
+	{
+		OutError = FString::Printf(TEXT("StartEntryId '%s' is not declared in StartRoom '%s' EntryIds"),
+			*InStartEntryId.ToString(), *InStartRoomId.ToString());
 		return false;
 	}
 
@@ -187,27 +222,37 @@ bool FLB_DungeonRouteState::ValidateGraph(FName InStartRoomId, const TArray<FLB_
 				return false;
 			}
 
-			if (!IndexById.Contains(Exit.TargetRoomId))
+			const int32* TargetIndex = IndexById.Find(Exit.TargetRoomId);
+			if (!TargetIndex)
 			{
 				OutError = FString::Printf(TEXT("Room '%s' Exit '%s': TargetRoomId '%s' does not exist"),
 					*RoomName, *Exit.ExitId.ToString(), *Exit.TargetRoomId.ToString());
 				return false;
 			}
+
+			if (!IsValidIdentifier(Exit.TargetEntryId))
+			{
+				OutError = FString::Printf(TEXT("Room '%s' Exit '%s': TargetEntryId '%s' must be non-None and contain only letters, digits, underscore"),
+					*RoomName, *Exit.ExitId.ToString(), *Exit.TargetEntryId.ToString());
+				return false;
+			}
+
+			if (!RoomHasEntry(InRooms[*TargetIndex], Exit.TargetEntryId))
+			{
+				OutError = FString::Printf(TEXT("Room '%s' Exit '%s': TargetEntryId '%s' is not declared in target room '%s' EntryIds"),
+					*RoomName, *Exit.ExitId.ToString(), *Exit.TargetEntryId.ToString(), *Exit.TargetRoomId.ToString());
+				return false;
+			}
 		}
 	}
 
-	// StartRoom에서 DFS: Cycle 거부 + 도달 가능성 확인.
-	TArray<LB_DungeonRoute::EVisitState> States;
-	States.Init(LB_DungeonRoute::EVisitState::Unvisited, InRooms.Num());
-
-	if (!LB_DungeonRoute::VisitAcyclic(*StartIndex, InRooms, IndexById, States, OutError))
-	{
-		return false;
-	}
+	// StartRoom에서 도달 가능성 확인. 다른 방을 경유한 순환(A → B → A)은 허용한다.
+	TArray<bool> Visited;
+	LB_DungeonRoute::MarkReachableRooms(*StartIndex, InRooms, IndexById, Visited);
 
 	for (int32 Index = 0; Index < InRooms.Num(); ++Index)
 	{
-		if (States[Index] != LB_DungeonRoute::EVisitState::Done)
+		if (!Visited[Index])
 		{
 			OutError = FString::Printf(TEXT("Room '%s' is unreachable from StartRoomId '%s'"),
 				*InRooms[Index].RoomId.ToString(), *InStartRoomId.ToString());
@@ -229,13 +274,13 @@ bool FLB_DungeonRouteState::Validate(FString& OutError) const
 		return false;
 	}
 
-	return ValidateGraph(StartRoomId, Rooms, OutError);
+	return ValidateGraph(StartRoomId, StartEntryId, Rooms, OutError);
 }
 
 bool ULB_DungeonLayoutDataAsset::ValidateLayout(FString& OutError) const
 {
 	FString RoomError;
-	if (!FLB_DungeonRouteState::ValidateGraph(StartRoomId, Rooms, RoomError))
+	if (!FLB_DungeonRouteState::ValidateGraph(StartRoomId, StartEntryId, Rooms, RoomError))
 	{
 		OutError = FString::Printf(TEXT("Layout '%s': %s"), *GetName(), *RoomError);
 		return false;
@@ -259,6 +304,7 @@ bool ULB_DungeonLayoutDataAsset::BuildRoute(FName InstanceKey, FLB_DungeonRouteS
 	FLB_DungeonRouteState Candidate;
 	Candidate.InstanceKey = InstanceKey;
 	Candidate.StartRoomId = StartRoomId;
+	Candidate.StartEntryId = StartEntryId;
 	Candidate.Rooms = Rooms;
 
 	FString RouteError;

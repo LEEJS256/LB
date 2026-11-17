@@ -16,7 +16,7 @@ class ALB_DungeonExit;
 DECLARE_MULTICAST_DELEGATE_OneParam(FLB_OnExitPresenceChanged, ALB_DungeonExit* /*Exit*/);
 
 /**
- * 방 맵에 하나 배치하는 진입 지점 Marker.
+ * 방 맵에 배치하는 진입 지점 Marker. 한 방에 여러 개를 둘 수 있으며 EntryId로 구분한다.
  * 서버가 Pawn을 이동시킬 Transform만 제공하며 Tick·복제·자동 로직은 없다.
  */
 UCLASS()
@@ -27,6 +27,13 @@ class LB_API ALB_DungeonRoomEntry : public AActor
 public:
 	ALB_DungeonRoomEntry();
 
+	UFUNCTION(BlueprintPure, Category = "Dungeon|RoomEntry")
+	FName GetEntryId() const { return EntryId; }
+
+	// EntryId가 None이 아니고 영문숫자/underscore로만 이루어졌는지.
+	UFUNCTION(BlueprintPure, Category = "Dungeon|RoomEntry")
+	bool HasValidEntryId() const;
+
 	// 진입 위치·회전(Scale 제외) World Transform.
 	UFUNCTION(BlueprintPure, Category = "Dungeon|RoomEntry")
 	FTransform GetEntryTransform() const;
@@ -36,6 +43,11 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Dungeon|RoomEntry")
 	FRotator GetEntryRotation() const;
+
+protected:
+	// 방 안에서 고유한 Entry ID. RoomDefinition.EntryIds 및 Exit Link의 TargetEntryId와 일치해야 한다.
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Dungeon|RoomEntry")
+	FName EntryId = NAME_None;
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Dungeon|RoomEntry")

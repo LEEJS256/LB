@@ -3,6 +3,7 @@
 #include "Dungeon/LB_DungeonRoomMarkers.h"
 
 #include "LB.h"
+#include "Data/Dungeon/LB_DungeonRoomTypes.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "GameFramework/Pawn.h"
@@ -19,6 +20,11 @@ ALB_DungeonRoomEntry::ALB_DungeonRoomEntry()
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);
+}
+
+bool ALB_DungeonRoomEntry::HasValidEntryId() const
+{
+	return FLB_DungeonRouteState::IsValidIdentifier(EntryId);
 }
 
 FTransform ALB_DungeonRoomEntry::GetEntryTransform() const
