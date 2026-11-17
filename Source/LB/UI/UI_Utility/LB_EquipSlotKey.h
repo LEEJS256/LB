@@ -14,7 +14,7 @@ struct LB_API FLB_EquipSlotKey
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Categories = "Equip.Slot"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (Categories = "Equip"))
 	FGameplayTag SlotTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0"))
