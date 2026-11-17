@@ -59,6 +59,8 @@ void ULB_InventoryPanel::NativeOnInitialized()
 		Tab_Consume->OnClicked.AddUniqueDynamic(this, &ULB_InventoryPanel::HandleTabConsumeClicked);
 	if (Tab_Currency)
 		Tab_Currency->OnClicked.AddUniqueDynamic(this, &ULB_InventoryPanel::HandleTabCurrencyClicked);
+	if (SortButton)
+		SortButton->OnClicked.AddUniqueDynamic(this, &ULB_InventoryPanel::HandleSortClicked);
 
 }
 
@@ -111,8 +113,10 @@ void ULB_InventoryPanel::NativeOnMouseCaptureLost(const FCaptureLostEvent& Captu
 
 void ULB_InventoryPanel::SetFilter(FGameplayTag InFilter)
 {
-	// 같은 탭을 다시 누르면 전체 보기로 토글
-	CurrentFilter = (CurrentFilter == InFilter) ? FGameplayTag() : InFilter;
+	// '전체' 탭이 없어서 같은 탭을 다시 눌러도 그대로 둔다
+	if (CurrentFilter == InFilter)
+		return;
+	CurrentFilter = InFilter;
 
 	UpdateTabVisuals();
 	RebuildList(/*bResetScroll*/ true);
@@ -121,6 +125,15 @@ void ULB_InventoryPanel::SetFilter(FGameplayTag InFilter)
 void ULB_InventoryPanel::HandleTabEquipClicked()    { SetFilter(TAG_Item_Equip); }
 void ULB_InventoryPanel::HandleTabConsumeClicked()  { SetFilter(TAG_Item_Consumable); }
 void ULB_InventoryPanel::HandleTabCurrencyClicked() { SetFilter(TAG_Item_Currency); }
+
+void ULB_InventoryPanel::HandleSortClicked()
+{
+	const ALB_PlayerState* PS = BoundPlayerState.Get();
+	if (ULB_InventoryComponent* Inv = PS ? PS->Get_InventoryComponent() : nullptr)
+	{
+		Inv->Server_SortItems();
+	}
+}
 
 void ULB_InventoryPanel::UpdateTabVisuals()
 {

@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Utility/LB_ItemEntry.h"
 #include "GameplayTagContainer.h"
+#include "Utility/LB_NativeGameplayTag.h"
 #include "LB_InventoryPanel.generated.h"
 
 class UTileView;
@@ -34,7 +35,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FLB_OnInventoryCloseRequested OnCloseRequested;
 
-	/** 탭 필터 변경. 빈 태그면 전체 표시. 같은 태그를 다시 누르면 전체로 돌아간다 */
+	/** 탭 필터 변경. 빈 태그면 전체 표시 */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void SetFilter(FGameplayTag InFilter);
 
@@ -89,9 +90,9 @@ protected:
 	int32 DummyItemCount = 30;
 
 	// ---- 탭 필터 ----
-	/** 처음 열었을 때 필터. 비워두면 전체 */
+	/** 처음 열었을 때 필터. 기본은 장비 탭 (비워두면 전체) */
 	UPROPERTY(EditAnywhere, Category = "Inventory|Filter", meta = (Categories = "Item"))
-	FGameplayTag CurrentFilter;
+	FGameplayTag CurrentFilter = TAG_Item_Equip;
 
 	UPROPERTY(EditAnywhere, Category = "Inventory|Filter")
 	FLinearColor TabActiveBorderColor = FLinearColor(0.f, 0.9f, 1.f, 1.f);
@@ -115,6 +116,10 @@ private:
 
 	UFUNCTION()
 	void HandleTabCurrencyClicked();
+
+	/** 서버에 정렬 요청. 결과는 OnInventoryUpdated로 돌아와서 RefreshFromEntries가 다시 그린다 */
+	UFUNCTION()
+	void HandleSortClicked();
 
 	/** CachedItems + CurrentFilter로 TileView 목록을 다시 만든다 */
 	void RebuildList(bool bResetScroll);
