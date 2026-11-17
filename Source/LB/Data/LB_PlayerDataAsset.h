@@ -8,6 +8,19 @@
 #include "Abilities/GameplayAbility.h"
 #include "LB_PlayerDataAsset.generated.h"
 
+USTRUCT(BlueprintType)
+struct FLB_StartupItem
+{
+	GENERATED_BODY()
+
+	// 마스터 아이템 DT의 RowName (= 아이템 코드)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FName ItemCode;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "1"))
+	int32 Count = 1;
+};
+
 /**
  * 
  */
@@ -88,6 +101,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Tags|Effect")
 	TSubclassOf<UGameplayEffect> GiveTeamtagEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	TArray<FLB_StartupItem> StartupItems;
 	
 #pragma endregion
 

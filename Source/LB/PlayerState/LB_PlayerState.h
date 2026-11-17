@@ -31,6 +31,7 @@ class LB_API ALB_PlayerState : public APlayerState , public IAbilitySystemInterf
 public:
 	ALB_PlayerState();
 
+	void GrantDefaultItems(const ULB_PlayerDataAsset* Data);
 #pragma region component
 	UPROPERTY(BlueprintAssignable, Category = "LB|Component")
 	FLB_OnPlayerInventoryUpdated OnInventoryUpdated;
