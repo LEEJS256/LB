@@ -52,7 +52,7 @@ void SLB_EquipSlot::ClearEmptyBrush()
 
 const FSlateBrush* SLB_EquipSlot::GetDisplayBrush() const
 {
-	if (bHasItem)       return &ItemBrush;
+	if (bHasItem) return &ItemBrush;
 	if (bHasEmptyBrush) return &EmptyBrush;
 	return nullptr;
 }
@@ -89,7 +89,9 @@ FReply SLB_EquipSlot::OnDragDetected(const FGeometry& MyGeometry, const FPointer
 	{
 		return FReply::Unhandled();
 	}
-	return FReply::Handled().BeginDragDrop(FLB_SlotDragDropOp::Create(Group, SlotIndex, &ItemBrush));
+	TSharedRef<FLB_SlotDragDropOp> Op = FLB_SlotDragDropOp::Create(Group, SlotIndex, &ItemBrush);
+	Op->EquipKey = SlotKey;
+	return FReply::Handled().BeginDragDrop(Op);
 }
 
 // ---------- 드롭 ----------
@@ -130,4 +132,14 @@ FReply SLB_EquipSlot::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& 
 
 	OnEquipDropped.ExecuteIfBound(SlotKey, Op->SourceGroup, Op->SourceIndex);
 	return FReply::Handled();
+}
+
+FReply SLB_EquipSlot::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (HasItem() && MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		OnUnequip.ExecuteIfBound(SlotKey);
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
 }

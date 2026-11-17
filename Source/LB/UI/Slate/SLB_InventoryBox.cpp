@@ -15,7 +15,8 @@ void SLB_InventoryBox::Construct(const FArguments& InArgs)
 	ItemCount = InArgs._ItemCount;
 	OnSlotDropped = InArgs._OnSlotDropped;
 	OnUse = InArgs._OnUse;
-
+	OnEquipDropped = InArgs._OnEquipDropped;
+	
 	const FSlateFontInfo CountFont = InArgs._CountTextFont.HasValidFont()
 		                                 ? InArgs._CountTextFont
 		                                 : FCoreStyle::GetDefaultFontStyle("Bold", 10);
@@ -156,9 +157,20 @@ FReply SLB_InventoryBox::OnDrop(const FGeometry& MyGeometry, const FDragDropEven
 	const TSharedPtr<FLB_SlotDragDropOp> Op = DragDropEvent.GetOperationAs<FLB_SlotDragDropOp>();
 	if (!Op.IsValid())
 	{
+		OnEquipDropped.ExecuteIfBound(Op->EquipKey, SlotIndex);
 		return FReply::Unhandled();
 	}
 
 	OnSlotDropped.ExecuteIfBound(Op->SourceGroup, Op->SourceIndex, SlotIndex);
 	return FReply::Handled();
+}
+
+FReply SLB_InventoryBox::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (HasItem() && MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		TriggerUse();   // 우클릭과 같음 (장비면 장착, 포션이면 사용)
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
 }

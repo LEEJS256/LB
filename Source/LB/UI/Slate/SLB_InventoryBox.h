@@ -36,6 +36,7 @@ public:
 		SLATE_ATTRIBUTE(bool, Selected)
 		SLATE_EVENT(FLB_OnSlotDropped, OnSlotDropped)
 		SLATE_EVENT(FLB_OnSlotUse, OnUse)
+		SLATE_EVENT(FLB_OnEquipDroppedToSlot, OnEquipDropped) 
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);
@@ -63,6 +64,7 @@ public:
 	virtual void OnDragEnter(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
 	virtual void OnDragLeave(const FDragDropEvent& DragDropEvent) override;
 	virtual FReply OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
+	virtual FReply OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 
 private:
 	int32 TestCount = 0;
@@ -76,4 +78,5 @@ private:
 	TAttribute<int32> ItemCount;
 	FLB_OnSlotDropped OnSlotDropped;
 	FLB_OnSlotUse OnUse;
+	FLB_OnEquipDroppedToSlot OnEquipDropped;   
 };
