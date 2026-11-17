@@ -5,6 +5,7 @@
 #include "UI/UI_Utility/FLB_SquareBoxStyle.h"
 #include "LB_SquareBox.generated.h"
 
+
 class SLB_SquareBox;
 class ULB_ItemTooltip;
 class ULB_DA_ItemInfo;
@@ -32,6 +33,7 @@ public:
 	virtual void SynchronizeProperties() override;
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
 
+
 #if WITH_EDITOR
 	virtual const FText GetPaletteCategory() override;
 #endif
@@ -47,7 +49,7 @@ protected:
 	TObjectPtr<ULB_ItemTooltip> ItemTooltipWidget;
 
 	UFUNCTION()
-	UWidget* GetItemTooltip();
+	virtual UWidget* GetItemTooltip();
 
 	static TSubclassOf<ULB_ItemTooltip> FindDefaultTooltipClass();
 
