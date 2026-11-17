@@ -5,7 +5,7 @@
 #include "LB_DA_SkillInfo.generated.h"
 
 class UGameplayAbility;
-class UTexture2D;
+class UPaperSprite;
 
 /**
  * 스킬 한 개의 정보. 마스터 스킬 테이블(FLB_DT_MasterSkill)의 로우 이름 = 스킬 코드가 이 DA를 가리킨다.
@@ -18,7 +18,7 @@ class LB_API ULB_DA_SkillInfo : public UPrimaryDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
-	TSoftObjectPtr<UTexture2D> Icon;
+	TSoftObjectPtr<UPaperSprite> Icon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
 	FText DisplayName;

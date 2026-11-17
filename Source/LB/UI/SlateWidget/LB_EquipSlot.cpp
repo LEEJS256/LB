@@ -1,16 +1,16 @@
 #include "LB_EquipSlot.h"
 
 #include "UI/Slate/SLB_EquipSlot.h"
-#include "Engine/Texture2D.h"
+#include "PaperSprite.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 
 namespace
 {
-	FSlateBrush MakeIconBrush(UTexture2D* InTexture)
+	FSlateBrush MakeIconBrush(UPaperSprite* InSprite)
 	{
 		FSlateBrush Brush;
-		Brush.SetResourceObject(InTexture);
-		Brush.ImageSize = FVector2D(InTexture->GetSizeX(), InTexture->GetSizeY());
+		Brush.SetResourceObject(InSprite);   // 아틀라스 영역만 잘려서 그려진다
+		Brush.ImageSize = InSprite->GetSlateAtlasData().GetSourceDimensions();
 		return Brush;
 	}
 }
@@ -86,7 +86,7 @@ void ULB_EquipSlot::ApplyState()
 	}
 }
 
-void ULB_EquipSlot::SetItem(UTexture2D* InIcon, FName InItemCode)
+void ULB_EquipSlot::SetItem(UPaperSprite* InIcon, FName InItemCode)
 {
 	Icon = InIcon;
 	ItemCode = InItemCode;
@@ -100,7 +100,7 @@ void ULB_EquipSlot::ClearItem()
 	ApplyState();
 }
 
-void ULB_EquipSlot::SetEmptyIcon(UTexture2D* InIcon)
+void ULB_EquipSlot::SetEmptyIcon(UPaperSprite* InIcon)
 {
 	EmptyIcon = InIcon;
 	ApplyState();

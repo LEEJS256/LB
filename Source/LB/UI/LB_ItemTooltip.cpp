@@ -8,7 +8,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
-#include "Engine/Texture2D.h"
+#include "PaperSprite.h"
 #include "Data/LB_DA_ItemInfo.h"
 
 
@@ -33,9 +33,18 @@ void ULB_ItemTooltip::SetItem(const ULB_DA_ItemInfo* Info)
 	}
 
 	// 아이콘은 Soft라 이미 로드돼 있으면 바로, 아니면 동기 로드(슬롯에서 이미 써서 보통 로드됨)
-	if (UTexture2D* Tex = Info->Icon.LoadSynchronous())
+	if (UPaperSprite* Sprite = Info->Icon.LoadSynchronous())
 	{
-		IconImage->SetBrushFromTexture(Tex);
+		// PaperSprite는 아틀라스 인터페이스라서 브러시 리소스로 넣으면 해당 영역만 그려진다
+		// 크기는 디자이너에서 정한 IconImage 브러시 크기를 유지
+		IconImage->SetBrushResourceObject(Sprite);
+		IconImage->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
+	else
+	{
+		// 툴팁 위젯은 재사용돼서, 아이콘 없는 아이템이면 이전 아이콘이 남는다
+		IconImage->SetBrushResourceObject(nullptr);
+		IconImage->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
 	// 타입별 효과 줄 (DA가 GetTooltipLines에서 채워 준다)

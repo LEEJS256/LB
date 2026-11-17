@@ -7,7 +7,7 @@
 #include "Engine/DataAsset.h"
 #include "LB_DA_Equipment.generated.h"
 
-class UTexture2D;
+class UPaperSprite;
 
 class UGameplayEffect;
 /**
@@ -32,7 +32,7 @@ public:
  
 	// UI에서 필요할 때만 비동기 로드하도록 Soft로 둠
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|UI")
-	TSoftObjectPtr<UTexture2D> Icon;
+	TSoftObjectPtr<UPaperSprite> Icon;
  
 	//인벤토리 내- 최대 소유수
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "1"))

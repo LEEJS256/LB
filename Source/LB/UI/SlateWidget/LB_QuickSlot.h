@@ -7,7 +7,7 @@
 #include "LB_QuickSlot.generated.h"
 
 class SLB_QuickSlot;
-class UTexture2D;
+class UPaperSprite;
 
 /** (내 슬롯 종류, 원본 그룹, 원본 인덱스, 내 인덱스) — 퀵슬롯 칸에 드롭됐을 때 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FLB_OnQuickSlotDropped, ELB_QuickSlotType, DstType, FName, SrcGroup, int32, SrcIndex, int32, DstIndex);
@@ -81,7 +81,7 @@ private:
 	void ApplyState();
 
 	// 아이템 코드 → 아이콘/수량/툴팁. 마스터테이블(ULB_GISubsystem_Data) + 인벤토리 연동 지점
-	void ResolveItemVisual(FName ItemCode, UTexture2D*& OutIcon, int32& OutCount, FText& OutInfo) const;
+	void ResolveItemVisual(FName ItemCode, UPaperSprite*& OutIcon, int32& OutCount, FText& OutInfo) const;
  
 	TSharedPtr<SLB_QuickSlot> GetQuickSlotBox() const;
 
@@ -89,7 +89,7 @@ private:
 
 	// Slate 브러시는 UObject를 약하게 들고 있어서 GC 방지용으로 여기서 잡는다
 	UPROPERTY(Transient)
-	TObjectPtr<UTexture2D> Icon;
+	TObjectPtr<UPaperSprite> Icon;
 
 	int32 Count = 0;
 	FText InfoText;

@@ -13,7 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLB_OnInventoryBoxDropped, FName,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLB_OnInventoryBoxUse, int32, SlotIndex);
 
 class SLB_InventoryBox;
-class UTexture2D;
+class UPaperSprite;
 
 
 /**
@@ -31,7 +31,7 @@ public:
 	ULB_InventoryBox(const FObjectInitializer& ObjectInitializer);
 	// ---- 런타임 세터 ----
 	UFUNCTION(BlueprintCallable, Category = "LB|InventoryBox")
-	void SetItem(UTexture2D* InIcon, int32 InCount, FName InItemCode);
+	void SetItem(UPaperSprite* InIcon, int32 InCount, FName InItemCode);
 
 	UFUNCTION(BlueprintCallable, Category = "LB|InventoryBox")
 	void ClearItem();
@@ -108,7 +108,7 @@ private:
 
 	// Slate 브러시는 UObject를 약하게 들고 있어서 GC 방지용으로 여기서 잡는다
 	UPROPERTY(Transient)
-	TObjectPtr<UTexture2D> Icon;
+	TObjectPtr<UPaperSprite> Icon;
 
 	int32 Count = 0;
 	FText InfoText;

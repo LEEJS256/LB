@@ -4,7 +4,7 @@
 #include "LB_InventoryBox.h"
 
 #include "UI/Slate/SLB_InventoryBox.h"
-#include "Engine/Texture2D.h"
+#include "PaperSprite.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 
 ULB_InventoryBox::ULB_InventoryBox(const FObjectInitializer& ObjectInitializer)
@@ -74,7 +74,7 @@ void ULB_InventoryBox::ApplyState()
 	{
 		FSlateBrush Brush;
 		Brush.SetResourceObject(Icon);
-		Brush.ImageSize = FVector2D(Icon->GetSizeX(), Icon->GetSizeY());
+		Brush.ImageSize = Icon->GetSlateAtlasData().GetSourceDimensions();
 		Box->SetItem(Brush, Count);
 	}
 	else
@@ -84,7 +84,7 @@ void ULB_InventoryBox::ApplyState()
 }
 
 
-void ULB_InventoryBox::SetItem(UTexture2D* InIcon, int32 InCount, FName InItemCode)
+void ULB_InventoryBox::SetItem(UPaperSprite* InIcon, int32 InCount, FName InItemCode)
 {
 	Icon = InIcon;
 	ItemCode = InItemCode;

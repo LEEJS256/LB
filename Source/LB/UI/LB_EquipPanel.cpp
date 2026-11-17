@@ -2,7 +2,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Image.h"
-#include "Engine/Texture2D.h"
+#include "PaperSprite.h"
 #include "TimerManager.h"
 #include "Component/LB_InventoryComponent.h"
 #include "Component/LB_QuickSlotComponent.h" // LBSlotGroup
@@ -104,10 +104,6 @@ bool ULB_EquipPanel::GetSlotKeyByIndex(int32 SlotIndex, FLB_EquipSlotKey& OutKey
 	OutKey = (*Found)->GetSlotKey();
 	return true;
 }
-
-// ============================================================
-// 표시
-// ============================================================
 
 void ULB_EquipPanel::RefreshFromEquipped(const TMap<FLB_EquipSlotKey, FName>& Equipped)
 {

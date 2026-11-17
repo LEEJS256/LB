@@ -13,7 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLB_OnEquipBoxUnequip, FLB_EquipSlot
 DECLARE_DELEGATE_RetVal_ThreeParams(bool, FLB_EquipBoxCanAccept, const FLB_EquipSlotKey& /*DstKey*/, FName /*SrcGroup*/, int32 /*SrcIndex*/);
 
 class SLB_EquipSlot;
-class UTexture2D;
+class UPaperSprite;
 
 /**
  * 장비 한 칸 (UMG용). 데이터는 모르고 표시값만 받는다.
@@ -30,13 +30,13 @@ public:
 
 	// ---- 런타임 세터 ----
 	UFUNCTION(BlueprintCallable, Category = "LB|EquipSlot")
-	void SetItem(UTexture2D* InIcon, FName InItemCode);
+	void SetItem(UPaperSprite* InIcon, FName InItemCode);
 
 	UFUNCTION(BlueprintCallable, Category = "LB|EquipSlot")
 	void ClearItem();
 
 	UFUNCTION(BlueprintCallable, Category = "LB|EquipSlot")
-	void SetEmptyIcon(UTexture2D* InIcon);
+	void SetEmptyIcon(UPaperSprite* InIcon);
 
 	UFUNCTION(BlueprintPure, Category = "LB|EquipSlot")
 	bool HasItem() const { return Icon != nullptr; }
@@ -80,7 +80,7 @@ protected:
 
 	/** 빈 칸일 때 흐리게 표시할 실루엣 (투구, 반지 등) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|EquipSlot")
-	TObjectPtr<UTexture2D> EmptyIcon;
+	TObjectPtr<UPaperSprite> EmptyIcon;
 
 private:
 	void ApplyState();
@@ -92,7 +92,7 @@ private:
 
 	// Slate 브러시는 UObject를 약하게 들고 있어서 GC 방지용으로 여기서 잡는다
 	UPROPERTY(Transient)
-	TObjectPtr<UTexture2D> Icon;
+	TObjectPtr<UPaperSprite> Icon;
 
 	FName ItemCode = NAME_None;
 };

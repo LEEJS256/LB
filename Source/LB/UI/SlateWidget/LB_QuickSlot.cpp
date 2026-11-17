@@ -3,7 +3,7 @@
 #include "UI/Slate/SLB_QuickSlot.h"
 #include "Component/LB_InventoryComponent.h"
 #include "Data/LB_DA_ItemInfo.h"
-#include "Engine/Texture2D.h"
+#include "PaperSprite.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 
 
@@ -131,7 +131,7 @@ void ULB_QuickSlot::HandleClearRequested()
 
 void ULB_QuickSlot::RefreshFromComponent()
 {
-	UTexture2D* NewIcon = nullptr;
+	UPaperSprite* NewIcon = nullptr;
 	int32 NewCount = 0;
 	FText NewInfo;
 
@@ -172,7 +172,8 @@ void ULB_QuickSlot::ApplyState()
 	{
 		FSlateBrush Brush;
 		Brush.SetResourceObject(Icon);
-		Brush.ImageSize = FVector2D(Icon->GetSizeX(), Icon->GetSizeY());
+		// PaperSprite는 GetSizeX가 없어서 아틀라스에서 잘라낸 영역 크기를 쓴다
+		Brush.ImageSize = Icon->GetSlateAtlasData().GetSourceDimensions();
 		Box->SetItem(Brush, Count);
 		Box->SetDimmed(SlotType == ELB_QuickSlotType::Item && Count <= 0);
 	}
@@ -183,7 +184,7 @@ void ULB_QuickSlot::ApplyState()
 	}
 }
 
-void ULB_QuickSlot::ResolveItemVisual(FName ItemCode, UTexture2D*& OutIcon, int32& OutCount, FText& OutInfo) const
+void ULB_QuickSlot::ResolveItemVisual(FName ItemCode, UPaperSprite*& OutIcon, int32& OutCount, FText& OutInfo) const
 {
 	OutIcon = nullptr;
 	OutCount = 0;
@@ -199,8 +200,7 @@ void ULB_QuickSlot::ResolveItemVisual(FName ItemCode, UTexture2D*& OutIcon, int3
 
 	// 인벤토리 슬롯 엔트리와 같은 방식 (아이콘은 Soft라 동기 로드, 로드 후엔 캐시)
 	OutIcon = Info->Icon.LoadSynchronous();
-	UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Loaded Icon for %s: %s"), *ItemCode.ToString(),
-	       OutIcon ? *OutIcon->GetName() : TEXT("nullptr"));
+	
 	OutInfo = FText::Format(FText::FromString(TEXT("{0}\n{1}")), Info->DisplayName, Info->Description);
 
 	// 수량은 같은 PlayerState의 인벤토리에서 (스택 합계)
