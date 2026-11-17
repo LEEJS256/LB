@@ -6,14 +6,20 @@
 #include "LB_EquipSlot.generated.h"
 
 /** (대상 장비 슬롯, 원본 그룹, 원본 인덱스) */
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLB_OnEquipBoxDropped, FLB_EquipSlotKey, DstKey, FName, SrcGroup, int32, SrcIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FLB_OnEquipBoxDropped, FLB_EquipSlotKey, DstKey, FName, SrcGroup, int32,
+                                               SrcIndex);
+
 /** 우클릭 해제 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLB_OnEquipBoxUnequip, FLB_EquipSlotKey, Key);
+
 /** 드롭 가능 여부 판정 (C++ 전용, 패널에서 바인딩) */
-DECLARE_DELEGATE_RetVal_ThreeParams(bool, FLB_EquipBoxCanAccept, const FLB_EquipSlotKey& /*DstKey*/, FName /*SrcGroup*/, int32 /*SrcIndex*/);
+DECLARE_DELEGATE_RetVal_ThreeParams(bool, FLB_EquipBoxCanAccept, const FLB_EquipSlotKey& /*DstKey*/, FName /*SrcGroup*/,
+                                    int32 /*SrcIndex*/);
 
 class SLB_EquipSlot;
 class UPaperSprite;
+class UBorder;
+class UTextBlock;
 
 /**
  * 장비 한 칸 (UMG용). 데이터는 모르고 표시값만 받는다.
@@ -60,9 +66,13 @@ public:
 	/** 바인딩 안 하면 모든 드롭 허용 (하이라이트용, 최종 판정은 서버) */
 	FLB_EquipBoxCanAccept CanAcceptDrop;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "LB|EquipSlot")
+	FText SlotDisplayName;
+
 	virtual void SynchronizeProperties() override;
 
 protected:
+	virtual UWidget* GetItemTooltip() override;
 	virtual const ULB_DA_ItemInfo* GetCurrentItemInfo() const override;
 	virtual TSharedRef<SLB_SquareBox> CreateSquareBox() override;
 
@@ -95,4 +105,10 @@ private:
 	TObjectPtr<UPaperSprite> Icon;
 
 	FName ItemCode = NAME_None;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBorder> EmptyTooltip;
+	
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> EmptyTooltipText;
 };

@@ -2,6 +2,8 @@
 
 #include "UI/Slate/SLB_EquipSlot.h"
 #include "PaperSprite.h"
+#include "Components/Border.h"
+#include "Components/TextBlock.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 
 namespace
@@ -42,6 +44,29 @@ void ULB_EquipSlot::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
 	ApplyState();
+}
+
+UWidget* ULB_EquipSlot::GetItemTooltip()
+{
+	// 장착 중이면 기존 아이템 툴팁
+	if (UWidget* ItemTip = Super::GetItemTooltip())
+		return ItemTip;
+
+	// 빈 칸이면 부위 이름만
+	if (!EmptyTooltip)
+	{
+		EmptyTooltip = NewObject<UBorder>(this);
+		EmptyTooltip->SetBrushColor(FLinearColor(0.02f, 0.05f, 0.08f, 0.9f));
+		EmptyTooltip->SetPadding(FMargin(8.f, 4.f));
+
+		EmptyTooltipText = NewObject<UTextBlock>(this);
+		EmptyTooltip->SetContent(EmptyTooltipText);
+	}
+
+	EmptyTooltipText->SetText(SlotDisplayName.IsEmpty()
+		? FText::FromName(SlotKey.SlotTag.GetTagName())
+		: SlotDisplayName);
+	return EmptyTooltip;
 }
 
 const ULB_DA_ItemInfo* ULB_EquipSlot::GetCurrentItemInfo() const
