@@ -36,7 +36,7 @@ public:
 	void ServerReportDungeonRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial);
 
 	// 로컬 카메라 Fade 표현만 담당한다. Pawn 위치는 건드리지 않는다.
-	UFUNCTION(Client, Reliable)
+	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Dungeon|Transition")
 	void ClientSetDungeonFade(bool bFadeOut, float Duration);
 
 protected:
