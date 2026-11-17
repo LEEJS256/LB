@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/IUserObjectListEntry.h"
+#include "UI/UI_Utility/LB_EquipSlotKey.h" 
 #include "LB_InventorySlotEntry.generated.h"
 
 class ULB_InventoryBox;
@@ -51,4 +52,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ULB_InventoryItemObject> Item;
+	
+	UFUNCTION()
+	void HandleEquipDropped(FLB_EquipSlotKey Key, int32 DstIndex);
 };

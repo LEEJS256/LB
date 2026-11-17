@@ -20,6 +20,8 @@ void ULB_InventorySlotEntry::NativeOnInitialized()
 	{
 		InventoryBox->OnUse.AddDynamic(this, &ULB_InventorySlotEntry::HandleUse);
 		InventoryBox->OnSlotDropped.AddDynamic(this, &ULB_InventorySlotEntry::HandleSlotDropped);
+		InventoryBox->OnEquipDropped.AddDynamic(this, &ULB_InventorySlotEntry::HandleEquipDropped);
+
 	}
 }
 
@@ -89,6 +91,14 @@ void ULB_InventorySlotEntry::ClearView()
 	InventoryBox->SetSlotIndex(INDEX_NONE);
 }
 
+void ULB_InventorySlotEntry::HandleEquipDropped(FLB_EquipSlotKey Key, int32 DstIndex)
+{
+	if (ULB_InventoryComponent* InvComp = GetInventoryComponent())
+	{
+		InvComp->Server_UnequipToSlot(Key,DstIndex);
+	}
+}
+
 void ULB_InventorySlotEntry::ApplySlotColors()
 {
 	if (!InventoryBox) return;
@@ -131,7 +141,6 @@ void ULB_InventorySlotEntry::HandleSlotDropped(FName SrcGroup, int32 SrcIndex, i
 
 ULB_InventoryComponent* ULB_InventorySlotEntry::GetInventoryComponent() const
 {
-	// 인벤토리 컴포넌트는 PlayerState에 붙어 있다
 	const APlayerState* PS = GetOwningPlayerState();
 	return PS ? PS->FindComponentByClass<ULB_InventoryComponent>() : nullptr;
 }
