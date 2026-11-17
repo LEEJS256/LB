@@ -78,3 +78,56 @@ struct LB_API FLB_DungeonRouteState
 	// 영문/숫자/underscore로만 이루어진 None이 아닌 이름인지 검사.
 	static bool IsValidIdentifier(const FName& InName);
 };
+
+/**
+ * 방 전환 진행 단계. 서버 GameMode가 결정하고 GameState가 복제한다.
+ */
+UENUM(BlueprintType)
+enum class ELB_DungeonTransitionPhase : uint8
+{
+	Waiting,
+	CountingDown,
+	LoadingNextRoom,
+	FadingOut,
+	FadingIn,
+	Failed
+};
+
+/**
+ * 현재 방 전환 상태의 복제 Snapshot.
+ * TransitionSerial은 PendingRoomId가 유효하면 Pending 방의 세대, 아니면 현재 방의 세대다.
+ * 세대 홀짝으로 방 슬롯(짝수 A, 홀수 B)을 고르므로 새 Pending은 이전 세대 + 1로 게시해야 한다.
+ */
+USTRUCT(BlueprintType)
+struct LB_API FLB_DungeonTransitionSnapshot
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	FName CurrentRoomId = NAME_None;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	FName PendingRoomId = NAME_None;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	FName ActiveExitId = NAME_None;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	int32 TransitionSerial = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	ELB_DungeonTransitionPhase Phase = ELB_DungeonTransitionPhase::Waiting;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	int32 TotalPlayers = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	int32 NearbyPlayers = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	int32 RequiredPlayers = 0;
+
+	// 카운트다운 종료 서버 시간(GetServerWorldTimeSeconds 기준). 0이면 카운트다운 없음.
+	UPROPERTY(BlueprintReadOnly, Category = "Dungeon")
+	double CountdownEndServerTime = 0.0;
+};
