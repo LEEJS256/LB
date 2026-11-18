@@ -87,7 +87,12 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Epic);      // 4단계 (영웅)
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip			, "Equip");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Weapon		, "Equip.Weapon");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Armor		, "Equip.Armor");
-
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Equip_Armor_Head,  "Equip.Armor.Head",  "장비 슬롯: 머리");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Equip_Armor_Top,  "Equip.Armor.Top",  "장비 슬롯: 상의");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Equip_Armor_Bottom,  "Equip.Armor.Bottom",  "장비 슬롯: 하의");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Equip_Armor_Hands, "Equip.Armor.Hands", "장비 슬롯: 장갑");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Equip_Armor_Feet,  "Equip.Armor.Feet",  "장비 슬롯: 신발");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_Equip_Accessory,   "Equip.Accessory",   "장비 슬롯: 악세사리 (최대 4칸)");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Combo_None, "Combo.None");
 

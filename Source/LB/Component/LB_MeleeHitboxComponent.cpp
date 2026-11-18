@@ -7,6 +7,10 @@
 #include "GameFramework/Pawn.h"
 #include "Object/Destructible/LB_DestructibleProp.h"
 
+static TAutoConsoleVariable<bool> CVarLBShowMeleeHitbox(
+	TEXT("LB.Debug.ShowMeleeHitbox"), false,
+	TEXT("근접 판정 박스 표시"), ECVF_Cheat);
+
 ULB_MeleeHitboxComponent::ULB_MeleeHitboxComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -53,7 +57,7 @@ void ULB_MeleeHitboxComponent::BeginHitWindow(const FLB_MeleeHitboxSettings& Set
 		if (!bUseSocket)
 		{
 			UE_LOG(LogLB, Warning, TEXT("%s: Socket '%s' not found on %s. Using character axes."),
-				*GetName(), *Settings.SocketName.ToString(), *GetNameSafe(DefaultAttachParent));
+			       *GetName(), *Settings.SocketName.ToString(), *GetNameSafe(DefaultAttachParent));
 		}
 	}
 
@@ -62,7 +66,8 @@ void ULB_MeleeHitboxComponent::BeginHitWindow(const FLB_MeleeHitboxSettings& Set
 		// Socket 기준: Mesh Socket에 부착해 Mesh의 좌우 회전을 그대로 따름
 		if (GetAttachParent() != DefaultAttachParent || GetAttachSocketName() != Settings.SocketName)
 		{
-			AttachToComponent(DefaultAttachParent, FAttachmentTransformRules::KeepRelativeTransform, Settings.SocketName);
+			AttachToComponent(DefaultAttachParent, FAttachmentTransformRules::KeepRelativeTransform,
+			                  Settings.SocketName);
 		}
 
 		SetBoxExtent(Settings.BoxExtent, false);
@@ -92,6 +97,13 @@ void ULB_MeleeHitboxComponent::BeginHitWindow(const FLB_MeleeHitboxSettings& Set
 			break;
 		}
 		TryRegisterHit(OtherComp ? OtherComp->GetOwner() : nullptr, OtherComp, nullptr);
+	}
+	
+
+	if (ShouldDebugDraw())
+	{
+		ShapeColor = FColor::Red;
+		SetHiddenInGame(false);
 	}
 }
 
@@ -149,19 +161,31 @@ void ULB_MeleeHitboxComponent::ForceEndHitWindow()
 
 void ULB_MeleeHitboxComponent::DeactivateHitWindow()
 {
+	SetHiddenInGame(true);
 	bHitWindowActive = false;
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetGenerateOverlapEvents(false);
 	HitActors.Reset();
 }
 
+bool ULB_MeleeHitboxComponent::ShouldDebugDraw() const
+{
+#if !UE_BUILD_SHIPPING
+	return bDebugDraw || CVarLBShowMeleeHitbox.GetValueOnGameThread();
+#else
+	return false;
+#endif
+}
+
 void ULB_MeleeHitboxComponent::HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                                  UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+                                                  const FHitResult& SweepResult)
 {
 	TryRegisterHit(OtherActor, OtherComp, bFromSweep ? &SweepResult : nullptr);
 }
 
-void ULB_MeleeHitboxComponent::TryRegisterHit(AActor* OtherActor, UPrimitiveComponent* OtherComp, const FHitResult* SweepResult)
+void ULB_MeleeHitboxComponent::TryRegisterHit(AActor* OtherActor, UPrimitiveComponent* OtherComp,
+                                              const FHitResult* SweepResult)
 {
 	if (!bHitWindowActive || !IsValid(OtherActor))
 	{
@@ -206,5 +230,12 @@ void ULB_MeleeHitboxComponent::TryRegisterHit(AActor* OtherActor, UPrimitiveComp
 		HitResult = FHitResult(OtherActor, OtherComp, TargetLocation, HitNormal);
 	}
 
+#if ENABLE_DRAW_DEBUG
+	if (ShouldDebugDraw())
+	{
+		DrawDebugSphere(GetWorld(), HitResult.Location, 15.f, 8, FColor::Yellow, false, 1.f);
+	}
+#endif
+	
 	OnMeleeHit.Broadcast(OtherActor, HitResult);
 }

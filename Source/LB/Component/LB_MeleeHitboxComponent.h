@@ -74,7 +74,11 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LB|Hitbox|Debug")
+	bool bDebugDraw = false;
 private:
+	bool ShouldDebugDraw() const;
+	
 	UFUNCTION()
 	void HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -95,6 +99,7 @@ private:
 
 	bool bHitWindowActive = false;
 
+	
 	// Character-space 판정의 X 공격 방향. +1(Right) 또는 -1(Left)
 	float AttackDirectionX = 1.f;
 };

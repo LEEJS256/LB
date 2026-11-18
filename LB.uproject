@@ -14,7 +14,8 @@
 				"GameplayAbilities",
 				"Engine",
 				"Slate",
-				"SlateCore"
+				"SlateCore",
+				"CoreUObject"
 			]
 		}
 	],
@@ -36,6 +37,10 @@
 		},
 		{
 			"Name": "GameplayAbilities",
+			"Enabled": true
+		},
+		{
+			"Name": "MotionWarping",
 			"Enabled": true
 		}
 	]

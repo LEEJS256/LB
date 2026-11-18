@@ -27,6 +27,26 @@ ALB_PlayerState::ALB_PlayerState()
 	SetNetUpdateFrequency(100.f);
 }
 
+void ALB_PlayerState::GrantDefaultItems(const ULB_PlayerDataAsset* Data)
+{
+	if (!HasAuthority() || !Data || !InventoryComponent)
+		return;
+
+	for (const FLB_StartupItem& Item : Data->StartupItems)
+	{
+		if (Item.ItemCode.IsNone())
+			continue;
+
+		const int32 Remain = InventoryComponent->AddItem(Item.ItemCode, Item.Count);
+		if (Remain > 0)
+		{
+			// 코드 오타(DT에 없는 RowName)거나 칸 부족
+			UE_LOG(LogTemp, Warning, TEXT("[PS] 시작 아이템 %s: %d개 못 넣음"),
+				*Item.ItemCode.ToString(), Remain);
+		}
+	}
+}
+
 ULB_InventoryComponent* ALB_PlayerState::Get_InventoryComponent() const
 {
 	return InventoryComponent;
@@ -71,6 +91,7 @@ void ALB_PlayerState::InitializePlayerDA()
 
 	GrantDefaultGA(PlayerDA);
 	ApplyDefaultAttributes(PlayerDA);
+	GrantDefaultItems(PlayerDA);
 	AddStateTag(TAG_State_Idle);
 }
 

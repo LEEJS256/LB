@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/IUserObjectListEntry.h"
+#include "UI/UI_Utility/LB_EquipSlotKey.h" 
 #include "LB_InventorySlotEntry.generated.h"
 
 class ULB_InventoryBox;
@@ -31,11 +32,11 @@ protected:
 
 	/** 슬롯 테두리색 (hex 입력 가능) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slot|Color")
-	FColor BorderColor = FColor(28, 58, 74);   // #1C3A4A
+	FColor BorderColor;  // #1C3A4A
 
 	/** 슬롯 안쪽 배경색 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slot|Color")
-	FColor FillColor = FColor(10, 18, 28);
+	FColor FillColor ;
 	
 private:
 	void ApplySlotColors();
@@ -51,4 +52,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ULB_InventoryItemObject> Item;
+	
+	UFUNCTION()
+	void HandleEquipDropped(FLB_EquipSlotKey Key, int32 DstIndex);
 };

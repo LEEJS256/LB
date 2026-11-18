@@ -52,7 +52,25 @@ public:
 	void ResetCombo();
 #pragma endregion
 	
+#pragma  region MotionWarping
+	UFUNCTION(BlueprintCallable, Category="LB|Combat")
+	void UpdateAttackWarpTarget();
 
+	UPROPERTY(EditAnywhere, Category="LB|Combat|Warp")
+	float WarpSearchRadius = 200.f;   // 탐색 거리
+
+	UPROPERTY(EditAnywhere, Category="LB|Combat|Warp")
+	float WarpStopDistance = 90.f;    // 타겟 앞 멈출 거리
+
+	UPROPERTY(EditAnywhere, Category="LB|Combat|Warp")
+	float WarpMaxDistance = 150.f;    // 한 번에 땡겨지는 최대 거리
+
+	UPROPERTY(EditAnywhere, Category="LB|Combat|Warp")
+	float WarpFacingDot = 0.3f;       // 앞쪽 판정 (뒤에 있는 적 무시)
+
+	static const FName WarpTargetName;
+	
+#pragma  endregion 
 
 
 protected:

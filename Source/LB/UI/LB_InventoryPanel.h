@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Utility/LB_ItemEntry.h"
+#include "GameplayTagContainer.h"
+#include "Utility/LB_NativeGameplayTag.h"
 #include "LB_InventoryPanel.generated.h"
 
 class UTileView;
@@ -27,12 +29,15 @@ class LB_API ULB_InventoryPanel : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	
 	/** 슬롯 목록을 다시 만든다. 배열 인덱스가 곧 슬롯 번호 */
 	void RefreshFromEntries(const TArray<FLB_ItemEntry>& Items);
 
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FLB_OnInventoryCloseRequested OnCloseRequested;
+
+	/** 탭 필터 변경. 빈 태그면 전체 표시 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void SetFilter(FGameplayTag InFilter);
 
 protected:
 	virtual void NativeConstruct() override;
@@ -42,13 +47,33 @@ protected:
 	virtual FReply NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnMouseCaptureLost(const FCaptureLostEvent& CaptureLostEvent) override;
-	
+
+
+#pragma region Widget
+	UPROPERTY(EditAnywhere, Category = "Inventory|Debug")
+	TArray<FName> DummyItemCodes;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> DragHandle;
+
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<class ULB_Button> CloseButton;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<ULB_Button> Tab_Equip;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<ULB_Button> Tab_Consume;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<ULB_Button> Tab_Currency;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<ULB_Button> SortButton;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTileView> TileView;
-
+#pragma endregion
 	/** TileView 열 수(= 한 줄 칸 수). 실제 열 수는 TileView 너비 / EntryWidth로 정해지니 WBP 크기와 맞출 것 */
 	UPROPERTY(EditAnywhere, Category = "Inventory", meta = (ClampMin = "1"))
 	int32 Columns = 4;
@@ -64,12 +89,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Inventory|Debug", meta = (ClampMin = "0"))
 	int32 DummyItemCount = 30;
 
+	// ---- 탭 필터 ----
+	/** 처음 열었을 때 필터. 기본은 장비 탭 (비워두면 전체) */
+	UPROPERTY(EditAnywhere, Category = "Inventory|Filter", meta = (Categories = "Item"))
+	FGameplayTag CurrentFilter = TAG_Item_Equip;
 
-	UPROPERTY(EditAnywhere, Category = "Inventory|Debug")
-	TArray<FName> DummyItemCodes;
+	UPROPERTY(EditAnywhere, Category = "Inventory|Filter")
+	FLinearColor TabActiveBorderColor = FLinearColor(0.f, 0.9f, 1.f, 1.f);
 
-	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UWidget> DragHandle;
+	UPROPERTY(EditAnywhere, Category = "Inventory|Filter")
+	FLinearColor TabInactiveBorderColor = FLinearColor(0.11f, 0.23f, 0.29f, 1.f);
+
 private:
 	UFUNCTION()
 	void HandleCloseClicked();
@@ -77,17 +107,42 @@ private:
 	UFUNCTION()
 	void HandleInventoryUpdated();
 
+	// LB_Button::OnClicked는 파라미터가 없어서 탭마다 핸들러를 따로 둔다
+	UFUNCTION()
+	void HandleTabEquipClicked();
+
+	UFUNCTION()
+	void HandleTabConsumeClicked();
+
+	UFUNCTION()
+	void HandleTabCurrencyClicked();
+
+	/** 서버에 정렬 요청. 결과는 OnInventoryUpdated로 돌아와서 RefreshFromEntries가 다시 그린다 */
+	UFUNCTION()
+	void HandleSortClicked();
+
+	/** CachedItems + CurrentFilter로 TileView 목록을 다시 만든다 */
+	void RebuildList(bool bResetScroll);
+
+	/** 이 칸을 현재 탭에 보여줄지. 빈 칸은 항상 true */
+	bool PassFilter(const FLB_ItemEntry& Entry) const;
+
+	void UpdateTabVisuals();
+
+	/** 마지막으로 받은 원본 배열. 탭만 바꿀 때 컴포넌트를 다시 안 읽고 이걸로 재구성 */
+	TArray<FLB_ItemEntry> CachedItems;
+
 	/** PlayerState 복제가 늦을 수 있어서 못 찾으면 타이머로 재시도 */
 	void TryBindInventory();
 
 	bool bDragging = false;
-	FVector2D GrabLocal = FVector2D::ZeroVector;   // 잡은 지점(창 로컬 좌표)
+	FVector2D GrabLocal = FVector2D::ZeroVector; // 잡은 지점(창 로컬 좌표)
 	FVector2D PanelOffset = FVector2D::ZeroVector; // 현재 이동량
 
 	FVector2D DragStartScreenPos; // 드래그 시작 시점의 마우스 스크린(절대) 좌표
 	FVector2D DragStartPanelOffset; // 드래그 시작 시점의 패널 오프셋
-	
-	
+
+
 	int32 CalcSlotCount(int32 ItemCount) const;
 
 	void BuildDummy();
@@ -95,5 +150,3 @@ private:
 	TWeakObjectPtr<ALB_PlayerState> BoundPlayerState;
 	FTimerHandle BindRetryHandle;
 };
-
-

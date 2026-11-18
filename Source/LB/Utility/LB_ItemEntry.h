@@ -3,8 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Templates/SubclassOf.h"
-#include "UObject/ObjectMacros.h"
+
 #include "LB_ItemEntry.generated.h"
 
 class ULB_DA_Equipment;

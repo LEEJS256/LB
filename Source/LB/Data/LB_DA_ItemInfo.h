@@ -9,7 +9,8 @@
 #include "Data/LB_TooltipTypes.h"
 #include "LB_DA_ItemInfo.generated.h"
 
-class UTexture2D;
+// class UTexture2D;
+class UPaperSprite;
 class UGameplayEffect;
 /**
  *
@@ -46,7 +47,7 @@ public:
 
 	// UI에서 필요할 때만 비동기 로드하도록 Soft로 둠
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|UI")
-	TSoftObjectPtr<UTexture2D> Icon;
+	TSoftObjectPtr<UPaperSprite> Icon;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Shop", meta = (ClampMin = "0"))
 	int32 BuyPrice = 0;

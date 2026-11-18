@@ -32,8 +32,10 @@ ULB_GA_NormalAttack::ULB_GA_NormalAttack()
 	ActivationOwnedTags.AddTag(TAG_State_Movement_Blocked);
 }
 
-void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+                                          const FGameplayAbilityActorInfo* ActorInfo,
+                                          const FGameplayAbilityActivationInfo ActivationInfo,
+                                          const FGameplayEventData* TriggerEventData)
 {
 	if (!AttackMontage)
 	{
@@ -47,7 +49,7 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		return;
 	}
 	ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(ActorInfo->AvatarActor.Get());
-	
+
 	// 몬스터 Avatar는 플레이어 캐릭터가 아니므로 PlayerState 태그는 플레이어일 때만 처리
 	ALB_PlayerState* PS = Character ? Character->GetPlayerState<ALB_PlayerState>() : nullptr;
 
@@ -56,9 +58,7 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		PS->AddStateTag(TAG_State_ATK);
 		// ActivationOwnedTags.AddTag(TAG_State_ATK);
 	}
-	
 
-	
 
 	const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
 	if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
@@ -85,6 +85,10 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		return;
 	}
 
+
+	BattleComp->UpdateAttackWarpTarget();
+
+
 	// CreatePlayMontageAndWaitProxy 마지막 인자들에 StartSection 전달
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this, NAME_None, AttackMontage, MontagePlayRate, StartSection);
@@ -102,15 +106,19 @@ void ULB_GA_NormalAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 	MontageTask->ReadyForActivation();
 }
 
-void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle,
+                                     const FGameplayAbilityActorInfo* ActorInfo,
+                                     const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility,
+                                     bool bWasCancelled)
 {
 	// Montage가 NotifyEnd 전에 중단되거나 Ability가 취소돼도 판정이 남지 않도록 정리
 	// 이미 종료된 Ability에 대한 중복 EndAbility 호출(Blend Out 후 Completed 등)은 건너뜀
 	if (IsEndAbilityValid(Handle, ActorInfo))
 	{
 		const AActor* Avatar = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
-		if (ULB_MeleeHitboxComponent* Hitbox = Avatar ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>() : nullptr)
+		if (ULB_MeleeHitboxComponent* Hitbox = Avatar
+			                                       ? Avatar->FindComponentByClass<ULB_MeleeHitboxComponent>()
+			                                       : nullptr)
 		{
 			Hitbox->ForceEndHitWindow();
 		}
@@ -120,7 +128,7 @@ void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 	UnbindMeleeHit();
 
 	ALB_PlayerCharacter* Character = Cast<ALB_PlayerCharacter>(ActorInfo->AvatarActor.Get());
-	
+
 	// 몬스터 Avatar는 플레이어 캐릭터가 아니므로 PlayerState 태그는 플레이어일 때만 처리
 	ALB_PlayerState* PS = Character ? Character->GetPlayerState<ALB_PlayerState>() : nullptr;
 
@@ -129,13 +137,13 @@ void ULB_GA_NormalAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, co
 		PS->RemoveStateTag(TAG_State_ATK);
 	}
 
-	
+
 	if (ULB_BattleComponent* BattleComp = Character->GetBattleComponent())
 	{
 		BattleComp->ResetCombo();
 	}
-	
-	
+
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
@@ -170,7 +178,7 @@ void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResu
 	if (!DamageEffectClass)
 	{
 		UE_LOG(LogLB, Warning, TEXT("%s: DamageEffectClass is not set. Skipping damage to %s."),
-			*GetName(), *GetNameSafe(HitActor));
+		       *GetName(), *GetNameSafe(HitActor));
 		return;
 	}
 
@@ -194,8 +202,8 @@ void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResu
 	if (!SourceTeam.IsValid() || !TargetTeam.IsValid())
 	{
 		UE_LOG(LogLB, Warning, TEXT("%s: Missing Team tag (Source %s: %s, Target %s: %s). Skipping damage."),
-			*GetName(), *GetNameSafe(SourceASC->GetAvatarActor()), *SourceTeam.ToString(),
-			*GetNameSafe(HitActor), *TargetTeam.ToString());
+		       *GetName(), *GetNameSafe(SourceASC->GetAvatarActor()), *SourceTeam.ToString(),
+		       *GetNameSafe(HitActor), *TargetTeam.ToString());
 		return;
 	}
 
@@ -204,7 +212,7 @@ void ULB_GA_NormalAttack::OnMeleeHit(AActor* HitActor, const FHitResult& HitResu
 		return;
 	}
 
-	const float Attack =SourceASC->GetNumericAttribute(ULB_AttributeSet::GetAttackAttribute());
+	const float Attack = SourceASC->GetNumericAttribute(ULB_AttributeSet::GetAttackAttribute());
 	const float Armor = TargetASC->GetNumericAttribute(ULB_AttributeSet::GetArmorAttribute());
 	const float Damage = FMath::Max(1.f, Attack - Armor);
 

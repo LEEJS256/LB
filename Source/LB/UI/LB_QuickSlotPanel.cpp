@@ -8,7 +8,7 @@
 #include "TimerManager.h"
 #include "Component/LB_InventoryComponent.h"
 #include "PlayerState/LB_PlayerState.h"
-#include "UI/Slate/SlateWidget/LB_QuickSlot.h"
+#include "UI/SlateWidget/LB_QuickSlot.h"
 #include "Utility/LB_ItemEntry.h"
 
 ULB_QuickSlotPanel::ULB_QuickSlotPanel(const FObjectInitializer& ObjectInitializer)

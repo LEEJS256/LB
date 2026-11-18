@@ -5,32 +5,6 @@
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Layout/SBox.h"
 
-// ---------- DragDropOp ----------
-TSharedRef<FLB_SlotDragDropOp> FLB_SlotDragDropOp::Create(FName InGroup, int32 InIndex, const FSlateBrush* InIcon)
-{
-	TSharedRef<FLB_SlotDragDropOp> Op = MakeShared<FLB_SlotDragDropOp>();
-	Op->SourceGroup = InGroup;
-	Op->SourceIndex = InIndex;
-	if (InIcon)
-	{
-		Op->IconBrush = *InIcon;
-	}
-	Op->Construct();
-	return Op;
-}
-
-TSharedPtr<SWidget> FLB_SlotDragDropOp::GetDefaultDecorator() const
-{
-	return SNew(SBox)
-		.WidthOverride(48.f)
-		.HeightOverride(48.f)
-		[
-			SNew(SImage)
-			.Image(&IconBrush)
-			.ColorAndOpacity(FLinearColor(1.f, 1.f, 1.f, 0.7f))
-		];
-}
-
 // ---------- SLB_InventoryBox ----------
 void SLB_InventoryBox::Construct(const FArguments& InArgs)
 {
@@ -41,7 +15,8 @@ void SLB_InventoryBox::Construct(const FArguments& InArgs)
 	ItemCount = InArgs._ItemCount;
 	OnSlotDropped = InArgs._OnSlotDropped;
 	OnUse = InArgs._OnUse;
-
+	OnEquipDropped = InArgs._OnEquipDropped;
+	
 	const FSlateFontInfo CountFont = InArgs._CountTextFont.HasValidFont()
 		                                 ? InArgs._CountTextFont
 		                                 : FCoreStyle::GetDefaultFontStyle("Bold", 10);
@@ -182,9 +157,20 @@ FReply SLB_InventoryBox::OnDrop(const FGeometry& MyGeometry, const FDragDropEven
 	const TSharedPtr<FLB_SlotDragDropOp> Op = DragDropEvent.GetOperationAs<FLB_SlotDragDropOp>();
 	if (!Op.IsValid())
 	{
+		OnEquipDropped.ExecuteIfBound(Op->EquipKey, SlotIndex);
 		return FReply::Unhandled();
 	}
 
 	OnSlotDropped.ExecuteIfBound(Op->SourceGroup, Op->SourceIndex, SlotIndex);
 	return FReply::Handled();
+}
+
+FReply SLB_InventoryBox::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (HasItem() && MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		TriggerUse();   // 우클릭과 같음 (장비면 장착, 포션이면 사용)
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
 }

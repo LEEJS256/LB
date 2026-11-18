@@ -4,8 +4,8 @@
 #include "AbilitySystemComponent.h"
 #include "Components/TextBlock.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
-#include "UI/Slate/SlateWidget/LB_NeonProgressBar.h"
-#include "UI/Slate/SlateWidget/LB_InfoText.h"
+#include "UI/SlateWidget/LB_NeonProgressBar.h"
+#include "UI/SlateWidget/LB_InfoText.h"
 
 void ULB_PlayerStatus::SetPlayerName(const FText& InName)
 {

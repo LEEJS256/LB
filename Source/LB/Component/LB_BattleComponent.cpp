@@ -5,8 +5,11 @@
 #include "Component/LB_EquipComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "MotionWarpingComponent.h"
 #include "AbilitySystemInterface.h"
 #include "IPropertyTable.h"
+#include "GameFramework/Character.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Utility/LB_NativeGameplayTag.h"
 
 ULB_BattleComponent::ULB_BattleComponent()
@@ -143,6 +146,56 @@ void ULB_BattleComponent::ResetCombo()
 	CurrentComboState = TAG_Combo_None;
 	BufferedInput = FGameplayTag();
 	bComboWindowOpen = false;
+}
+
+const FName ULB_BattleComponent::WarpTargetName(TEXT("AttackTarget"));
+
+void ULB_BattleComponent::UpdateAttackWarpTarget()
+{
+	ACharacter* Owner = Cast<ACharacter>(GetOwner());
+	if (!Owner) return;
+
+	UMotionWarpingComponent* MW = Owner->FindComponentByClass<UMotionWarpingComponent>();
+	if (!MW) return;
+
+	const FVector MyLoc = Owner->GetActorLocation();
+	const FVector Forward = Owner->GetActorForwardVector();
+
+	TArray<AActor*> Overlaps;
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjTypes { UEngineTypes::ConvertToObjectType(ECC_Pawn) };
+	UKismetSystemLibrary::SphereOverlapActors(this, MyLoc, WarpSearchRadius, ObjTypes,
+		ACharacter::StaticClass(), { Owner }, Overlaps);
+
+	AActor* Best = nullptr;
+	float BestDistSq = TNumericLimits<float>::Max();
+
+	for (AActor* A : Overlaps)
+	{
+		// TODO: 몬스터 판정 (팀 태그/인터페이스 등), 사망 체크
+		FVector ToTarget = A->GetActorLocation() - MyLoc;
+		ToTarget.Z = 0.f;
+		const float DistSq = ToTarget.SizeSquared();
+		if (FVector::DotProduct(ToTarget.GetSafeNormal(), Forward) < WarpFacingDot) continue;
+		if (DistSq < BestDistSq) { BestDistSq = DistSq; Best = A; }
+	}
+
+	if (!Best)
+	{
+		// 타겟 없으면 제거 → 원래 루트모션 그대로 재생
+		MW->RemoveWarpTarget(WarpTargetName);
+		return;
+	}
+
+	FVector Dir = Best->GetActorLocation() - MyLoc;
+	Dir.Z = 0.f;
+	const float Dist = Dir.Size();
+	Dir = Dir.GetSafeNormal();
+
+	// 타겟 앞 StopDistance 지점, 최대 이동거리 클램프
+	const float MoveDist = FMath::Clamp(Dist - WarpStopDistance, 0.f, WarpMaxDistance);
+	const FVector WarpLoc = MyLoc + Dir * MoveDist;
+
+	MW->AddOrUpdateWarpTargetFromLocationAndRotation(WarpTargetName, WarpLoc, Dir.Rotation());
 }
 
 bool ULB_BattleComponent::TryAdvance(const FGameplayTag& InputTag, FName& OutSection)

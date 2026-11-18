@@ -14,6 +14,7 @@
 /Binaries/
 
 
+
 /Content/ModernFlatGUIPack/
 /Content/Developers/
 /Content/Collections/
@@ -44,3 +45,8 @@
 
 
 .claude/settings.local.json
+
+*.sln
+*.slnx
+*.sln.DotSettings.user
+.vs/

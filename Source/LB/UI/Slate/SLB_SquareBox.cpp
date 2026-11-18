@@ -4,6 +4,7 @@
 #include "Components/Widget.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SBorder.h"
+#include "Materials/MaterialInterface.h"
 
 void SLB_SquareBox::Construct(const FArguments& InArgs)
 {
@@ -13,8 +14,7 @@ void SLB_SquareBox::Construct(const FArguments& InArgs)
 	SelectedColor = InArgs._SelectedColor;
 	HighlightColor = InArgs._HighlightColor;
 	SelectedAttr = InArgs._Selected;
-
-	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush("GenericWhiteBox");
+	BorderColor = InArgs._BorderColor;
 
 	ChildSlot
 	[
@@ -24,17 +24,19 @@ void SLB_SquareBox::Construct(const FArguments& InArgs)
 		[
 			// 바깥: 테두리
 			SAssignNew(OuterBorder, SBorder)
-			.BorderImage(WhiteBrush)
-			.BorderBackgroundColor(FSlateColor(InArgs._BorderColor))
+			.BorderImage(this, &SLB_SquareBox::GetBorderBrush)
+			.BorderBackgroundColor(this, &SLB_SquareBox::GetBorderColor)
 			.Padding(InArgs._BorderThickness)
 			[
 				// 안쪽: 상태색 배경 + 콘텐츠
 				SAssignNew(FillBorder, SBorder)
-				.BorderImage(WhiteBrush)
+				.BorderImage(this, &SLB_SquareBox::GetFillBrush)
 				.BorderBackgroundColor(this, &SLB_SquareBox::GetFillColor)
 				.Padding(0.f)
 				[
-					InArgs._Content.Widget
+					InArgs
+					._Content
+					.Widget
 				]
 			]
 		]
@@ -48,6 +50,26 @@ void SLB_SquareBox::ApplyStyle(const FLB_SquareBoxStyle& InStyle)
 	PressedColor = InStyle.PressedColor;
 	SelectedColor = InStyle.SelectedColor;
 	HighlightColor = InStyle.HighlightColor;
+	BorderColor = InStyle.BorderColor;
+
+	// ---- 머티리얼 ----
+	auto SetupMaterialBrush = [](FSlateBrush& Brush, UMaterialInterface* Material) -> bool
+	{
+		if (!Material)
+		{
+			Brush.SetResourceObject(nullptr);
+			return false;
+		}
+		Brush.SetResourceObject(Material);
+		Brush.DrawAs = ESlateBrushDrawType::Image; // 박스 전체에 늘려서 그림
+		Brush.Tiling = ESlateBrushTileType::NoTile;
+		return true;
+	};
+
+	bUseMaterial = InStyle.bUseMaterial;
+	bTintMaterialWithStateColors = InStyle.bTintMaterialWithStateColors;
+	bHasFillMaterial = SetupMaterialBrush(FillMaterialBrush, bUseMaterial ? InStyle.FillMaterial.Get() : nullptr);
+	bHasBorderMaterial = SetupMaterialBrush(BorderMaterialBrush, bUseMaterial ? InStyle.BorderMaterial.Get() : nullptr);
 
 	if (SizeBox.IsValid())
 	{
@@ -56,7 +78,6 @@ void SLB_SquareBox::ApplyStyle(const FLB_SquareBoxStyle& InStyle)
 	}
 	if (OuterBorder.IsValid())
 	{
-		OuterBorder->SetBorderBackgroundColor(FSlateColor(InStyle.BorderColor));
 		OuterBorder->SetPadding(FMargin(InStyle.BorderThickness));
 	}
 }
@@ -70,12 +91,34 @@ void SLB_SquareBox::SetContent(const TSharedRef<SWidget>& InContent)
 }
 
 
+const FSlateBrush* SLB_SquareBox::GetFillBrush() const
+{
+	return bHasFillMaterial ? &FillMaterialBrush : FCoreStyle::Get().GetBrush("GenericWhiteBox");
+}
+
+const FSlateBrush* SLB_SquareBox::GetBorderBrush() const
+{
+	return bHasBorderMaterial ? &BorderMaterialBrush : FCoreStyle::Get().GetBrush("GenericWhiteBox");
+}
+
+FSlateColor SLB_SquareBox::GetBorderColor() const
+{
+	// 머티리얼 모드 + 상태색 끔 → 흰색(머티리얼 색 그대로)
+	if (bHasBorderMaterial && IsMaterialTintOff()) return FLinearColor::White;
+	return BorderColor;
+}
 
 FSlateColor SLB_SquareBox::GetFillColor() const
 {
-	if (bHighlighted)                    return HighlightColor;
-	if (bPressed)                        return PressedColor;
-	if (SelectedAttr.Get(false))         return SelectedColor;
-	if (IsHovered())                     return HoverColor;
+	if (bHasFillMaterial && IsMaterialTintOff())
+		return FLinearColor::White;
+	if (bHighlighted)
+		return HighlightColor;
+	if (bPressed)
+		return PressedColor;
+	if (SelectedAttr.Get(false))
+		return SelectedColor;
+	if (IsHovered())
+		return HoverColor;
 	return NormalColor;
 }

@@ -2,14 +2,14 @@
 
 
 #include "Subsystem/LB_DMGFontManager.h"
-
 #include "UI/LB_DamageFont.h"
 
-// Sets default values for this component's properties
 
-
-
-
+ULB_DMGFontManager::ULB_DMGFontManager()
+{
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+}
 
 void ULB_DMGFontManager::Spawn(const FVector& WorldLocation, float Amount, bool bCrit)
 {
@@ -28,10 +28,40 @@ void ULB_DMGFontManager::Spawn(const FVector& WorldLocation, float Amount, bool 
 	{
 		pWidget = CreateWidget<ULB_DamageFont>(PC, WidgetClass);
 		pWidget->OnFinished.BindUObject(this, &ULB_DMGFontManager::Release);
+		pWidget->SetAlignmentInViewport(FVector2D(0.5f, 0.5f)); // 숫자 중앙 기준
 		pWidget->AddToViewport(100);
 	}
+	Active.Add({
+		pWidget, WorldLocation,
+		FVector2D(FMath::FRandRange(-RandomOffsetX, RandomOffsetX), 0.f)
+	});
 
-	ScreenPos.X += FMath::FRandRange(-RandomOffsetX, RandomOffsetX);
-	pWidget->SetPositionInViewport(ScreenPos, true); // true = DPI 보정
+
 	pWidget->Play(Amount, bCrit);
+	SetComponentTickEnabled(true);
 }
+
+void ULB_DMGFontManager::TickComponent(float DeltaTime, ELevelTick TickType,
+                                       FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+		{ return; }
+
+	for (const FActiveEntry& E : Active)
+	{
+		FVector2D ScreenPos;
+		if (PC->ProjectWorldLocationToScreen(E.WorldLocation, ScreenPos, true))
+		{
+			E.Widget->SetPositionInViewport(ScreenPos + E.ScreenOffset, true); // 위에서 DPI 보정함
+			E.Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		else
+		{
+			E.Widget->SetVisibility(ESlateVisibility::Hidden); // 카메라 뒤/화면 밖
+		}
+	}
+}
+

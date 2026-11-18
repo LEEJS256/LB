@@ -4,11 +4,11 @@
 #include "LB_InventorySlotEntry.h"
 
 #include "LB_InventoryItemObject.h"
-#include "UI/Slate/SlateWidget/LB_InventoryBox.h"
+#include "UI/SlateWidget/LB_InventoryBox.h"
 #include "Component/LB_InventoryComponent.h"
 #include "Data/LB_DA_ItemInfo.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
-#include "Engine/Texture2D.h"
+#include "PaperSprite.h"
 #include "GameFramework/PlayerState.h"
 
 void ULB_InventorySlotEntry::NativeOnInitialized()
@@ -20,6 +20,8 @@ void ULB_InventorySlotEntry::NativeOnInitialized()
 	{
 		InventoryBox->OnUse.AddDynamic(this, &ULB_InventorySlotEntry::HandleUse);
 		InventoryBox->OnSlotDropped.AddDynamic(this, &ULB_InventorySlotEntry::HandleSlotDropped);
+		InventoryBox->OnEquipDropped.AddDynamic(this, &ULB_InventorySlotEntry::HandleEquipDropped);
+
 	}
 }
 
@@ -58,7 +60,9 @@ void ULB_InventorySlotEntry::NativeOnListItemObjectSet(UObject* ListItemObject)
 
 	// 아이콘은 Soft라 여기서 동기 로드. 칸당 한 번이고 로드된 뒤엔 캐시라 가볍다.
 	// 첫 로드 끊김이 거슬리면 나중에 비동기 로드로 바꾼다.
-	UTexture2D* Icon = Info->Icon.LoadSynchronous();
+	
+	UPaperSprite* Icon = Info->Icon.LoadSynchronous();
+	
 	InventoryBox->SetItem(Icon, Item->GetStackCount(),Item->GetItemCode());
 }
 
@@ -87,13 +91,21 @@ void ULB_InventorySlotEntry::ClearView()
 	InventoryBox->SetSlotIndex(INDEX_NONE);
 }
 
+void ULB_InventorySlotEntry::HandleEquipDropped(FLB_EquipSlotKey Key, int32 DstIndex)
+{
+	if (ULB_InventoryComponent* InvComp = GetInventoryComponent())
+	{
+		InvComp->Server_UnequipToSlot(Key,DstIndex);
+	}
+}
+
 void ULB_InventorySlotEntry::ApplySlotColors()
 {
 	if (!InventoryBox) return;
 
 	FLB_SquareBoxStyle S = InventoryBox->Style;
-	S.BorderColor = FLinearColor::FromSRGBColor(BorderColor);
-	S.NormalColor = FLinearColor::FromSRGBColor(FillColor);
+	// S.BorderColor = FLinearColor::FromSRGBColor(BorderColor);
+	// S.NormalColor = FLinearColor::FromSRGBColor(FillColor);
 	InventoryBox->SetStyle(S);
 }
 
@@ -129,7 +141,6 @@ void ULB_InventorySlotEntry::HandleSlotDropped(FName SrcGroup, int32 SrcIndex, i
 
 ULB_InventoryComponent* ULB_InventorySlotEntry::GetInventoryComponent() const
 {
-	// 인벤토리 컴포넌트는 PlayerState에 붙어 있다
 	const APlayerState* PS = GetOwningPlayerState();
 	return PS ? PS->FindComponentByClass<ULB_InventoryComponent>() : nullptr;
 }
