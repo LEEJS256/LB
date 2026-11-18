@@ -1,0 +1,19 @@
+id: CT-001
+title: 몬스터 서버 사망 완료 신호
+goal: |
+  ALB_MonsterBase에 자신을 전달하는 네이티브 OnMonsterDefeated delegate와 구독 접근 API를 추가한다. Health Attribute 변경 구독은 Dedicated Server를 포함한 모든 World에서 한 번만 연결하고, UI·데미지 폰트 갱신은 기존 비Dedicated 경로로 제한한다.
+  서버에서 Health가 처음 0 이하가 되는 순간 bDefeatNotified 가드를 먼저 확정한 뒤 delegate를 한 번 발행한다. 초기화·복제·회복·중복 피해와 Client는 사망 완료를 발행하지 않으며 기존 State.Death 판정과 Ability/AI 수명을 바꾸지 않는다.
+  몬스터 제거·드롭·던전 SpawnId·방 상태 저장은 추가하지 않는다.
+done_when:
+  - "Dedicated Server에서도 Health 변경을 구독하고 서버의 최초 0 이하 전이만 사망 완료를 한 번 알린다"
+  - "UI와 데미지 폰트는 기존 비Dedicated 표현 경계를 유지한다"
+  - "State.Death·ASC 초기화·Ability 부여와 몬스터 제거 정책을 변경하지 않는다"
+allow:
+  - Source/LB/Character/Monster/LB_MonsterBase.h
+  - Source/LB/Character/Monster/LB_MonsterBase.cpp
+context:
+  - Source/LB/GAS/Attribute/LB_AttributeSet.cpp
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 서버 단일 사망 신호·표현 전용 코드 분리·기존 State.Death 보존을 확인했다

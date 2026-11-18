@@ -1,0 +1,20 @@
+id: CT-005
+title: 방 Entry와 ExitId 영역
+goal: |
+  Dungeon의 LB_DungeonRoomMarkers.h/.cpp에 AActor 파생 ALB_DungeonRoomEntry와 ALB_DungeonExit를 정의한다. Entry는 SceneComponent Root와 서버 Pawn 이동에 사용할 Transform 조회 API를 제공하고 Tick·복제·자동 로직을 갖지 않는다.
+  Exit는 EditInstanceOnly FName ExitId, SceneComponent Root와 EditAnywhere UBoxComponent ExitTrigger를 소유한다. ExitId는 None이 아닌 영문숫자/underscore여야 한다. 서버에서만 Pawn Begin/End Overlap을 TSet<TWeakObjectPtr<APawn>>으로 추적하고 정리된 현재 목록을 조회하는 API와 Exit 자신을 전달하는 네이티브 OnExitPresenceChanged delegate를 제공한다. 중복 Begin, 누락 End, Destroy된 Pawn을 안전하게 처리한다.
+  Exit는 과반수·파티·카운트다운·TargetRoomId를 판단하지 않고 현재 방을 소유한 GameMode가 여러 Exit delegate를 구독하도록 한다. Client 독립 판정, 거리 Tick, Door 애니메이션과 방 클리어 조건은 추가하지 않는다.
+done_when:
+  - "방 맵에 배치할 단일 Entry Transform과 ExitId별 서버 Overlap 목록이 분리된다"
+  - "Exit가 자신과 고유 ID를 식별하며 중복/무효 Pawn 제거 후 실제 목록 변화 때만 delegate를 알린다"
+  - "과반수·Graph 목적지·전환 정책이 Marker Actor에 들어가지 않는다"
+  - "Actor Tick과 복제를 추가하지 않는다"
+allow:
+  - Source/LB/Dungeon/LB_DungeonRoomMarkers.h
+  - Source/LB/Dungeon/LB_DungeonRoomMarkers.cpp
+context:
+  - Source/LB/Character/LB_PlayerCharacter.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 Entry/Exit 책임 분리·ExitId·서버 Overlap·중복/무효 Pawn 정리를 확인했다
