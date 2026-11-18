@@ -27,6 +27,11 @@ struct FLB_PropBreakState
 	FVector_NetQuantizeNormal ImpactDirection = FVector::ZeroVector;
 };
 
+class ALB_DestructibleProp;
+
+// 서버 전용. 최초 TryBreak 성공 시 확정 BreakState와 함께 한 번만 발행된다.
+DECLARE_MULTICAST_DELEGATE_TwoParams(FLB_OnPropBroken, ALB_DestructibleProp* /*Prop*/, const FLB_PropBreakState& /*BreakState*/);
+
 UCLASS()
 class LB_API ALB_DestructibleProp : public AActor
 {
@@ -43,6 +48,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Destructible")
 	bool IsBroken() const { return BreakState.bBroken; }
+
+	// 서버 파괴 완료 신호 구독용. Loot/BP 호출 전에 발행된다.
+	FLB_OnPropBroken& OnPropBroken() { return OnPropBrokenDelegate; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -100,7 +108,12 @@ private:
 	// 서버 보상 처리 가드 (복제하지 않음)
 	bool bLootProcessed = false;
 
+	// 서버 파괴 완료 신호 발행 가드 (복제하지 않음)
+	bool bBreakNotified = false;
+
 	bool bLootRandomInitialized = false;
+
+	FLB_OnPropBroken OnPropBrokenDelegate;
 
 	FRandomStream LootRandom;
 };
