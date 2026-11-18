@@ -1,6 +1,10 @@
 base: master
 mode: solo
 remote: origin
+pr_title:
+  style: conventional
+  types: [feat, fix, docs, refactor, test, chore]
+  require_scope: true
 protected:
   - Content/**
   - Config/**

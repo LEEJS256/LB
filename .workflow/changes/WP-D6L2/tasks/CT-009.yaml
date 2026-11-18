@@ -1,0 +1,25 @@
+id: CT-009
+title: Exit별 과반수와 분기 파티 전환
+goal: |
+  ALB_GameMode에 ExitCountdownSeconds(양수 기본 5초), FadeOutDuration/FadeInDuration, PartyEntrySpacing을 EditDefaultsOnly로 추가한다. Pending 방 Barrier 완료 시 표시된 ULevel에서 ALB_DungeonRoomEntry가 정확히 하나인지, ALB_DungeonExit의 ExitId 집합이 해당 Room Graph의 Exits와 정확히 일치하는지 검증한다. Fade Out 후 서버가 참가 파티 Pawn 전부를 Entry 기준 Y 간격 위치로 Teleport한 뒤 GameState의 Pending 승격·이전 방 해제·Fade In을 수행한다. StartRoom 진입도 같은 경로를 사용한다.
+  안정된 Current 방의 모든 Exit OnExitPresenceChanged를 서버에서 구독한다. 각 ExitId는 Current Room Graph의 TargetRoomId를 조회하며 목적지를 Marker Actor에 저장하지 않는다. 전환 대상은 유효 PlayerState와 Pawn을 가진 비관전자 Controller이고 Nearby는 이벤트를 발생시킨 Exit가 추적한 대상만 센다. RequiredPlayers는 TotalPlayers / 2 + 1이다.
+  Exit별 평가 우선순위는 TotalPlayers>0이고 NearbyPlayers==TotalPlayers면 진행 중 Countdown Timer를 취소하고 해당 ExitId/TargetRoomId로 즉시 LoadingNextRoom을 잠그는 것이다. 전원 미만이면서 NearbyPlayers>=RequiredPlayers면 그 Exit를 ActiveExitId로 CountingDown과 CountdownEndServerTime=GameState 서버 시간+Duration을 한 번 시작한다. Active Exit가 과반수를 잃으면 Timer와 종료 시간을 취소해 Waiting으로 돌아가며, 다른 Exit가 과반수를 얻으면 새 Exit 기준 전체 시간으로 시작한다.
+  Countdown Timer 완료 시 Active Exit 인원을 다시 평가해 여전히 과반수면 연결된 TargetRoomId 전환을 잠근다. 엄밀한 과반수라 서로 다른 Exit 두 곳이 동시에 기준을 만족할 수 없지만 같은 프레임 이벤트는 TransitionSerial/Phase 가드로 목적지 요청을 한 번만 확정한다. 잠긴 뒤 Exit 이탈은 무시하고 출구 밖을 포함한 캡처된 파티 전체를 선택 목적지로 이동한다.
+  PostLogin/Logout과 Pawn 무효화로 대상이 변하면 잠기기 전에는 모든 Exit를 다시 평가한다. Exits가 비어 있는 종료 방에는 delegate를 바인딩하지 않는다. CountingDown 이외 Phase에서는 카운트다운 UI 상태를 숨기며 전원 진입 전용 문구나 0초 메시지는 만들지 않는다.
+done_when:
+  - "서버가 ExitId별 전원 즉시 전환을 엄밀한 과반수 카운트다운보다 우선하고 Graph의 TargetRoomId만 선택한다"
+  - "Active Exit 과반수 이탈/변경은 취소·재시작하고 Timer 완료·전원 진입 경쟁에서도 한 목적지만 잠긴다"
+  - "선택 목적지 준비 후 Fade와 서버 파티 전체 Teleport·Pending 승격·이전 방 해제가 순서대로 실행된다"
+  - "Entry 및 Graph/Marker Exit 집합 불일치·종료 방·참가자 변화가 잘못된 전환이나 남은 Timer를 만들지 않는다"
+  - "전원 진입 메시지 없이 CountingDown 상태에서만 UI용 인원·종료 시간이 유지된다"
+allow:
+  - Source/LB/GameMode/LB_GameMode.h
+  - Source/LB/GameMode/LB_GameMode.cpp
+context:
+  - Source/LB/GameMode/LB_GameState.h
+  - Source/LB/Controller/LB_PlayerController.h
+  - Source/LB/Dungeon/LB_DungeonRoomMarkers.h
+verify:
+  - name: 에디터 종료 후 LBEditor 빌드
+    use: build-editor
+  - manual: Diff에서 Exit별 목적지 조회·전원 우선·과반수 취소/경쟁 가드·파티 전체 서버 이동·Fade 순서를 확인했다

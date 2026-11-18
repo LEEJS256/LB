@@ -13,7 +13,7 @@
 
 ## Architecture
 
-서버 GameMode가 배치를 만들고 GameState가 공유하며 World별 조립기가 목록을 로드한다. 상세 계약은 원본을 따른다.
+2026-11-16 기준은 방을 물리적으로 붙이지 않는 Room/Exit 분기 Graph다. 서버 GameMode가 Exit별 과반수 카운트다운과 전원 즉시 전환으로 목적지 방을 확정하고 GameState가 진행 상태를 공유하며 각 World는 현재/선택 방을 두 슬롯에 로드한다. 상세 계약은 원본을 따른다.
 
 ## Trade-offs
 
