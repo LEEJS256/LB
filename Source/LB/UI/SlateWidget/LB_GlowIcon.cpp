@@ -1,9 +1,5 @@
 #include "LB_GlowIcon.h"
-<<<<<<<< HEAD:Source/LB/UI/SlateWidget/LB_GlowIcon.cpp
 #include "UI/Slate/SLB_GlowIcon.h"
-========
-#include "../SLB_GlowIcon.h"
->>>>>>>> refs/heads/master:Source/LB/UI/Slate/SlateWidget/LB_GlowIcon.cpp
 
 TSharedRef<SWidget> ULB_GlowIcon::RebuildWidget()
 {

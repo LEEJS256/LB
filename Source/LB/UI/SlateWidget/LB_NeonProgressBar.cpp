@@ -2,11 +2,7 @@
 
 
 #include "LB_NeonProgressBar.h"
-<<<<<<<< HEAD:Source/LB/UI/SlateWidget/LB_NeonProgressBar.cpp
 #include "UI/Slate/SLB_NeonProgressbar.h"
-========
-#include "../SLB_NeonProgressbar.h"
->>>>>>>> refs/heads/master:Source/LB/UI/Slate/SlateWidget/LB_NeonProgressBar.cpp
 
 TSharedRef<SWidget> ULB_NeonProgressBar::RebuildWidget()
 {

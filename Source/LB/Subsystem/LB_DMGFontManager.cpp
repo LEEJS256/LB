@@ -65,12 +65,3 @@ void ULB_DMGFontManager::TickComponent(float DeltaTime, ELevelTick TickType,
 	}
 }
 
-void ULB_DMGFontManager::Release(ULB_DamageFont* Widget)
-{
-	Active.RemoveAll([Widget](const FActiveEntry& E) { return E.Widget == Widget; });
-	Pool.Add(Widget);
-	if (Active.IsEmpty())
-	{
-		SetComponentTickEnabled(false);
-	}
-}

@@ -39,26 +39,6 @@ class ULB_DMGFontManager* ALB_PlayerController::Get_DMGFontMgr() const
 
 
 
-ALB_PlayerController::ALB_PlayerController()
-{
-	DamageNumberManager = CreateDefaultSubobject<ULB_DMGFontManager>(TEXT("DMGFontManager"));
-}
-
-void ALB_PlayerController::CloseInventory()
-{
-	if (!HUDWidget || !HUDWidget->IsInventoryVisible()) return;
-
-	HUDWidget->SetInventoryVisible(false);
-	SetInventoryUIMode(false);
-}
-
-class ULB_DMGFontManager* ALB_PlayerController::Get_DMGFontMgr() const
-{
-	return DamageNumberManager;
-}
-
-
-
 void ALB_PlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
