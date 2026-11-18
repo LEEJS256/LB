@@ -37,7 +37,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Style")
 	FLinearColor CritColor = FLinearColor(1.f, 0.82f, 0.25f);
 
-	virtual void NativeOnInitialized() override;
+	virtual void NativeOnInitialized() override;.
+
+	UFUNCTION()
 	void HandleAnimFinished();
 };
 
