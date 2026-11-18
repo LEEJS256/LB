@@ -14,6 +14,29 @@
 #include "Subsystem/LB_DMGFontManager.h"
 #include "UI/LB_PlayerStatus.h"
 #include "UI/LB_HUD.h"
+#include "GameMode/LB_GameState.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Engine/World.h"
+
+
+ALB_PlayerController::ALB_PlayerController()
+{
+	DamageNumberManager = CreateDefaultSubobject<ULB_DMGFontManager>(TEXT("DMGFontManager"));
+}
+
+void ALB_PlayerController::CloseInventory()
+{
+	if (!HUDWidget || !HUDWidget->IsInventoryVisible()) return;
+
+	HUDWidget->SetInventoryVisible(false);
+	SetInventoryUIMode(false);
+}
+
+class ULB_DMGFontManager* ALB_PlayerController::Get_DMGFontMgr() const
+{
+	return DamageNumberManager;
+}
+
 
 
 ALB_PlayerController::ALB_PlayerController()
@@ -113,6 +136,7 @@ void ALB_PlayerController::BeginPlay()
 	Set_IATag();
 	InitUI();
 	BindHUD();
+	TryBindDungeonGameState();
 }
 
 void ALB_PlayerController::OnRep_PlayerState()
@@ -120,7 +144,271 @@ void ALB_PlayerController::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 	InitUI();
 	BindHUD();
+	TryBindDungeonGameState();
 }
+
+void ALB_PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnbindDungeonGameState();
+
+	if (GameStateSetHandle.IsValid())
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GameStateSetEvent.Remove(GameStateSetHandle);
+		}
+		GameStateSetHandle.Reset();
+	}
+
+	ResetDungeonReportCache();
+
+	Super::EndPlay(EndPlayReason);
+}
+
+#pragma region Dungeon
+
+void ALB_PlayerController::TryBindDungeonGameState()
+{
+	// 표현/보고는 로컬 Controller 몫. 서버의 원격 Controller는 바인딩하지 않는다.
+	// BeginPlay 이전(OnRep_PlayerState 선도착)에는 BeginPlay에서 다시 시도한다.
+	if (!IsLocalController() || (!HasActorBegunPlay() && !IsActorBeginningPlay()))
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	ALB_GameState* GS = World->GetGameState<ALB_GameState>();
+	if (!GS)
+	{
+		// GameState 지연 도착: 한 번만 대기 등록한다.
+		if (!GameStateSetHandle.IsValid())
+		{
+			GameStateSetHandle = World->GameStateSetEvent.AddUObject(this, &ThisClass::HandleGameStateSet);
+		}
+		return;
+	}
+
+	if (GameStateSetHandle.IsValid())
+	{
+		World->GameStateSetEvent.Remove(GameStateSetHandle);
+		GameStateSetHandle.Reset();
+	}
+
+	if (BoundDungeonGameState.Get() == GS)
+	{
+		return; // 이미 바인딩됨
+	}
+
+	UnbindDungeonGameState();
+
+	BoundDungeonGameState = GS;
+	LocalPendingRoomReadyHandle = GS->OnLocalPendingRoomReady.AddUObject(this, &ThisClass::HandleLocalPendingRoomReady);
+	LocalCurrentRoomReadyHandle = GS->OnLocalCurrentRoomReady.AddUObject(this, &ThisClass::HandleLocalCurrentRoomReady);
+	GS->OnDungeonTransitionChanged.AddUniqueDynamic(this, &ThisClass::HandleDungeonTransitionChanged);
+
+	// 바인딩 이전에 이미 일어난 상태를 따라잡는다.
+	if (GS->HasDungeonRoute())
+	{
+		const FLB_DungeonTransitionSnapshot& Snapshot = GS->GetDungeonTransition();
+		HandleDungeonTransitionChanged(Snapshot);
+
+		// Client World에서 Pending 방이 이미 표시됐다면 놓친 준비 보고를 보낸다.
+		if (!HasAuthority() && !Snapshot.PendingRoomId.IsNone() && GS->GetPendingRoomLevel() != nullptr)
+		{
+			ReportRoomReadyOnce(GS->GetDungeonRoute().InstanceKey, Snapshot.PendingRoomId, Snapshot.TransitionSerial);
+		}
+
+		// 안정 상태 Current 방이 이미 표시됐다면 놓친 합류 보고를 보낸다.
+		if (!HasAuthority() && GS->IsLocalStableCurrentRoomReady())
+		{
+			ReportCurrentRoomReadyOnce(GS->GetDungeonRoute().InstanceKey, Snapshot.CurrentRoomId, Snapshot.TransitionSerial);
+		}
+	}
+}
+
+void ALB_PlayerController::UnbindDungeonGameState()
+{
+	if (ALB_GameState* GS = BoundDungeonGameState.Get())
+	{
+		GS->OnLocalPendingRoomReady.Remove(LocalPendingRoomReadyHandle);
+		GS->OnLocalCurrentRoomReady.Remove(LocalCurrentRoomReadyHandle);
+		GS->OnDungeonTransitionChanged.RemoveDynamic(this, &ThisClass::HandleDungeonTransitionChanged);
+	}
+	LocalPendingRoomReadyHandle.Reset();
+	LocalCurrentRoomReadyHandle.Reset();
+	BoundDungeonGameState.Reset();
+}
+
+void ALB_PlayerController::HandleGameStateSet(AGameStateBase* NewGameState)
+{
+	TryBindDungeonGameState();
+}
+
+void ALB_PlayerController::HandleLocalPendingRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	ReportRoomReadyOnce(InstanceKey, RoomId, TransitionSerial);
+}
+
+void ALB_PlayerController::ReportRoomReadyOnce(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	if (!IsLocalController() || HasAuthority() || InstanceKey.IsNone() || RoomId.IsNone())
+	{
+		return;
+	}
+
+	if (LastReportedInstanceKey == InstanceKey && LastReportedRoomId == RoomId && LastReportedSerial == TransitionSerial)
+	{
+		return;
+	}
+
+	LastReportedInstanceKey = InstanceKey;
+	LastReportedRoomId = RoomId;
+	LastReportedSerial = TransitionSerial;
+	ServerReportDungeonRoomReady(InstanceKey, RoomId, TransitionSerial);
+}
+
+void ALB_PlayerController::ServerReportDungeonRoomReady_Implementation(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	// 검증과 판정은 GameState/GameMode 몫. 여기서는 보고자와 입력만 전달한다.
+	if (ALB_GameState* GS = GetWorld() ? GetWorld()->GetGameState<ALB_GameState>() : nullptr)
+	{
+		GS->ReceiveClientRoomReady(this, InstanceKey, RoomId, TransitionSerial);
+	}
+}
+
+void ALB_PlayerController::HandleLocalCurrentRoomReady(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	ReportCurrentRoomReadyOnce(InstanceKey, RoomId, TransitionSerial);
+}
+
+void ALB_PlayerController::ReportCurrentRoomReadyOnce(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	if (!IsLocalController() || HasAuthority() || InstanceKey.IsNone() || RoomId.IsNone())
+	{
+		return;
+	}
+
+	if (LastReportedCurrentInstanceKey == InstanceKey && LastReportedCurrentRoomId == RoomId && LastReportedCurrentSerial == TransitionSerial)
+	{
+		return;
+	}
+
+	LastReportedCurrentInstanceKey = InstanceKey;
+	LastReportedCurrentRoomId = RoomId;
+	LastReportedCurrentSerial = TransitionSerial;
+	ServerReportDungeonCurrentRoomReady(InstanceKey, RoomId, TransitionSerial);
+}
+
+void ALB_PlayerController::ServerReportDungeonCurrentRoomReady_Implementation(FName InstanceKey, FName RoomId, int32 TransitionSerial)
+{
+	// 검증은 GameState, 배치는 GameMode 몫. 여기서는 보고자와 입력만 전달한다.
+	if (ALB_GameState* GS = GetWorld() ? GetWorld()->GetGameState<ALB_GameState>() : nullptr)
+	{
+		GS->ReceiveClientCurrentRoomReady(this, InstanceKey, RoomId, TransitionSerial);
+	}
+}
+
+void ALB_PlayerController::ResetDungeonReportCache()
+{
+	LastReportedInstanceKey = NAME_None;
+	LastReportedRoomId = NAME_None;
+	LastReportedSerial = INDEX_NONE;
+	LastReportedCurrentInstanceKey = NAME_None;
+	LastReportedCurrentRoomId = NAME_None;
+	LastReportedCurrentSerial = INDEX_NONE;
+}
+
+void ALB_PlayerController::HandleDungeonTransitionChanged(const FLB_DungeonTransitionSnapshot& Snapshot)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (Snapshot.Phase != ELB_DungeonTransitionPhase::CountingDown)
+	{
+		if (bDungeonCountdownVisible)
+		{
+			bDungeonCountdownVisible = false;
+			LastCountdownNearby = INDEX_NONE;
+			LastCountdownRequired = INDEX_NONE;
+			LastCountdownTotal = INDEX_NONE;
+			LastCountdownEndTime = -1.0;
+			OnDungeonCountdownHidden();
+		}
+		return;
+	}
+
+	const bool bChanged = !bDungeonCountdownVisible
+		|| LastCountdownNearby != Snapshot.NearbyPlayers
+		|| LastCountdownRequired != Snapshot.RequiredPlayers
+		|| LastCountdownTotal != Snapshot.TotalPlayers
+		|| LastCountdownEndTime != Snapshot.CountdownEndServerTime;
+	if (!bChanged)
+	{
+		return;
+	}
+
+	bDungeonCountdownVisible = true;
+	LastCountdownNearby = Snapshot.NearbyPlayers;
+	LastCountdownRequired = Snapshot.RequiredPlayers;
+	LastCountdownTotal = Snapshot.TotalPlayers;
+	LastCountdownEndTime = Snapshot.CountdownEndServerTime;
+	OnDungeonCountdownUpdated(Snapshot.NearbyPlayers, Snapshot.RequiredPlayers, Snapshot.TotalPlayers, Snapshot.CountdownEndServerTime);
+}
+
+void ALB_PlayerController::ClientSetDungeonFade_Implementation(bool bFadeOut, float Duration)
+{
+	// 로컬 카메라 표현만. Pawn/Transform은 서버가 소유한다.
+	if (!IsLocalController() || !PlayerCameraManager)
+	{
+		return;
+	}
+
+	const float SafeDuration = FMath::Max(0.f, Duration);
+	constexpr float MinFadeDuration = KINDA_SMALL_NUMBER;
+
+	if (bFadeOut)
+	{
+		// 중복 Fade Out도 현재 알파에서 이어가므로 깜빡임 없이 갱신된다.
+		if (SafeDuration <= MinFadeDuration)
+		{
+			PlayerCameraManager->SetManualCameraFade(1.f, FLinearColor::Black, false);
+		}
+		else
+		{
+			const float FromAlpha = FMath::Clamp(PlayerCameraManager->FadeAmount, 0.f, 1.f);
+			PlayerCameraManager->StartCameraFade(FromAlpha, 1.f, SafeDuration, FLinearColor::Black, false, true);
+		}
+	}
+	else
+	{
+		// 이미 Fade In 중/완료라면 1로 되돌리지 않는다.
+		if (bHasDungeonFadeRequest && !bLastDungeonFadeOut)
+		{
+			return;
+		}
+
+		if (SafeDuration <= MinFadeDuration)
+		{
+			PlayerCameraManager->StopCameraFade();
+		}
+		else
+		{
+			PlayerCameraManager->StartCameraFade(1.f, 0.f, SafeDuration, FLinearColor::Black, false, false);
+		}
+	}
+
+	bHasDungeonFadeRequest = true;
+	bLastDungeonFadeOut = bFadeOut;
+}
+
+#pragma endregion
 
 void ALB_PlayerController::OnPossess(APawn* InPawn)
 {

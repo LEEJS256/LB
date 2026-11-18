@@ -27,6 +27,16 @@ public:
 	class ULB_DMGFontManager* Get_DMGFontMgr() const;
 	
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	// CountingDown Phase에서 인원/종료 서버 시간이 바뀔 때만 호출된다.
+	UFUNCTION(BlueprintImplementableEvent, Category = "LB|Dungeon")
+	void OnDungeonCountdownUpdated(int32 NearbyPlayers, int32 RequiredPlayers, int32 TotalPlayers, double CountdownEndServerTime);
+
+	// CountingDown이 아닌 Phase로 바뀌면 즉시 호출된다.
+	UFUNCTION(BlueprintImplementableEvent, Category = "LB|Dungeon")
+	void OnDungeonCountdownHidden();
+
 	// Enhanced Input Mapping Context 등록과 Action 바인딩 (로컬 컨트롤러에서만 호출됨)
 	virtual void SetupInputComponent() override;
 

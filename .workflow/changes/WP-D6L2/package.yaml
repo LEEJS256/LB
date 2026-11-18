@@ -1,7 +1,9 @@
 id: WP-D6L2
-title: Data Asset 기반 정적 던전 조각 조립
+title: 분기·순환 기반 파티 방 스트리밍 전환
 branch: feature/dungeon-layout
 base: master
+pr_type: feat
+pr_scope: dungeon
 protected:
   - Source/LB/Object/Destructible/**
   - Source/LB/Data/Loot/**
@@ -10,11 +12,12 @@ protected:
   - Source/LB/GAS/GA/LB_GA_NormalAttack.h
   - Source/LB/GAS/GA/LB_GA_NormalAttack.cpp
 description: |
-  Layout Data Asset의 맵 조각·배치 정보를 읽어 정적 테스트 던전을 조립한다.
-  GameMode가 고정 Layout을 배치 목록으로 변환하고 GameState로 공유하며 각 World는 동일 이름·Transform으로 조립한다.
-  랜덤 생성·포트 탐색·런타임 재조립·전투 Actor 배치·이동 잠금 및 전원 준비 배리어는 제외한다.
+  Layout Data Asset의 분기·합류·순환 Room Graph를 두 슬롯에 스트리밍하고 Exit별 TargetEntryId로 파티 전체를 목적지 Entry에 배치한다.
+  선택 Exit의 과반수는 카운트다운, 전원 진입은 즉시 전환하며 서버 준비 Barrier·Fade·서버 Teleport·이전 방 해제를 하나의 전환 수명으로 처리한다.
+  명시적 던전 시작과 안정 상태의 늦은 Client 복구를 지원하고, 도착 직후 겹친 Exit는 Pawn별로 이탈 전까지 억제한다.
+  랜덤 Route·방 전투 상태 저장·사망/관전자 참가 규칙·게임플레이 Actor 배치·전환 실패 재시도 UX는 제외한다.
 verify:
   - name: 에디터 종료 후 LBEditor 통합 빌드
     use: build-editor
-  - manual: E01·E02에서 맵 조각 규격·로컬 로드 완료 및 실패 정리를 확인했다
-  - manual: E99에서 Listen Server·Client·늦은 접속의 동일 배치와 종료 정리를 확인했다
+  - manual: 독립 방·두 슬롯 로드와 Exit별 TargetEntryId 도착을 확인하고 A→B→A→C→A 순환 이동에서 이전 방 해제와 시리얼 증가를 확인했다
+  - manual: Listen Server와 Client에서 Exit별 과반수·전원 즉시 전환·준비 Barrier·Fade·도착 Exit 억제·안정 상태의 늦은 Client 복구를 확인했다

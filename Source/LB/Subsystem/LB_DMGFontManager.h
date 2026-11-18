@@ -35,7 +35,7 @@ private:
 	};
 
 	UPROPERTY() TArray<TObjectPtr<ULB_DamageFont>> Pool;
+	void Release(ULB_DamageFont* Widget) { Pool.Add(Widget); }
 	TArray<FActiveEntry> Active;
-	
-	void Release(ULB_DamageFont* Widget);
+
 };
