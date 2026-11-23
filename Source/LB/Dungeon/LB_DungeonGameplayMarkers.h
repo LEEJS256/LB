@@ -22,7 +22,7 @@ class ALB_DestructibleProp;
  * - Marker는 데이터 작성 전용이다. BeginPlay Spawn, 복제, Actor 상태, RoomId, Loot, Exit 제어를
  *   수행하지 않는다. 실제 Spawn은 서버 Runtime Manager가 Marker Transform과 소유 ULevel을 조회해 수행한다.
  */
-UCLASS(Abstract, NotBlueprintable)
+UCLASS(Abstract, Blueprintable)
 class LB_API ALB_DungeonGameplaySpawnMarker : public AActor
 {
 	GENERATED_BODY()
@@ -61,7 +61,7 @@ protected:
 };
 
 /** 몬스터 Spawn Marker. */
-UCLASS(NotBlueprintable)
+UCLASS(Blueprintable)
 class LB_API ALB_DungeonMonsterSpawnMarker : public ALB_DungeonGameplaySpawnMarker
 {
 	GENERATED_BODY()
@@ -78,7 +78,7 @@ protected:
 };
 
 /** 파괴 오브젝트(Prop) Spawn Marker. */
-UCLASS(NotBlueprintable)
+UCLASS(Blueprintable)
 class LB_API ALB_DungeonPropSpawnMarker : public ALB_DungeonGameplaySpawnMarker
 {
 	GENERATED_BODY()
