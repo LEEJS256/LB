@@ -23,8 +23,10 @@ class LB_API ALB_PlayerController : public APlayerController
 {
 	GENERATED_BODY()
 	ALB_PlayerController();
+
 public:
 	void CloseInventory();
+	void CloseSkillStat();
 
 	UFUNCTION(BlueprintCallable, Category = "LB|Component")
 	class ULB_DMGFontManager* Get_DMGFontMgr() const;
@@ -48,7 +50,8 @@ protected:
 
 	// CountingDown Phase에서 인원/종료 서버 시간이 바뀔 때만 호출된다.
 	UFUNCTION(BlueprintImplementableEvent, Category = "LB|Dungeon")
-	void OnDungeonCountdownUpdated(int32 NearbyPlayers, int32 RequiredPlayers, int32 TotalPlayers, double CountdownEndServerTime);
+	void OnDungeonCountdownUpdated(int32 NearbyPlayers, int32 RequiredPlayers, int32 TotalPlayers,
+	                               double CountdownEndServerTime);
 
 	// CountingDown이 아닌 Phase로 바뀌면 즉시 호출된다.
 	UFUNCTION(BlueprintImplementableEvent, Category = "LB|Dungeon")
@@ -58,14 +61,14 @@ protected:
 	virtual void SetupInputComponent() override;
 
 	virtual void BeginPlay() override;
-	virtual void OnRep_PlayerState() override;      // 클라: PlayerState 도착 시점
+	virtual void OnRep_PlayerState() override; // 클라: PlayerState 도착 시점
 	virtual void OnPossess(APawn* InPawn) override; // 서버/호스트
-	
+
 	void OnMoveTriggered(const FInputActionValue& Value);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	TObjectPtr<ULB_DMGFontManager> DamageNumberManager;
-	
+
 #pragma region INPUT_AREA
 	// 에디터에서 생성한 /Game/LB/Input/IMC_Player를 BP_PlayerController Class Defaults에서 연결
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
@@ -81,17 +84,21 @@ protected:
 	TArray<TObjectPtr<UInputAction>> SkillSlotActions; // A S D F (4개)
 
 	UPROPERTY(EditDefaultsOnly, Category="Input")
-	TArray<TObjectPtr<UInputAction>> ItemSlotActions;  // Num1~4 (4개)
-	
+	TArray<TObjectPtr<UInputAction>> ItemSlotActions; // Num1~4 (4개)
+
 	//스페이스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DodgeAction;
 
-	//인벤토리
+	//인벤토리 - I
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> InvenAction;
 
-	
+	//스킬&스탯창 - K
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> SkillInfoAction;
+
+
 	// 점프- C
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> JumpAction;
@@ -101,12 +108,10 @@ protected:
 	// 기본스킬- Z
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> StrongAttackAction;
-	
+
 #pragma endregion
 
-	
 private:
-
 #pragma region UI
 
 	// MyPlayerController.h
@@ -118,8 +123,8 @@ private:
 
 	void InitUI();
 	void BindHUD();
-#pragma endregion 
-	
+#pragma endregion
+
 #pragma  region Action
 	void Jump(const FInputActionValue& Value);
 	void StopJumping();
@@ -127,6 +132,7 @@ private:
 	void StartSprint(const FInputActionValue& Value);
 	void StopSprint(const FInputActionValue& Value);
 	void TurnOn_Inventory(const FInputActionValue& Value);
+	void TurnOn_SkillInfo(const FInputActionValue& Value);
 	void Dodge(const FInputActionValue& Value);
 	void OnNormalAttackStarted(const FInputActionValue& Value);
 	void StrongATK(const FInputActionValue& Value);
@@ -134,15 +140,14 @@ private:
 	void OnSkillSlot(int32 Index);
 	void OnItemSlot(int32 Index);
 	void Set_IATag();
-	
+
 	FGameplayTagContainer SprintTagContainer;
 	FGameplayTagContainer DodgeTagContainer;
-	
+
 #pragma endregion
 
 
-private:
-	void SetInventoryUIMode(bool bOpen)   ;
+	void RefreshUIInputMode();
 #pragma region Dungeon
 	// GameState 도착 여부와 무관하게 여러 지점에서 호출해도 안전하다(중복 바인딩 없음).
 	void TryBindDungeonGameState();
