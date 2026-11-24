@@ -3,6 +3,8 @@
 #include "Subsystem/LB_GISubsystem_Data.h"
 #include "AbilitySystemComponent.h"
 #include "LB_InventoryComponent.h"
+#include "LB_SkillComponent.h"
+#include "Data/LB_DA_SkillInfo.h"
 #include "Net/UnrealNetwork.h"
 
 ULB_QuickSlotComponent::ULB_QuickSlotComponent()
@@ -25,10 +27,10 @@ void ULB_QuickSlotComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 // ------------------------------------------------------------------ 등록 / 해제
 
-void ULB_QuickSlotComponent::RegisterSkill(int32 Index, FGameplayTag AbilityTag)
+void ULB_QuickSlotComponent::RegisterSkill(int32 Index, FName SkillCode)
 {
 	FLB_QuickSlotEntry Entry;
-	Entry.AbilityTag = AbilityTag;
+	Entry.SkillCode = SkillCode;
 	Server_SetSlot(ELB_QuickSlotType::Skill, Index, Entry);
 }
 
@@ -48,10 +50,45 @@ void ULB_QuickSlotComponent::Server_SetSlot_Implementation(ELB_QuickSlotType Typ
                                                            FLB_QuickSlotEntry Entry)
 {
 	// 스킬 칸은 보류
-	if (Type != ELB_QuickSlotType::Item || !ItemSlots.IsValidIndex(Index))
+	if (!GetSlots(Type).IsValidIndex(Index))
 	{
 		return;
 	}
+
+	// ---- 스킬 칸 ----
+	if (Type == ELB_QuickSlotType::Skill)
+	{
+		Entry.ItemCode = NAME_None;
+		Entry.AbilityTag = FGameplayTag();
+
+		if (!Entry.SkillCode.IsNone())
+		{
+			const ULB_DA_SkillInfo* Info = GetSkillInfo(Entry.SkillCode);
+			const ULB_SkillComponent* Skills = GetSkillComp();
+			if (!Info || !Skills || Info->bIsPassive || !Info->AbilityClass || !Skills->IsSkillLearned(Entry.SkillCode))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[QuickSlot] 스킬 등록 실패 (%s): 미습득/패시브/GA 없음"),
+					   *Entry.SkillCode.ToString());
+				return;
+			}
+
+			// 같은 스킬이 다른 칸에 있으면 비움 (이동 효과)
+			for (int32 i = 0; i < SkillSlots.Num(); ++i)
+			{
+				if (i != Index && SkillSlots[i].SkillCode == Entry.SkillCode)
+				{
+					SkillSlots[i] = FLB_QuickSlotEntry();
+					OnSlotChanged.Broadcast(ELB_QuickSlotType::Skill, i);
+				}
+			}
+		}
+
+		SkillSlots[Index] = Entry;
+		OnSlotChanged.Broadcast(ELB_QuickSlotType::Skill, Index);
+		return;
+	}
+
+	
  
 	Entry.SkillCode = NAME_None;
  
@@ -115,15 +152,21 @@ void ULB_QuickSlotComponent::Server_SwapSlots_Implementation(ELB_QuickSlotType T
 
 void ULB_QuickSlotComponent::UseSkillSlot(int32 Index)
 {
-	// if (!SkillSlots.IsValidIndex(Index) || !SkillSlots[Index].AbilityTag.IsValid())
-	// {
-	// 	return;
-	// }
-	//
-	// if (UAbilitySystemComponent* ASC = GetASC())
-	// {
-	// 	ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(SkillSlots[Index].AbilityTag));
-	// }
+	if (!SkillSlots.IsValidIndex(Index) || SkillSlots[Index].SkillCode.IsNone())
+	{
+		return;
+	}
+
+	const ULB_DA_SkillInfo* Info = GetSkillInfo(SkillSlots[Index].SkillCode);
+	if (!Info || !Info->AbilityClass)
+	{
+		return;
+	}
+
+	if (UAbilitySystemComponent* ASC = GetASC())
+	{
+		ASC->TryActivateAbilityByClass(Info->AbilityClass);
+	}
 }
 
 void ULB_QuickSlotComponent::UseItemSlot(int32 Index)
@@ -211,4 +254,21 @@ const ULB_DA_ItemInfo* ULB_QuickSlotComponent::GetItemInfo(FName ItemCode) const
 {
 	const ULB_GISubsystem_Data* Data = ULB_GISubsystem_Data::Get_Subsystem_Data(this);
 	return Data ? Data->GetItemInfo(ItemCode) : nullptr;
+}
+
+ULB_SkillComponent* ULB_QuickSlotComponent::GetSkillComp() const
+{
+	const AActor* Owner = GetOwner();
+	return Owner ? Owner->FindComponentByClass<ULB_SkillComponent>() : nullptr;
+}
+
+const ULB_DA_SkillInfo* ULB_QuickSlotComponent::GetSkillInfo(FName SkillCode) const
+{
+	const ULB_GISubsystem_Data* Data = ULB_GISubsystem_Data::Get_Subsystem_Data(this);
+	return Data ? Data->GetSkillInfo(SkillCode) : nullptr;
+}
+
+UAbilitySystemComponent* ULB_QuickSlotComponent::GetASC() const
+{
+	return UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetOwner());
 }
