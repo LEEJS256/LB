@@ -26,6 +26,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill", meta = (MultiLine = "true"))
 	FText Description;
 
+	//참이면 패시브
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+	bool bIsPassive = false;
+	
 	/** 이 스킬을 실행하는 GA. ASC에 부여(Grant)된 같은 클래스를 찾아 사용/쿨타임 조회에 쓴다 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
 	TSubclassOf<UGameplayAbility> AbilityClass;
@@ -38,9 +42,31 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill|Level", meta = (MultiLine = "true"))
 	TArray<FText> LevelDescriptions;
 
+	/** 레벨별 피해량 배율(%) (0번 = Lv.1). 비면 "-" 표시 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill|Level")
+	TArray<float> DamagePercentPerLevel;
+
+	/** 해당 레벨을 배우는 데 필요한 스킬 포인트 (0번 = Lv.1 습득 비용). 비면 1 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill|Level")
+	TArray<int32> PointCostPerLevel;
+	
 	FText GetDescriptionForLevel(int32 Level) const
 	{
 		const int32 Index = FMath::Max(Level, 1) - 1;
 		return LevelDescriptions.IsValidIndex(Index) ? LevelDescriptions[Index] : Description;
 	}
+	bool GetDamagePercent(int32 Level, float& Out) const
+	{
+		const int32 I = FMath::Max(Level, 1) - 1;
+		if (!DamagePercentPerLevel.IsValidIndex(I)) return false;
+		Out = DamagePercentPerLevel[I];
+		return true;
+	}
+
+	int32 GetPointCost(int32 TargetLevel) const
+	{
+		const int32 I = FMath::Max(TargetLevel, 1) - 1;
+		return PointCostPerLevel.IsValidIndex(I) ? FMath::Max(PointCostPerLevel[I], 1) : 1;
+	}
+	
 };
