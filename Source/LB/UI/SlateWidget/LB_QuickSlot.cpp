@@ -4,6 +4,7 @@
 #include "Component/LB_InventoryComponent.h"
 #include "Data/LB_DA_ItemInfo.h"
 #include "PaperSprite.h"
+#include "Data/LB_DA_SkillInfo.h"
 #include "Subsystem/LB_GISubsystem_Data.h"
 
 
@@ -143,6 +144,14 @@ void ULB_QuickSlot::RefreshFromComponent()
 		if (SlotType == ELB_QuickSlotType::Item && !Entry.ItemCode.IsNone())
 		{
 			ResolveItemVisual(Entry.ItemCode, NewIcon, NewCount, NewInfo);
+		}
+		else if (SlotType == ELB_QuickSlotType::Skill && !Entry.SkillCode.IsNone())
+		{
+			const ULB_GISubsystem_Data* Data = ULB_GISubsystem_Data::Get_Subsystem_Data(this);
+			if (const ULB_DA_SkillInfo* Info = Data ? Data->GetSkillInfo(Entry.SkillCode) : nullptr)
+			{
+				NewIcon = Info->Icon.LoadSynchronous();
+			}
 		}
 	}
 
