@@ -14,6 +14,7 @@
 class UAbilitySystemComponent;
 class ULB_InventoryComponent;
 class ULB_QuickSlotComponent;
+class ULB_SkillComponent;
 class UAttributeSet;
 class ULB_AttributeSet;
 class ULB_PlayerDataAsset;
@@ -53,6 +54,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category = "LB|Component")
 	TObjectPtr<ULB_QuickSlotComponent> QuickSlotComponent;
+	
+	UFUNCTION(BlueprintCallable, Category = "LB|Component")
+	ULB_SkillComponent* Get_SkillComponent() const { return SkillComponent; }
+
+	UPROPERTY(VisibleAnywhere, Category = "LB|Component")
+	TObjectPtr<ULB_SkillComponent> SkillComponent;
 #pragma  endregion 
 	
 #pragma region GAS
