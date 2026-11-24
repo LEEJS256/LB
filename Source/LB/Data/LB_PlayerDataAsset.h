@@ -104,7 +104,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
 	TArray<FLB_StartupItem> StartupItems;
-	
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	TArray<FName> AvailableSkills;
 #pragma endregion
 
 #pragma region DROPDATA
