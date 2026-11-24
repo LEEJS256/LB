@@ -4,6 +4,7 @@
 #include "Subsystem/LB_GISubsystem_Data.h"
 #include "Data/LB_DT_MasterItem.h"
 #include "LB_GameInstance.h"
+#include "Data/LB_DT_MasterSkill.h"
 
 void ULB_GISubsystem_Data::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -12,9 +13,11 @@ void ULB_GISubsystem_Data::Initialize(FSubsystemCollectionBase& Collection)
 	if (const ULB_GameInstance* GI = Cast<ULB_GameInstance>(GetGameInstance()))
 	{
 		MasterItemTable = GI->MasterItemTable.LoadSynchronous();
-		WeaponInfoTable = GI->WeaponInfoTable.LoadSynchronous(); 
+		WeaponInfoTable = GI->WeaponInfoTable.LoadSynchronous();
+		MasterSkillTable = GI->MasterSkillTable.LoadSynchronous();
 	}
 	ensureMsgf(MasterItemTable, TEXT("BP_GameInstance에 MasterItemTable 지정 필요"));
+	ensureMsgf(MasterSkillTable, TEXT("BP_GameInstance에 MasterSkillTable 지정 필요"));
 }
 
 const FLB_DT_MasterItem* ULB_GISubsystem_Data::FindItemRow(FName ItemCode) const
@@ -41,6 +44,13 @@ const FLB_DT_WeaponInformation* ULB_GISubsystem_Data::FindWeaponRow(const FGamep
 	return nullptr;
 }
 
+const FLB_DT_MasterSkill* ULB_GISubsystem_Data::FindSkillRow(FName SkillCode) const
+{
+	if (!MasterSkillTable || SkillCode.IsNone())
+		return nullptr;
+	return MasterSkillTable->FindRow<FLB_DT_MasterSkill>(SkillCode, TEXT("FindSkillRow"));
+}
+
 ULB_GISubsystem_Data* ULB_GISubsystem_Data::Get_Subsystem_Data(const UObject* WorldContext)
 {
 	if (!GEngine || !WorldContext)
@@ -62,4 +72,10 @@ ULB_DA_ItemInfo* ULB_GISubsystem_Data::GetItemInfo(FName ItemCode) const
 {
 	const FLB_DT_MasterItem* Row = FindItemRow(ItemCode);
 	return Row ? Row->ItemInfo.LoadSynchronous() : nullptr;
+}
+
+ULB_DA_SkillInfo* ULB_GISubsystem_Data::GetSkillInfo(FName SkillCode) const
+{
+	const FLB_DT_MasterSkill* Row = FindSkillRow(SkillCode);
+	return Row ? Row->SkillInfo.LoadSynchronous() : nullptr;
 }
