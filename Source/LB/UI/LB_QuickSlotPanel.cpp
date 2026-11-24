@@ -7,6 +7,7 @@
 #include "GameFramework/PlayerState.h"
 #include "TimerManager.h"
 #include "Component/LB_InventoryComponent.h"
+#include "Component/LB_SkillComponent.h"
 #include "PlayerState/LB_PlayerState.h"
 #include "UI/SlateWidget/LB_QuickSlot.h"
 #include "Utility/LB_ItemEntry.h"
@@ -160,7 +161,24 @@ void ULB_QuickSlotPanel::HandleSlotDropped(ELB_QuickSlotType DstType, FName SrcG
 		return;
 	}
 
-	// TODO: 스킬창 → 스킬 칸 (스킬 목록 UI가 생기면 SrcGroup/SrcIndex → AbilityTag 변환 후 RegisterSkill)
+	if (SrcGroup == TEXT("Skill"))
+	{
+		if (DstType != ELB_QuickSlotType::Skill)
+			return;
+
+		const AActor* Owner = Component->GetOwner();
+		const ULB_SkillComponent* Skills = Owner ? Owner->FindComponentByClass<ULB_SkillComponent>() : nullptr;
+		if (!Skills || !Skills->GetAvailableSkills().IsValidIndex(SrcIndex))
+			return;
+
+		const FName SkillCode = Skills->GetAvailableSkills()[SrcIndex];
+		if (Skills->IsSkillLearned(SkillCode))
+		{
+			Component->RegisterSkill(DstIndex, SkillCode);
+		}
+		return;
+	}
+	
 }
 
 FName ULB_QuickSlotPanel::ResolveInventoryItemCode(int32 InventoryIndex) const

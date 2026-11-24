@@ -7,13 +7,17 @@
 
 class UAbilitySystemComponent;
 class ULB_DA_ItemInfo;
+class ULB_DA_SkillInfo;
+class ULB_SkillComponent;
 class ULB_InventoryComponent;
+
 UENUM(BlueprintType)
 enum class ELB_QuickSlotType : uint8
 {
 	Skill,
 	Item
 };
+
 
 
 // 드래그앤드롭 그룹 이름 (FLB_SlotDragDropOp::SourceGroup)
@@ -44,7 +48,10 @@ struct LB_API FLB_QuickSlotEntry
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName SkillCode;
 	
-	bool IsEmpty() const { return !AbilityTag.IsValid() && ItemCode.IsNone(); }
+	bool IsEmpty() const
+	{
+		return !AbilityTag.IsValid() && ItemCode.IsNone() && SkillCode.IsNone();
+	}
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLB_OnQuickSlotChanged, ELB_QuickSlotType, SlotType, int32, SlotIndex);
@@ -70,7 +77,7 @@ public:
 
 	// ---- 등록 / 해제 (클라에서 호출해도 서버에서 처리) ----
 	UFUNCTION(BlueprintCallable, Category="LB|QuickSlot")
-	void RegisterSkill(int32 Index, FGameplayTag AbilityTag);
+	void RegisterSkill(int32 Index, FName SkillCode);
 
 	UFUNCTION(BlueprintCallable, Category="LB|QuickSlot")
 	void RegisterItem(int32 Index, FName ItemCode);
@@ -146,4 +153,8 @@ private:
  
 	ULB_InventoryComponent* GetInventory() const; // 같은 PlayerState의 인벤토리
 	const ULB_DA_ItemInfo* GetItemInfo(FName ItemCode) const;
+
+	ULB_SkillComponent* GetSkillComp() const;
+	const ULB_DA_SkillInfo* GetSkillInfo(FName SkillCode) const;
+	UAbilitySystemComponent* GetASC() const;
 };
