@@ -9,6 +9,7 @@
 class ULB_PlayerStatus;
 class ULB_InventoryPanel;
 class ULB_QuickSlotPanel;
+class ULB_SkillStatPanel;
 UCLASS()
 class LB_API ULB_HUD : public UUserWidget
 {
@@ -27,13 +28,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	bool IsInventoryVisible() const;
 
+	UFUNCTION(BlueprintPure, Category = "HUD")
+	bool IsSkillStatVisible() const;
+	
 	void SetInventoryVisible(bool bVisible);
 
-
+	void SetSkillInfoVisible(bool bVisible);
 protected:
 
 	virtual void NativeConstruct() override;
 
+	
+	UFUNCTION()
+	void HandleSkillInfoCloseRequested();
+	
 	UFUNCTION()
 	void HandleInventoryCloseRequested();
 
@@ -46,6 +54,9 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<ULB_InventoryPanel> BP_Inventory;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<ULB_SkillStatPanel> BP_SkillInfo;
+	
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<ULB_QuickSlotPanel> BP_QuickSlot;
 };

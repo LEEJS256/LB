@@ -20,4 +20,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "LB|Data")
 	TSoftObjectPtr<UDataTable> WeaponInfoTable;
+
+	UPROPERTY(EditDefaultsOnly, Category = "LB|Data")
+	TSoftObjectPtr<UDataTable> MasterSkillTable;
 };

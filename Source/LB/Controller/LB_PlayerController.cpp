@@ -16,6 +16,7 @@
 #include "UI/LB_HUD.h"
 #include "GameMode/LB_GameState.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Component/LB_QuickSlotComponent.h"
 #include "Engine/World.h"
 
 
@@ -29,7 +30,16 @@ void ALB_PlayerController::CloseInventory()
 	if (!HUDWidget || !HUDWidget->IsInventoryVisible()) return;
 
 	HUDWidget->SetInventoryVisible(false);
-	SetInventoryUIMode(false);
+	RefreshUIInputMode();
+}
+
+void ALB_PlayerController::CloseSkillStat()
+{
+	if (!HUDWidget || !HUDWidget->IsSkillStatVisible())
+		return;
+
+	HUDWidget->SetSkillInfoVisible(false);
+	RefreshUIInputMode();
 }
 
 class ULB_DMGFontManager* ALB_PlayerController::Get_DMGFontMgr() const
@@ -85,6 +95,11 @@ void ALB_PlayerController::SetupInputComponent()
 		{
 			EnhancedInputComponent->BindAction(InvenAction, ETriggerEvent::Started, this,
 											   &ALB_PlayerController::TurnOn_Inventory);
+		}
+		if (SkillInfoAction)
+		{
+			EnhancedInputComponent->BindAction(SkillInfoAction, ETriggerEvent::Started, this,
+											   &ALB_PlayerController::TurnOn_SkillInfo);
 		}
 		if (NormalAttackAction)
 		{
@@ -500,10 +515,16 @@ void ALB_PlayerController::TurnOn_Inventory(const FInputActionValue& Value)
 {
 	if (!IsLocalController() || !HUDWidget) return;
 
-	if (HUDWidget->IsInventoryVisible()) { CloseInventory(); return; }
+	HUDWidget->SetInventoryVisible(!HUDWidget->IsInventoryVisible());
+	RefreshUIInputMode();
+}
 
-	HUDWidget->SetInventoryVisible(true);
-	SetInventoryUIMode(true);
+void ALB_PlayerController::TurnOn_SkillInfo(const FInputActionValue& Value)
+{
+	if (!IsLocalController() || !HUDWidget) return;
+
+	HUDWidget->SetSkillInfoVisible(!HUDWidget->IsSkillStatVisible());
+	RefreshUIInputMode();
 }
 
 void ALB_PlayerController::Dodge(const FInputActionValue& Value)
@@ -553,14 +574,24 @@ void ALB_PlayerController::StrongATK(const FInputActionValue& Value)
 
 void ALB_PlayerController::OnSkillSlot(int32 Index)
 {
-	// if (ULB_QuickSlotComponent* QS = GetPlayerState<ALB_PlayerState>()->GetQuickSlotComponent())
-	// 	QS->UseSkillSlot(Index);
+	if (const ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>())
+	{
+		if (ULB_QuickSlotComponent* QS = PS->Get_QuickSlotComponent())
+		{
+			QS->UseSkillSlot(Index);
+		}
+	}
 }
 
 void ALB_PlayerController::OnItemSlot(int32 Index)
 {
-	// if (ULB_QuickSlotComponent* QS = GetPlayerState<ALB_PlayerState>()->GetQuickSlotComponent())
-	// 	QS->UseSkillSlot(Index);
+	if (const ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>())
+	{
+		if (ULB_QuickSlotComponent* QS = PS->Get_QuickSlotComponent())
+		{
+			QS->UseItemSlot(Index);
+		}
+	}
 }
 
 void ALB_PlayerController::Set_IATag()
@@ -569,16 +600,19 @@ void ALB_PlayerController::Set_IATag()
 	DodgeTagContainer.AddTag(TAG_Ability_Dodge);
 }
 
-void ALB_PlayerController::SetInventoryUIMode(bool bOpen)
+
+
+void ALB_PlayerController::RefreshUIInputMode()
 {
-	if (bOpen)
+	const bool bAnyOpen = HUDWidget && (HUDWidget->IsInventoryVisible() || HUDWidget->IsSkillStatVisible());
+	if (bAnyOpen)
 	{
 		FInputModeGameAndUI Mode;
 		Mode.SetHideCursorDuringCapture(false);
 		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		SetInputMode(Mode);
 		bShowMouseCursor = true;
-		SetIgnoreLookInput(true);    // 열려 있는 동안 카메라가 마우스를 따라 돌지 않게
+		SetIgnoreLookInput(true);
 	}
 	else
 	{

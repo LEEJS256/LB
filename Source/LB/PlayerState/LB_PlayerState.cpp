@@ -3,6 +3,7 @@
 #include "AbilitySystemComponent.h"
 #include "Component/LB_InventoryComponent.h"
 #include "Component/LB_QuickSlotComponent.h"
+#include "Component/LB_SkillComponent.h"
 #include "Data/LB_PlayerDataAsset.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "Utility/LB_NativeGameplayTag.h"
@@ -19,6 +20,8 @@ ALB_PlayerState::ALB_PlayerState()
 	QuickSlotComponent = CreateDefaultSubobject<ULB_QuickSlotComponent>(TEXT("QuickSlotComponent"));
 	QuickSlotComponent->SetIsReplicated(true);
 
+	SkillComponent = CreateDefaultSubobject<ULB_SkillComponent>(TEXT("SkillComponent"));
+	SkillComponent->SetIsReplicated(true);
 
 	// 같은 액터의 서브오브젝트라 ASC에 자동 등록됨
 	AttributeSet = CreateDefaultSubobject<ULB_AttributeSet>(TEXT("AttributeSet"));
@@ -93,6 +96,11 @@ void ALB_PlayerState::InitializePlayerDA()
 	ApplyDefaultAttributes(PlayerDA);
 	GrantDefaultItems(PlayerDA);
 	AddStateTag(TAG_State_Idle);
+
+	if (SkillComponent)
+	{
+		SkillComponent->InitAvailableSkills(PlayerDA->AvailableSkills);
+	}
 }
 
 

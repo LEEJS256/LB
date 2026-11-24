@@ -3,6 +3,7 @@
 
 #include "LB_InventoryPanel.h"
 #include "LB_PlayerStatus.h"
+#include "LB_SkillStatPanel.h"
 #include "Controller/LB_PlayerController.h"
 
 ULB_PlayerStatus* ULB_HUD::GetPlayerStatus(int32 SlotIndex) const
@@ -34,10 +35,21 @@ bool ULB_HUD::IsInventoryVisible() const
 	return BP_Inventory && BP_Inventory->IsVisible();
 }
 
+bool ULB_HUD::IsSkillStatVisible() const
+{
+	return BP_SkillInfo && BP_SkillInfo->IsVisible();
+}
+
 void ULB_HUD::SetInventoryVisible(bool bVisible)
 {
 	if (BP_Inventory)
 		BP_Inventory->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+}
+
+void ULB_HUD::SetSkillInfoVisible(bool bVisible)
+{
+	if (BP_SkillInfo)
+		BP_SkillInfo->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 }
 
 void ULB_HUD::NativeConstruct()
@@ -48,6 +60,17 @@ void ULB_HUD::NativeConstruct()
 		BP_Inventory->SetVisibility(ESlateVisibility::Collapsed);
 		BP_Inventory->OnCloseRequested.AddUniqueDynamic(this, &ULB_HUD::HandleInventoryCloseRequested);
 	}
+	if (BP_SkillInfo)
+	{
+		BP_SkillInfo->SetVisibility(ESlateVisibility::Collapsed);
+		BP_SkillInfo->OnCloseRequested_SkillStat.AddUniqueDynamic(this, &ULB_HUD::HandleSkillInfoCloseRequested);
+	}
+}
+
+void ULB_HUD::HandleSkillInfoCloseRequested()
+{
+	if (ALB_PlayerController* PC = GetOwningPlayer<ALB_PlayerController>())
+		PC->CloseSkillStat();
 }
 
 void ULB_HUD::HandleInventoryCloseRequested()

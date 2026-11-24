@@ -12,6 +12,7 @@
 class UDataTable;
 class ULB_DA_ItemInfo;
 struct FLB_DT_MasterItem;
+struct FLB_DT_MasterSkill;
 
 UCLASS()
 class LB_API ULB_GISubsystem_Data : public UGameInstanceSubsystem
@@ -23,17 +24,22 @@ public:
 	
 	const FLB_DT_MasterItem*		FindItemRow(FName ItemCode) const;
 	const FLB_DT_WeaponInformation* FindWeaponRow(const FGameplayTag& WeaponTag) const;
-
+	const FLB_DT_MasterSkill*		FindSkillRow(FName SkillCode) const;
+	
 	static ULB_GISubsystem_Data* Get_Subsystem_Data(const UObject* WorldContext);
 	
 	UFUNCTION(BlueprintPure, Category = "LB|Data")
 	ULB_DA_ItemInfo* GetItemInfo(FName ItemCode) const;
 
+	UFUNCTION(BlueprintPure, Category = "LB|Data")
+	ULB_DA_SkillInfo* GetSkillInfo(FName SkillCode) const;
 private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> MasterItemTable;
 
 	UPROPERTY()
 	TObjectPtr<UDataTable> WeaponInfoTable;
-	
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> MasterSkillTable;
 };
