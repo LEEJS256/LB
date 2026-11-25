@@ -30,9 +30,11 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_DMGType_Ice, "DMGType.Ice");
 UE_DEFINE_GAMEPLAY_TAG(TAG_DMGType_Lightning, "DMGType.Lightning");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability, "Ability");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Death, "Ability.Death");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Combo, "Ability.Combo");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Sprint, "Ability.Sprint");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Dodge, "Ability.Dodge");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Skill, "Ability.Skill");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Ultimate, "Ability.Ultimate");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_BuildTower, "Ability.BuildTower");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Tower_ATK, "Ability.Tower.ATK");
@@ -40,23 +42,37 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_InterAction, "Ability.InterAction");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Monster_Attack_Melee, "Ability.Monster.Attack.Melee");
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_State, "State");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Idle, "State.Idle");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Action, "State.Action");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Action_Attacking, "State.Action.Attacking", "평타(Z/X) 중");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Action_Skill, "State.Action.Skill", "스킬 사용 중");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Action_Dodge, "State.Action.Dodge", "대쉬 중");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Action_Sprint, "State.Action.Sprint", "스프린트 중");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Block, "State.Block");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Block_Move, "State.Block.Move", "이동 입력 차단");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Block_Jump, "State.Block.Jump", "점프 차단");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Block_Rotate, "State.Block.Rotate", "방향 전환 차단");
+
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Hit, "State.Hit", "피격(경직) 중");
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Death, "State.Death");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Invincible, "State.Invincible");
+
+// ---- DEPRECATED: 사용처 교체 후 삭제 예정 ----
+UE_DEFINE_GAMEPLAY_TAG(TAG_State_Idle, "State.Idle");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_ATK, "State.ATK");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Option, "State.Option");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Run, "State.Run");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Walk, "State.Walk");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Wound, "State.Wound");
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Death, "State.Death");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Build, "State.Build");
-
-UE_DEFINE_GAMEPLAY_TAG(TAG_State_Action_Attacking, "State.Action.Attacking");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_FacingLocked, "State.Movement.FacingLocked");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Movement_Blocked, "State.Movement.Blocked");
 
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event, "Event");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event_Start, "Event.Start");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Event_Death,   "Event.Death");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event_End,   "Event.End");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Event_AI_PlayerAvailable, "Event.AI.PlayerAvailable");
 
@@ -72,17 +88,12 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Equip			, "Item.Equip");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Consumable		, "Item.Consumable");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Currency		, "Item.Currency");
 
-UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade			, "Item");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade			, "Item.Grade");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier1		, "Item.Grade.Tier1");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier2		, "Item.Grade.Tier2");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier3		, "Item.Grade.Tier3");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Item_Grade_Tier4     , "Item.Grade.Tier4");
 
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Common);    // 1단계 (일반)
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Uncommon);  // 2단계 (고급)
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Rare);      // 3단계 (희귀)
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Item_Grade_Epic);      // 4단계 (영웅)
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip			, "Equip");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Equip_Weapon		, "Equip.Weapon");
