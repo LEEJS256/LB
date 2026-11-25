@@ -12,5 +12,5 @@ description: |
 verify:
   - name: 에디터 종료 후 LBEditor 통합 빌드
     use: build-editor
-  - manual: E01·E02에서 안정 SpawnId·서버 Spawn·몬스터 Exit 잠금과 결과 기록을 확인했다
-  - manual: E99에서 A→B→A 실제 재방문과 Listen Server·Client의 비재생성·중복 Loot·도착 Exit 재전환 방지를 확인했다
+  - manual: E01에서 안정 SpawnId를 확인하고 PR 준비 단계의 E02에서 무효 Marker 거부·중간 실패 롤백·생존 몬스터가 있는 방의 수동 재활성화를 확인했다
+  - manual: E99에서 서버 Spawn·몬스터 Exit 잠금·결과 기록과 Listen Server·Client의 A→B→A 재방문·소비 Actor 비재생성·Loot 비재추첨·도착 Exit 재전환 방지를 확인했다

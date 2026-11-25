@@ -29,9 +29,9 @@ WP-P9D4 항아리/Loot와 WP-D6L2 분기·순환 방 전환이 master에 Merge�
 | 1 | CT-001 몬스터 사망 완료 신호 | 서버 1회 신호와 기존 사망 회귀 |
 | 2 | CT-002 Prop 파괴 완료 신호 | Loot 전 기록 순서와 기존 항아리 회귀 |
 | 3 | CT-003 Spawn Marker | E01 안정 ID와 방 배치 |
-| 4 | CT-004 Runtime Manager | E02 Spawn·상태 기록·수동 재활성화 |
+| 4 | CT-004 Runtime Manager | 일반 빌드와 Diff 확인 |
 | 5 | CT-005 Exit 활성 상태 | 빌드와 Diff 확인 |
-| 6 | CT-006 GameMode 통합 | E99 네트워크·Exit 잠금·A→B→A 실제 재방문 |
+| 6 | CT-006 GameMode 통합 | PR 준비 단계에서 E02 독립 검증과 E99 네트워크 통합 검증 |
 
 Codex는 계획과 정합성 확인을 담당하고 Claude Code가 C++을 구현한다. 자동 Commit·Push·PR은 하지 않는다.
 
@@ -43,9 +43,13 @@ Room A에는 서로 다른 `SpawnId`의 Monster Marker와 Prop Marker를 배치�
 Marker는 서로·벽·바닥·Entry·Exit Trigger와 겹치지 않게 배치한다. Monster BP는 `AIControllerClass`, `Auto Possess AI = Placed in World or Spawned`, Monster Data와 StateTree 연결을 기존 몬스터 테스트 기준대로 유지한다.
 Room B/C처럼 게임플레이 Spawn Marker가 없는 방도 유효하다. 빈 방은 생존 몬스터가 없는 상태로 활성화되고 기존 Exit 전환을 그대로 허용한다.
 
-## 재활성화 확인
+## Runtime Manager 독립 검증 (E02)
 
-E02에서는 CT-004를 GameMode 통합 전에 독립 확인하기 위해 Runtime Manager의 같은 RoomId 수동 해제/활성화를 사용한다. 테스트 전용 호출 경로를 제품 API로 남기지 않는다. CT-006 이후 E99에서는 기존 `Room_A → Room_B → Room_A` 순환 링크로 같은 계약을 다시 확인한다.
+E02는 CT-006 커밋 이후 PR 준비 단계에서 수행한다. Runtime Manager의 활성화·해제는 일반 C++ 호출이므로, 별도 서버 측 C++ 테스트 경로가 필요하다. 테스트 경로를 제품 API로 공개하지 않는다.
+
+먼저 중복 SpawnId, None ID, 무효 Class가 Spawn 전에 거부되는지 확인한다. 유효한 구성에서는 일부 Actor가 생성된 뒤 Spawn 또는 delegate 연결 실패를 별도로 유도해, 이번 시도의 Actor·구독만 정리되고 누적 소비 상태가 유지되는지 확인한다.
+
+재활성화는 다음 순서로 확인한다.
 
 1. 몬스터 2개 중 1개만 죽이고 Prop 2개 중 1개만 파괴한다.
 2. 현재 방 Runtime을 비활성화한 뒤 같은 `RoomId`와 표시 ULevel로 다시 활성화한다.
@@ -56,7 +60,7 @@ E02에서는 CT-004를 GameMode 통합 전에 독립 확인하기 위해 Runtime
 
 E99에서는 Room A의 몬스터를 모두 처치해 Exit를 연 뒤 Prop 하나만 파괴하고 `Room_A → Room_B → Room_A`로 이동한다. 돌아온 Room A에서는 죽은 몬스터와 깨진 Prop이 생성되지 않고 온전한 Prop만 초기 상태로 생성돼야 한다. 목적지 `TargetEntryId` 도착과 기존 도착 Exit 억제도 유지돼 즉시 Room B로 되튕기지 않아야 한다.
 
-생존 몬스터를 남긴 실제 방 이동은 Exit 잠금 정책상 불가능하다. 생존 몬스터와 온전한 Prop의 초기 상태 재생성은 E02의 수동 재활성화에서 확인한다.
+Exit 잠금 때문에 생존 몬스터를 남긴 방의 재활성화는 PR 준비 단계의 E02에서 별도로 확인한다.
 
 ## 제외 범위와 후속
 
