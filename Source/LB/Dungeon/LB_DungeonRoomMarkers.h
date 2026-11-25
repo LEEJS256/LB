@@ -88,6 +88,19 @@ public:
 
 	UBoxComponent* GetExitTrigger() const { return ExitTrigger; }
 
+	/**
+	 * 서버 전용. Exit 활성 여부를 바꾼다(기본 활성, 같은 값 재호출은 무시).
+	 * 비활성: Trigger Collision을 NoCollision으로 바꾸고 추적 Pawn을 비운다.
+	 * 활성: QueryOnly와 기존 Pawn 응답을 복구하고 이미 겹친 Pawn을 재수집한다.
+	 * 어느 쪽이든 실제 Presence가 바뀐 경우에만 OnExitPresenceChanged를 한 번 알린다.
+	 * 잠금 여부 판단(몬스터 생존 등)은 호출자가 담당한다.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Dungeon|Exit")
+	void SetExitEnabled(bool bEnabled);
+
+	UFUNCTION(BlueprintPure, Category = "Dungeon|Exit")
+	bool IsExitEnabled() const { return bExitEnabled; }
+
 	// 서버 전용. 실제 목록 변화(추가/제거/무효 정리) 때만 발행.
 	FLB_OnExitPresenceChanged OnExitPresenceChanged;
 
@@ -123,7 +136,12 @@ private:
 
 	void NotifyPresenceChanged();
 	void ClearTrackedPawns();
+	// 현재 Trigger와 겹친 Pawn을 다시 조회해 목록을 재구성한다. 변화가 있으면 true(알림은 호출자).
+	bool RebuildPawnsFromOverlaps();
 
 	TSet<TWeakObjectPtr<APawn>> PawnsInExit;
 	bool bTrackingBound = false;
+	bool bExitEnabled = true;
+	// 비활성화 직전 Trigger의 Pawn 채널 응답. 활성화 때 복구한다.
+	TEnumAsByte<ECollisionResponse> SavedPawnResponse = ECR_Overlap;
 };

@@ -109,19 +109,98 @@ void ALB_DungeonExit::BeginPlay()
 	ExitTrigger->OnComponentEndOverlap.AddUniqueDynamic(this, &ALB_DungeonExit::HandleTriggerEndOverlap);
 	bTrackingBound = true;
 
-	// 바인딩 이전에 이미 겹쳐 있던 Pawn을 반영한다.
-	TArray<AActor*> InitialActors;
-	ExitTrigger->GetOverlappingActors(InitialActors, APawn::StaticClass());
-
-	bool bChanged = false;
-	for (AActor* Actor : InitialActors)
-	{
-		bChanged |= AddPawn(Cast<APawn>(Actor));
-	}
-	if (bChanged)
+	// 바인딩 이전에 이미 겹쳐 있던 Pawn을 반영한다. BeginPlay 전에 비활성화됐다면 추적하지 않는다.
+	if (bExitEnabled && RebuildPawnsFromOverlaps())
 	{
 		NotifyPresenceChanged();
 	}
+}
+
+void ALB_DungeonExit::SetExitEnabled(bool bEnabled)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (bExitEnabled == bEnabled)
+	{
+		return;
+	}
+
+	if (!bEnabled)
+	{
+		// 먼저 비활성 플래그를 세워 충돌 변경 중 발생하는 End Overlap을 무시한다.
+		bExitEnabled = false;
+		if (ExitTrigger)
+		{
+			SavedPawnResponse = ExitTrigger->GetCollisionResponseToChannel(ECC_Pawn);
+			ExitTrigger->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+
+		const bool bChanged = PawnsInExit.Num() > 0;
+		ClearTrackedPawns();
+		if (bChanged)
+		{
+			NotifyPresenceChanged();
+		}
+		return;
+	}
+
+	// 충돌 복구 중 Begin Overlap은 비활성 플래그로 무시하고, 복구 후 한 번에 재수집한다.
+	if (ExitTrigger)
+	{
+		ExitTrigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		ExitTrigger->SetCollisionResponseToChannel(ECC_Pawn, SavedPawnResponse);
+		ExitTrigger->UpdateOverlaps();
+	}
+	bExitEnabled = true;
+
+	if (RebuildPawnsFromOverlaps())
+	{
+		NotifyPresenceChanged();
+	}
+}
+
+bool ALB_DungeonExit::RebuildPawnsFromOverlaps()
+{
+	bool bChanged = PruneInvalidPawns();
+	if (!ExitTrigger)
+	{
+		return bChanged;
+	}
+
+	TArray<AActor*> OverlappingActors;
+	ExitTrigger->GetOverlappingActors(OverlappingActors, APawn::StaticClass());
+
+	TSet<APawn*> CurrentPawns;
+	for (AActor* Actor : OverlappingActors)
+	{
+		if (APawn* Pawn = Cast<APawn>(Actor); IsValid(Pawn))
+		{
+			CurrentPawns.Add(Pawn);
+		}
+	}
+
+	// 더 이상 겹치지 않는 Pawn 제거.
+	TArray<APawn*> ToRemove;
+	for (const TWeakObjectPtr<APawn>& WeakPawn : PawnsInExit)
+	{
+		APawn* Pawn = WeakPawn.Get();
+		if (Pawn && !CurrentPawns.Contains(Pawn))
+		{
+			ToRemove.Add(Pawn);
+		}
+	}
+	for (APawn* Pawn : ToRemove)
+	{
+		bChanged |= RemovePawn(Pawn);
+	}
+
+	for (APawn* Pawn : CurrentPawns)
+	{
+		bChanged |= AddPawn(Pawn);
+	}
+	return bChanged;
 }
 
 void ALB_DungeonExit::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -143,6 +222,10 @@ void ALB_DungeonExit::EndPlay(const EEndPlayReason::Type EndPlayReason)
 TArray<APawn*> ALB_DungeonExit::GetPawnsInExit() const
 {
 	TArray<APawn*> Result;
+	if (!bExitEnabled)
+	{
+		return Result;
+	}
 	Result.Reserve(PawnsInExit.Num());
 	for (const TWeakObjectPtr<APawn>& WeakPawn : PawnsInExit)
 	{
@@ -158,6 +241,10 @@ TArray<APawn*> ALB_DungeonExit::GetPawnsInExit() const
 int32 ALB_DungeonExit::GetPawnCountInExit() const
 {
 	int32 Count = 0;
+	if (!bExitEnabled)
+	{
+		return Count;
+	}
 	for (const TWeakObjectPtr<APawn>& WeakPawn : PawnsInExit)
 	{
 		if (IsValid(WeakPawn.Get()))
@@ -170,7 +257,7 @@ int32 ALB_DungeonExit::GetPawnCountInExit() const
 
 bool ALB_DungeonExit::IsPawnInExit(const APawn* Pawn) const
 {
-	if (!IsValid(Pawn))
+	if (!bExitEnabled || !IsValid(Pawn))
 	{
 		return false;
 	}
@@ -179,7 +266,7 @@ bool ALB_DungeonExit::IsPawnInExit(const APawn* Pawn) const
 
 void ALB_DungeonExit::HandleTriggerBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || !bExitEnabled)
 	{
 		return;
 	}
@@ -194,7 +281,7 @@ void ALB_DungeonExit::HandleTriggerBeginOverlap(UPrimitiveComponent* OverlappedC
 
 void ALB_DungeonExit::HandleTriggerEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || !bExitEnabled)
 	{
 		return;
 	}
