@@ -51,6 +51,14 @@ void ULB_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, DashDuration, COND_None, REPNOTIFY_Always);
 }
 
+void ULB_AttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const
+{
+	Super::PreAttributeBaseChange(Attribute, NewValue);
+	if (Attribute == GetHealthAttribute())
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+	else if (Attribute == GetStaminaAttribute())
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxStamina());
+}
 void ULB_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
@@ -72,79 +80,46 @@ void ULB_AttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, f
 void ULB_AttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
 {
 	Super::PostAttributeChange(Attribute, OldValue, NewValue);
+
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+	if (!ASC || !ASC->IsOwnerActorAuthoritative()) return;
+
+	if (Attribute == GetMaxHealthAttribute() && GetHealth() > NewValue)
+		ASC->ApplyModToAttribute(GetHealthAttribute(), EGameplayModOp::Override, NewValue);
+	else if (Attribute == GetMaxStaminaAttribute() && GetStamina() > NewValue)
+		ASC->ApplyModToAttribute(GetStaminaAttribute(), EGameplayModOp::Override, NewValue);
+	
 }
 
 void ULB_AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
 
-#pragma region Stat
-	//Health
+	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
+	{
+		HandleIncomingDamage(Data);
+		return;
+	}
+
+	
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
-		const float Delta = Data.EvaluatedData.Magnitude;
+		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
 
-		if (Delta < 0.f)
+		if (GetHealth() <= 0.f)
 		{
-			//데미지 처리
-			FVector HitLocation = Data.Target.GetAvatarActor()->GetActorLocation();
-
-			// OnDamageTaken.Broadcast(-Delta, HitLocation);
-
-			const FGameplayEffectSpec& Spec = Data.EffectSpec;
-
-			// 🔹 크리티컬 여부
-			bool bCritical = Spec.DynamicGrantedTags.HasTag(TAG_ATKType_Crit);
-
-			// 🔹 데미지 타입
-			FGameplayTag DamageType = TAG_DMGType_Normal;
-
-			if (Spec.DynamicGrantedTags.HasTag(TAG_DMGType_Fire))
-				DamageType = TAG_DMGType_Fire;
-			else if (Spec.DynamicGrantedTags.HasTag(TAG_DMGType_Ice))
-				DamageType = TAG_DMGType_Ice;
-
-
-			OnDamageTaken.Broadcast(-Delta, HitLocation, bCritical, DamageType);
-		}
-
-		//최종체력
-		float NewHealth = GetHealth();
-
-		if (NewHealth <= 0.f)
-		{
-			// AActor* Owner = GetOwningActor();
 			UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
-
-			// 서버에서 한 번만 부여. Loose Tag는 기본적으로 복제되지 않으므로 TagOnly로 모든 클라이언트에 복제
-			if (ASC && ASC->IsOwnerActorAuthoritative() && !ASC->HasMatchingGameplayTag(TAG_State_Death))
+			if (ASC && !ASC->HasMatchingGameplayTag(TAG_State_Death))   // 중복 사망 방지
 			{
-				ASC->AddLooseGameplayTag(TAG_State_Death, 1, EGameplayTagReplicationState::TagOnly);
+				FGameplayEventData Payload;
+				Payload.EventTag   = TAG_Event_Death;
+				Payload.Instigator = Data.EffectSpec.GetContext().GetOriginalInstigator(); // 킬러
+				Payload.Target     = ASC->GetAvatarActor();
+				ASC->HandleGameplayEvent(Payload.EventTag, &Payload);
 			}
 		}
 	}
-	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
-	{
-		const float DeltaValue = Data.EvaluatedData.Magnitude;
-
-		// 현재 체력에 변화량만큼 더하기
-		SetHealth(FMath::Clamp(GetHealth() + DeltaValue, 0.0f, GetMaxHealth()));
-	}
-
-	//Stamina
-
-	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
-	{
-		SetStamina(FMath::Clamp(GetStamina(), 0.0f, GetMaxStamina()));
-	}
-	else if (Data.EvaluatedData.Attribute == GetMaxStaminaAttribute())
-	{
-		//변화량
-		const float DeltaValue = Data.EvaluatedData.Magnitude;
-
-		SetStamina(FMath::Clamp(GetStamina() + DeltaValue, 0.0f, GetMaxStamina()));
-	}
-#pragma endregion
+	
 }
 
 void ULB_AttributeSet::OnRep_PlayerName(const FName& OldName)
@@ -226,4 +201,37 @@ void ULB_AttributeSet::OnRep_DashDistance(const FGameplayAttributeData& OldDashD
 void ULB_AttributeSet::OnRep_DashDuration(const FGameplayAttributeData& OldDashDuration)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ULB_AttributeSet, DashDuration, OldDashDuration);
+}
+
+void ULB_AttributeSet::HandleIncomingDamage(const FGameplayEffectModCallbackData& Data)
+{
+	const float Damage = GetIncomingDamage();
+	SetIncomingDamage(0.f);
+	if (Damage <= 0.f)
+		return;
+
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+	if (!ASC)
+		return;
+	if (ASC->HasMatchingGameplayTag(TAG_State_Death) ||
+		ASC->HasMatchingGameplayTag(TAG_State_Invincible))
+		return;   
+
+	SetHealth(FMath::Clamp(GetHealth() - Damage, 0.f, GetMaxHealth()));
+
+	if (GetHealth() <= 0.f)
+	{
+		SendDeathEvent(Data);
+	}
+}
+
+void ULB_AttributeSet::SendDeathEvent(const FGameplayEffectModCallbackData& Data)
+{
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+
+	FGameplayEventData Payload;
+	Payload.EventTag   = TAG_Event_Death;
+	Payload.Instigator = Data.EffectSpec.GetContext().GetOriginalInstigator();
+	Payload.Target     = ASC->GetAvatarActor();
+	ASC->HandleGameplayEvent(TAG_Event_Death, &Payload);   // → GA_Death
 }

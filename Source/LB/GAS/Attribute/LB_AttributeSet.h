@@ -100,6 +100,10 @@ public:
 	FGameplayAttributeData Poise;
 	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, Poise)
 
+	//데미지
+	UPROPERTY(BlueprintReadOnly, Category = "Meta")   // Replicated 안 함
+	FGameplayAttributeData IncomingDamage;
+	ATTRIBUTE_ACCESSORS(ULB_AttributeSet, IncomingDamage)
 
 #pragma endregion
 
@@ -107,20 +111,22 @@ public:
 
 
 	//데미지용
-	// DECLARE_MULTICAST_DELEGATE_TwoParams(FOnDamageTaken, float, FVector);
-	DECLARE_MULTICAST_DELEGATE_FourParams(
-		FOnDamageTaken,
-		float, // Damage
-		FVector, // HitLocation
-		bool, // Critical
-		FGameplayTag // DamageType
-	);
-
-	FOnDamageTaken OnDamageTaken;
+	// // DECLARE_MULTICAST_DELEGATE_TwoParams(FOnDamageTaken, float, FVector);
+	// DECLARE_MULTICAST_DELEGATE_FourParams(
+	// 	FOnDamageTaken,
+	// 	float, // Damage
+	// 	FVector, // HitLocation
+	// 	bool, // Critical
+	// 	FGameplayTag // DamageType
+	// );
+	//
+	// FOnDamageTaken OnDamageTaken;
 #pragma  endregion
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
 
 	//attribute 값이 실제로 변경되기 직전
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
@@ -188,4 +194,8 @@ protected:
 
 
 #pragma endregion
+
+private:
+	void HandleIncomingDamage(const FGameplayEffectModCallbackData& Data);
+	void SendDeathEvent(const FGameplayEffectModCallbackData& Data);
 };
