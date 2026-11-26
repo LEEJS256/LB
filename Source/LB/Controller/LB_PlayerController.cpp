@@ -456,24 +456,18 @@ void ALB_PlayerController::BindHUD()
 
 void ALB_PlayerController::Jump(const FInputActionValue& Value)
 {
-	APawn* ControlledPawn = GetPawn();
-	if (!IsValid(ControlledPawn))
-		return;
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	UAbilitySystemComponent* ASC = PS ? PS->GetAbilitySystemComponent() : nullptr;
+	if (!ASC || ASC->GetAvatarActor() != GetPawn()) return;
 
-	ALB_PlayerCharacter* PlayerCharacter = Cast<ALB_PlayerCharacter>(ControlledPawn);
-	if (!IsValid(PlayerCharacter))
-		return;
-
-
-	PlayerCharacter->Jump();
+	ASC->TryActivateAbilitiesByTag(JumpTagContainer);
 }
 
 void ALB_PlayerController::StopJumping()
 {
-	if (ACharacter* pCharacter = Cast<ACharacter>(GetPawn()))
-	{
-		pCharacter->StopJumping();
-	}
+	ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+	if (UAbilitySystemComponent* ASC = PS ? PS->GetAbilitySystemComponent() : nullptr)
+		ASC->CancelAbilities(&JumpTagContainer);
 }
 
 void ALB_PlayerController::StartSprint(const FInputActionValue& Value)
@@ -598,6 +592,7 @@ void ALB_PlayerController::Set_IATag()
 {
 	SprintTagContainer.AddTag(TAG_Ability_Sprint);
 	DodgeTagContainer.AddTag(TAG_Ability_Dodge);
+	JumpTagContainer.AddTag(TAG_Ability_Jump);
 }
 
 

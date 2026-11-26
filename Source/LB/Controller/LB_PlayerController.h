@@ -143,6 +143,7 @@ private:
 
 	FGameplayTagContainer SprintTagContainer;
 	FGameplayTagContainer DodgeTagContainer;
+	FGameplayTagContainer JumpTagContainer;
 
 #pragma endregion
 
