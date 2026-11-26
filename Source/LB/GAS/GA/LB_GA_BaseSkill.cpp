@@ -76,8 +76,7 @@ void ULB_GA_BaseSkill::ApplyDamageTo(AActor* Target)
 	FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(DamageEffectClass, GetSkillLevel());
 	if (Spec.IsValid())
 	{
-		// NormalAttack의 피해 GE와 같은 규칙. 부호(감소)는 GE 쪽 설정에 맞춰야 함
-		Spec.Data->SetSetByCallerMagnitude(TAG_Data_Damage, -Damage);
+		Spec.Data->SetSetByCallerMagnitude(TAG_Data_Damage, Damage);
 		SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
 	}
 }

@@ -190,7 +190,8 @@ void ULB_GA_MonsterMeleeAttack::OnMeleeHit(AActor* HitActor, const FHitResult& H
 
 	SpecHandle.Data->GetContext().AddHitResult(HitResult, true);
 	// GE의 Health Add Modifier가 이 값을 그대로 더하므로 감소량을 음수로 전달
-	SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_Damage, -Damage);
+	// SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_Damage, -Damage);
+	SpecHandle.Data->SetSetByCallerMagnitude(TAG_Data_Damage, Damage);
 
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 }
