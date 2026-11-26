@@ -34,6 +34,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Death, "Ability.Death");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Combo, "Ability.Combo");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Sprint, "Ability.Sprint");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Dodge, "Ability.Dodge");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Jump, "Ability.Jump");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Skill, "Ability.Skill");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_Ultimate, "Ability.Ultimate");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Ability_BuildTower, "Ability.BuildTower");
@@ -56,6 +57,7 @@ UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Block_Rotate, "State.Block.Rotate", "�
 
 UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Hit, "State.Hit", "피격(경직) 중");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Death, "State.Death");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_State_Movement_InAir, "State.Movement.InAir", "공중 상태 (낙하/점프/공중 콤보)");
 UE_DEFINE_GAMEPLAY_TAG(TAG_State_Invincible, "State.Invincible");
 
 // ---- DEPRECATED: 사용처 교체 후 삭제 예정 ----
