@@ -51,7 +51,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	ULB_BattleComponent* GetBattleComponent() const { return BattleComp; }
 
-
+	virtual void OnDeathFinished(AActor* Killer) override;   // 서버
 #pragma  endregion
 
 	//ASC = GAS본체
@@ -69,6 +69,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
 	virtual void PossessedBy(AController* NewController) override; // 서버
 	virtual void OnRep_PlayerState() override;
 

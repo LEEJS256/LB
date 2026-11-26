@@ -15,6 +15,7 @@
 #include "Equipment/LB_Equipment.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameMode/LB_GameMode.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerState/LB_PlayerState.h"
@@ -44,7 +45,7 @@ ALB_PlayerCharacter::ALB_PlayerCharacter()
 
 	BattleComp = CreateDefaultSubobject<ULB_BattleComponent>(TEXT("BattleComp"));
 	MotionWarpingComp = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
-	
+
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
 	CMC->BrakingDecelerationWalking = 1800.f; //관성크기
 	CMC->BrakingFrictionFactor = 0.f; // 마찰 항 제거 → 등감속이라 예측이 정확해짐
@@ -71,11 +72,12 @@ void ALB_PlayerCharacter::BindDelegate()
 	{
 		pBattleComp->BindCombatStateEvents(); // 중복 바인딩 방지
 	}
-	
+
 	if (bSpeedBound) return;
 
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */;
-	if (!ASC) return;   // 아직 준비 안 됐으면 패스
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();/* PS의 ASC 가져오기 */
+	;
+	if (!ASC) return; // 아직 준비 안 됐으면 패스
 
 	ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetSpeedAttribute())
 	   .AddUObject(this, &ALB_PlayerCharacter::OnSpeedChanged);
@@ -89,8 +91,8 @@ void ALB_PlayerCharacter::BindDelegate()
 void ALB_PlayerCharacter::OnSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	// UE_LOG(LogTemp, Warning, TEXT("Speed %.1f -> %.1f (Base %.1f)"),
-	       // Data.OldValue, Data.NewValue,
-	       // GetAbilitySystemComponent()->GetNumericAttributeBase(ULB_AttributeSet::GetSpeedAttribute()));
+	// Data.OldValue, Data.NewValue,
+	// GetAbilitySystemComponent()->GetNumericAttributeBase(ULB_AttributeSet::GetSpeedAttribute()));
 
 	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
 }
@@ -123,6 +125,13 @@ void ALB_PlayerCharacter::GiveDefaultWeapon()
 	Inv->EquipItem(Id);
 }
 
+void ALB_PlayerCharacter::OnDeathFinished(AActor* Killer)
+{
+	Super::OnDeathFinished(Killer);
+	// if (ALB_GameMode* GM = GetWorld()->GetAuthGameMode<ALB_GameMode>())
+	// 	GM->OnPlayerDied(GetController(), Killer); 
+}
+
 UAbilitySystemComponent* ALB_PlayerCharacter::GetAbilitySystemComponent() const
 {
 	return GasComp ? GasComp->GetASC() : nullptr;
@@ -145,10 +154,25 @@ void ALB_PlayerCharacter::BeginPlay()
 	ApplyFacingToMesh(CurrentFacing);
 }
 
+void ALB_PlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
+	if (!ASC)
+		return; // GAS 초기화 전 (스폰 직후 등)
+
+	const UCharacterMovementComponent* CMC = GetCharacterMovement();
+	const bool bInAir = CMC->IsFalling() || CMC->IsFlying(); // 점프/낙하 + 공중콤보, MOVE_None(사망) 제외
+
+	ASC->SetLooseGameplayTagCount(TAG_State_Movement_InAir, bInAir ? 1 : 0);
+}
+
 void ALB_PlayerCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	InitGAS();
+	BindDeathTag(GetAbilitySystemComponent());
 	BindDelegate();
 	GiveDefaultWeapon();
 }
@@ -157,6 +181,7 @@ void ALB_PlayerCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
 	InitGAS();
+	BindDeathTag(GetAbilitySystemComponent());
 	BindDelegate();
 	GiveDefaultWeapon();
 }
@@ -181,8 +206,15 @@ void ALB_PlayerCharacter::AddMoveInput(const FVector2D& Axis2D)
 
 	// 방향 잠금과 이동 차단은 Ability별로 조합할 수 있도록 서로 독립적으로 판단
 	const UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
-	const bool bFacingLocked = ASC && ASC->HasMatchingGameplayTag(TAG_State_Movement_FacingLocked);
-	const bool bMovementBlocked = ASC && ASC->HasMatchingGameplayTag(TAG_State_Movement_Blocked);
+	//나중에 지울예정
+	const bool bFacingLocked = ASC && (ASC->HasMatchingGameplayTag(TAG_State_Block_Rotate));
+	const bool bMovementBlocked = ASC && (ASC->HasMatchingGameplayTag(TAG_State_Block_Move));
+
+	//죽음 예외처리
+	if (ASC && ASC->HasMatchingGameplayTag(TAG_State_Death))
+	{
+		return; // 이동, 방향 전환 둘 다 막음
+	}
 
 	if (!bFacingLocked)
 	{
@@ -258,6 +290,4 @@ void ALB_PlayerCharacter::OnRep_Facing()
 void ALB_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }
-
