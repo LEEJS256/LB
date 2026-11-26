@@ -3,7 +3,10 @@
 
 #include "Character/LB_CharacterBase.h"
 
+#include "AbilitySystemComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Utility/LB_NativeGameplayTag.h"
 
 // Sets default values
 ALB_CharacterBase::ALB_CharacterBase()
@@ -18,6 +21,10 @@ ALB_CharacterBase::ALB_CharacterBase()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.f;
 
+}
+
+void ALB_CharacterBase::OnDeathFinished(AActor* Killer)
+{
 }
 
 // Called when the game starts or when spawned
@@ -41,3 +48,22 @@ void ALB_CharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 }
 
+void ALB_CharacterBase::BindDeathTag(UAbilitySystemComponent* ASC)
+{
+	ASC->RegisterGameplayTagEvent(TAG_State_Death, EGameplayTagEventType::NewOrRemoved)
+	   .AddUObject(this, &ThisClass::OnDeadTagChanged);
+}
+
+void ALB_CharacterBase::OnDeadTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	const bool bDead = NewCount > 0;
+
+	GetCharacterMovement()->StopMovementImmediately();
+	bDead ? GetCharacterMovement()->DisableMovement()
+		  : GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, bDead ? ECR_Ignore : ECR_Block);
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		bDead ? DisableInput(PC) : EnableInput(PC);
+}
