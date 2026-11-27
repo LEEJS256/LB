@@ -47,6 +47,7 @@ void ALB_MonsterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	BindHealthChanged();
 	Begin_HPComp();
 
 	// 서버/클라이언트 모두 Owner와 Avatar를 몬스터 자신으로 초기화
@@ -80,10 +81,7 @@ void ALB_MonsterBase::Begin_HPComp()
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	if (!ASC) { return; }
 
-	// TODO: 몬스터 AttributeSet의 Health/MaxHealth 이름
-	ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetHealthAttribute())
-	   .AddUObject(this, &ALB_MonsterBase::OnHealthChanged);
-
+	// Health 변경 구독은 BindHealthChanged에서 모든 World에 한 번만 연결한다
 	// 초기값 세팅
 	if (ULB_MonsterHPBar* Bar = Cast<ULB_MonsterHPBar>(HPBarComp->GetUserWidgetObject()))
 	{
@@ -92,8 +90,44 @@ void ALB_MonsterBase::Begin_HPComp()
 	}
 }
 
+void ALB_MonsterBase::BindHealthChanged()
+{
+	if (bHealthChangeBound || !AbilitySystemComponent)
+	{
+		return;
+	}
+
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetHealthAttribute())
+	   .AddUObject(this, &ALB_MonsterBase::OnHealthChanged);
+	bHealthChangeBound = true;
+}
+
+void ALB_MonsterBase::TryNotifyDefeated(const FOnAttributeChangeData& Data)
+{
+	// 서버만, 초기화 중이 아닐 때, 살아있던 상태에서 0 이하로 처음 떨어진 순간만
+	if (!HasAuthority() || bDefeatNotified || bApplyingDefaultAttributes)
+	{
+		return;
+	}
+	if (!(Data.OldValue > 0.f && Data.NewValue <= 0.f))
+	{
+		return;
+	}
+
+	// 재진입·중복 피해에 대비해 가드를 먼저 확정한 뒤 발행
+	bDefeatNotified = true;
+	OnMonsterDefeated.Broadcast(this);
+}
+
 void ALB_MonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
+	TryNotifyDefeated(Data);
+
+	if (IsNetMode(NM_DedicatedServer))
+	{
+		return;
+	} // UI·데미지 폰트는 비Dedicated 경로만
+
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponent();
 	const float Max = ASC->GetNumericAttribute(ULB_AttributeSet::GetMaxHealthAttribute());
 
@@ -164,7 +198,11 @@ void ALB_MonsterBase::InitializeMonsterData()
 		return;
 	}
 
-	ApplyDefaultAttributes(MonsterData);
+	{
+		// 초기 Attribute 적용으로 인한 Health 변화는 사망 완료로 취급하지 않음
+		TGuardValue<bool> ApplyingGuard(bApplyingDefaultAttributes, true);
+		ApplyDefaultAttributes(MonsterData);
+	}
 
 	bStartupApplied = true;
 

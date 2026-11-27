@@ -2,12 +2,15 @@ id: WP-R8K3
 title: 던전 방 전투 상태와 재방문 Spawn 복구
 branch: feature/dungeon-room-state
 base: master
+pr_type: feat
+pr_scope: dungeon
 description: |
   방별 안정 SpawnId로 몬스터 사망과 파괴 오브젝트 결과를 서버 세션 상태에 기록하고 같은 RoomId 재활성화 때 소비된 Actor를 다시 생성하지 않는다.
-  기존 몬스터 GAS 사망·항아리 단발 파괴/Loot·WP-D6L2의 두 슬롯 전환과 서버 권한을 유지하며 생존 몬스터가 있으면 현재 방 Exit를 잠근다.
-  디스크 저장·미획득 DropItem 보존·몬스터 체력 중간 저장·랜덤 Spawn·Graph Cycle/되돌아가기 링크는 제외한다.
+  기존 몬스터 GAS 사망·항아리 단발 파괴/Loot와 WP-D6L2의 순환 Graph·TargetEntryId·두 슬롯 전환을 유지하며 생존 몬스터가 있으면 현재 방 Exit를 잠근다.
+  Runtime Actor와 DropItem은 방 Streaming ULevel 수명을 따르고 방 활성화 중 Spawn 실패는 부분 Actor를 남기지 않게 전체 롤백한다.
+  실제 순환 링크로 같은 RoomId 재방문을 검증하되 디스크 저장·미획득 DropItem 보존·몬스터 체력 중간 저장·랜덤 Spawn과 Graph 생성 규칙 변경은 제외한다.
 verify:
   - name: 에디터 종료 후 LBEditor 통합 빌드
     use: build-editor
-  - manual: E01·E02에서 안정 SpawnId·서버 Spawn·몬스터 Exit 잠금과 결과 기록을 확인했다
-  - manual: E99에서 같은 RoomId 재활성화와 Listen Server·Client의 비재생성·중복 Loot 방지를 확인했다
+  - manual: E01에서 안정 SpawnId를 확인하고 PR 준비 단계의 E02에서 무효 Marker 거부·중간 실패 롤백·생존 몬스터가 있는 방의 수동 재활성화를 확인했다
+  - manual: E99에서 서버 Spawn·몬스터 Exit 잠금·결과 기록과 Listen Server·Client의 A→B→A 재방문·소비 Actor 비재생성·Loot 비재추첨·도착 Exit 재전환 방지를 확인했다

@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
 #include "Data/Loot/LB_LootTableDataAsset.h"
+#include "Engine/Level.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "Object/Item/LB_DropItem.h"
@@ -71,7 +72,20 @@ bool ALB_DestructibleProp::TryBreak(AActor* DamageCauser, const FVector& ImpactP
 	// 3. 원본 지연 제거 수명 예약 (외부 BP 호출 전)
 	SetLifeSpan(FMath::Max(BreakLifetime, 1.f));
 
-	// 4. 서버 보상 처리 (파괴당 한 번)
+	// 4. 파괴 완료 신호 (확정 상태로 한 번). Loot/BP 외부 호출 전에 구독자가 기록할 수 있도록 먼저 발행.
+	if (!bBreakNotified)
+	{
+		bBreakNotified = true;
+		const FLB_PropBreakState NotifiedState = BreakState;
+		OnPropBrokenDelegate.Broadcast(this, NotifiedState);
+
+		if (!IsValid(this) || IsActorBeingDestroyed())
+		{
+			return true;
+		}
+	}
+
+	// 5. 서버 보상 처리 (파괴당 한 번)
 	SpawnBreakLoot();
 
 	if (!IsValid(this) || IsActorBeingDestroyed())
@@ -79,10 +93,10 @@ bool ALB_DestructibleProp::TryBreak(AActor* DamageCauser, const FVector& ImpactP
 		return true;
 	}
 
-	// 5. 복제 갱신
+	// 6. 복제 갱신
 	ForceNetUpdate();
 
-	// 6. (Listen Server라면) 표현. 보상 처리 이후 서버 함수 호출 순서만 보장한다.
+	// 7. (Listen Server라면) 표현. 보상 처리 이후 서버 함수 호출 순서만 보장한다.
 	ApplyBreakState();
 
 	return true;
@@ -175,9 +189,20 @@ void ALB_DestructibleProp::SpawnBreakLoot()
 		const FVector SpawnLocation = PropTransform.TransformPosition(LocalOffset);
 		const FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
 
-		ALB_DropItem* Drop = World->SpawnActorDeferred<ALB_DropItem>(
-			DropItemClass, SpawnTransform, nullptr, nullptr,
-			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		ULevel* PropLevel = GetLevel();
+		if (!IsValid(PropLevel))
+		{
+			UE_LOG(LogLB, Warning, TEXT("[%s] 원본 Level 없음. 드롭 중단."), *GetName());
+			return;
+		}
+
+		// 원본 Prop이 속한 Streaming ULevel에 생성해 방 Level 해제 시 함께 제거되게 한다.
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.OverrideLevel = PropLevel;
+		SpawnParams.bDeferConstruction = true;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		ALB_DropItem* Drop = World->SpawnActor<ALB_DropItem>(DropItemClass, SpawnTransform, SpawnParams);
 
 		if (!IsValid(Drop))
 		{

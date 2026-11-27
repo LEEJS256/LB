@@ -12,6 +12,10 @@ class UAbilitySystemComponent;
 class ULB_AttributeSet;
 class ULB_MonsterDataAsset;
 class UWidgetComponent;
+class ALB_MonsterBase;
+
+// 서버에서 몬스터 Health가 처음 0 이하가 되었을 때 한 번 발행되는 사망 완료 신호
+DECLARE_MULTICAST_DELEGATE_OneParam(FLBOnMonsterDefeated, ALB_MonsterBase* /*DefeatedMonster*/);
 
 UCLASS()
 class LB_API ALB_MonsterBase : public ACharacter, public IAbilitySystemInterface
@@ -28,6 +32,12 @@ public:
 	// ASC의 State.Death 보유 여부. 서버가 부여하고 TagOnly로 복제되므로 클라이언트에서도 사용 가능
 	UFUNCTION(BlueprintPure, Category = "LB|State")
 	bool IsDead() const;
+
+	// 서버 전용 사망 완료 신호 구독 API. Client에서는 발행되지 않는다
+	FLBOnMonsterDefeated& GetOnMonsterDefeated() { return OnMonsterDefeated; }
+
+	// 서버에서 사망 완료 신호가 이미 발행되었는지 여부
+	bool IsDefeatNotified() const { return bDefeatNotified; }
 
 protected:
 	// Called when the game starts or when spawned
@@ -67,5 +77,15 @@ private:
 	// 서버 전용, 1회만 실행
 	void InitializeMonsterData();
 
+	// 모든 World(Dedicated 포함)에서 Health 변경 구독을 한 번만 연결
+	void BindHealthChanged();
+	// 서버의 최초 0 이하 전이만 사망 완료로 발행
+	void TryNotifyDefeated(const FOnAttributeChangeData& Data);
+
+	FLBOnMonsterDefeated OnMonsterDefeated;
+
 	bool bStartupApplied = false;
+	bool bHealthChangeBound = false;
+	bool bApplyingDefaultAttributes = false;
+	bool bDefeatNotified = false;
 };
