@@ -12,6 +12,7 @@ class ALB_PlayerController;
 class ALB_DungeonExit;
 class ALB_DungeonRoomEntry;
 class ULB_DungeonLayoutDataAsset;
+class ALB_DungeonRoomRuntimeManager;
 class ULevel;
 class APawn;
 
@@ -142,6 +143,21 @@ private:
 	void BindGameStateDelegates();
 	void UnbindGameStateDelegates();
 
+	// ---- 방 Runtime(몬스터/파괴 오브젝트) ----
+
+	// Route 게시 직후 서버 전용 Runtime Manager를 InstanceKey 세션으로 생성한다.
+	bool CreateRoomRuntimeManager(FName InstanceKey);
+	// delegate 해제 + 활성 방 정리 + Manager 제거(누적 Room 상태 폐기). 던전 세션 종료 때만 호출한다.
+	void DestroyRoomRuntimeManager();
+	// 활성 Runtime 방의 관리 Actor·구독만 정리한다(누적 Room 상태 유지).
+	void DeactivateRoomRuntime();
+	// 기존 Current Runtime을 먼저 정리하고 표시된 Pending Level로 RoomId Runtime을 활성화한 뒤 Exit 잠금을 반영한다.
+	bool ActivatePendingRoomRuntime(FName RoomId, FString& OutError);
+	// Level의 모든 Exit를 잠금/해제한다. 잠금 갱신 중 Presence 알림은 억제 해제만 하고 평가는 호출자가 한 번 수행한다.
+	void ApplyRoomExitLock(ULevel* Level, bool bLocked);
+	void HandleRoomCombatStateChanged(FName RoomId, int32 LivingMonsterCount);
+	bool HasLivingRoomMonsters() const;
+
 	void HandleServerPendingRoomReady(FName RoomId, int32 TransitionSerial);
 	void HandleClientPendingRoomReady(ALB_PlayerController* Reporter, FName RoomId, int32 TransitionSerial);
 	void HandleLocalPendingRoomFailed(FName RoomId, int32 TransitionSerial);
@@ -167,6 +183,18 @@ private:
 	FDelegateHandle ClientReadyHandle;
 	FDelegateHandle LocalFailedHandle;
 	FDelegateHandle CurrentReadyHandle;
+
+	// 서버 전용 방 Runtime Manager. StartDungeon Route 게시 후 생성되어 던전 세션 동안 유지된다.
+	UPROPERTY(Transient)
+	TObjectPtr<ALB_DungeonRoomRuntimeManager> RoomRuntimeManager;
+
+	FDelegateHandle RoomCombatStateHandle;
+
+	// Runtime이 활성화된 방 Level(Pending → 승격 후 Current). Exit 잠금 대상.
+	TWeakObjectPtr<ULevel> RuntimeRoomLevel;
+
+	// ApplyRoomExitLock 진행 중. Exit Presence 알림에서 개별 평가를 미룬다.
+	bool bApplyingExitLock = false;
 
 	// StartDungeon 성공(Route 게시) 후 true. 중복 시작을 막는다.
 	bool bDungeonStarted = false;

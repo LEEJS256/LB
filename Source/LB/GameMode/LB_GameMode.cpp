@@ -8,6 +8,7 @@
 #include "Controller/LB_PlayerController.h"
 #include "Data/Dungeon/LB_DungeonLayoutDataAsset.h"
 #include "Dungeon/LB_DungeonRoomMarkers.h"
+#include "Dungeon/LB_DungeonRoomRuntimeManager.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/Pawn.h"
 #include "Misc/Guid.h"
@@ -88,6 +89,15 @@ bool ALB_GameMode::StartDungeon()
 
 	// Route가 게시되면 이후 결과와 무관하게 다시 시작하지 않는다.
 	bDungeonStarted = true;
+
+	// 방 Runtime은 Route 게시 성공 뒤 이 InstanceKey 세션 동안 유지된다.
+	if (!CreateRoomRuntimeManager(InstanceKey))
+	{
+		TransitionParty.Reset();
+		bTransitionLocked = true;
+		FailRoomTransition(TEXT("room runtime manager spawn failed"));
+		return false;
+	}
 
 	// StartRoom 진입도 Exit 전환과 같은 잠금·Barrier·Fade·Teleport 경로를 사용한다.
 	bTransitionLocked = true;
@@ -180,6 +190,8 @@ void ALB_GameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	CurrentRoomPlaced.Reset();
 	ArrivingPawns.Reset();
 	SuppressedExitPawns.Reset();
+	// 던전 세션 종료: Runtime Actor·delegate와 누적 Room 상태를 함께 폐기한다.
+	DestroyRoomRuntimeManager();
 	bTransitionLocked = false;
 	bDungeonStarted = false;
 	UnbindGameStateDelegates();
@@ -586,6 +598,8 @@ void ALB_GameMode::FailRoomTransition(const TCHAR* Reason)
 	ClearTransitionTimers();
 	UnbindCurrentRoomExits();
 	PendingEntry.Reset();
+	// 관리 Actor·구독만 정리하고 누적 Room 상태는 세션 종료까지 유지한다.
+	DeactivateRoomRuntime();
 	// 재시도 UX는 범위 밖: 잠금을 유지해 Exit 평가·추가 전환을 막는다.
 	bTransitionLocked = true;
 
@@ -804,12 +818,22 @@ void ALB_GameMode::HandleExitPresenceChanged(ALB_DungeonExit* Exit)
 	}
 	// 억제 Pawn이 이 Exit를 벗어났으면 이 Exit의 억제만 해제한다(재진입 시 정상 Nearby로 계산).
 	ReleaseExitSuppressions(Exit);
+	// 잠금 일괄 갱신 중에는 모든 Exit가 반영된 뒤 호출자가 한 번에 평가한다.
+	if (bApplyingExitLock)
+	{
+		return;
+	}
 	EvaluateExit(Exit);
 }
 
 bool ALB_GameMode::CanEvaluateExits() const
 {
-	if (!DungeonGameState || bTransitionLocked || bBarrierActive || BoundExitsSerial == INDEX_NONE)
+	if (!DungeonGameState || bTransitionLocked || bBarrierActive || BoundExitsSerial == INDEX_NONE || bApplyingExitLock)
+	{
+		return false;
+	}
+	// 생존 몬스터가 있으면 현재 방 Exit는 잠겨 있다.
+	if (HasLivingRoomMonsters())
 	{
 		return false;
 	}
@@ -1272,6 +1296,18 @@ void ALB_GameMode::HandleFadeOutFinished(int32 Serial)
 		return;
 	}
 
+	// 0) 이전 Current Runtime 정리 → Pending 방 Runtime 활성화 + Exit 잠금 반영.
+	//    실패하면 Teleport·승격 없이 Pending Runtime을 롤백하고 Fade 복구 후 Failed로 남긴다.
+	const FName PendingRoomId = Snapshot.PendingRoomId;
+	FString RuntimeError;
+	if (!ActivatePendingRoomRuntime(PendingRoomId, RuntimeError))
+	{
+		UE_LOG(LogLB, Error, TEXT("Room %s (serial %d) runtime activation failed: %s"),
+			*PendingRoomId.ToString(), Serial, *RuntimeError);
+		FailRoomTransition(TEXT("room runtime activation failed"));
+		return;
+	}
+
 	// 1) 서버가 캡처된 파티 전체를 선택 Entry로 Teleport.
 	TeleportPartyToEntry(Entry);
 	PendingEntry.Reset();
@@ -1557,4 +1593,167 @@ void ALB_GameMode::ClearTransitionTimers()
 		TimerManager.ClearTimer(ExitCountdownHandle);
 		TimerManager.ClearTimer(TransitionStepHandle);
 	}
+}
+
+// ============================================================================
+// 방 Runtime
+// ============================================================================
+
+bool ALB_GameMode::CreateRoomRuntimeManager(FName InstanceKey)
+{
+	DestroyRoomRuntimeManager();
+
+	UWorld* World = GetWorld();
+	if (!HasAuthority() || !World || InstanceKey.IsNone())
+	{
+		return false;
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = this;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.ObjectFlags |= RF_Transient;
+	ALB_DungeonRoomRuntimeManager* Manager = World->SpawnActor<ALB_DungeonRoomRuntimeManager>(
+		ALB_DungeonRoomRuntimeManager::StaticClass(), FTransform::Identity, Params);
+	if (!IsValid(Manager))
+	{
+		UE_LOG(LogLB, Error, TEXT("CreateRoomRuntimeManager: spawn failed (instance %s)."), *InstanceKey.ToString());
+		return false;
+	}
+
+	Manager->SetSessionInstanceKey(InstanceKey);
+	RoomRuntimeManager = Manager;
+	RoomCombatStateHandle = Manager->OnRoomCombatStateChanged().AddUObject(this, &ALB_GameMode::HandleRoomCombatStateChanged);
+	UE_LOG(LogLB, Log, TEXT("Room runtime manager created (instance %s)."), *InstanceKey.ToString());
+	return true;
+}
+
+void ALB_GameMode::DestroyRoomRuntimeManager()
+{
+	ALB_DungeonRoomRuntimeManager* Manager = RoomRuntimeManager.Get();
+	RoomRuntimeManager = nullptr;
+	RuntimeRoomLevel.Reset();
+	if (!IsValid(Manager))
+	{
+		RoomCombatStateHandle.Reset();
+		return;
+	}
+
+	Manager->OnRoomCombatStateChanged().Remove(RoomCombatStateHandle);
+	RoomCombatStateHandle.Reset();
+	Manager->DeactivateRoom();
+
+	const UWorld* World = GetWorld();
+	if (World && !World->bIsTearingDown)
+	{
+		Manager->Destroy();
+	}
+}
+
+void ALB_GameMode::DeactivateRoomRuntime()
+{
+	RuntimeRoomLevel.Reset();
+	if (ALB_DungeonRoomRuntimeManager* Manager = RoomRuntimeManager.Get(); IsValid(Manager) && Manager->IsRoomActive())
+	{
+		UE_LOG(LogLB, Log, TEXT("Room runtime deactivated: %s."), *Manager->GetActiveRoomId().ToString());
+		Manager->DeactivateRoom();
+	}
+}
+
+bool ALB_GameMode::ActivatePendingRoomRuntime(FName RoomId, FString& OutError)
+{
+	ALB_DungeonRoomRuntimeManager* Manager = RoomRuntimeManager.Get();
+	if (!IsValid(Manager) || !DungeonGameState)
+	{
+		OutError = TEXT("room runtime manager missing");
+		return false;
+	}
+	if (Manager->GetSessionInstanceKey() != DungeonGameState->GetDungeonRoute().InstanceKey)
+	{
+		OutError = TEXT("room runtime session mismatch");
+		return false;
+	}
+
+	// 이전 Current 방 Loader가 CompleteDungeonTransition에서 해제되기 전에 관리 Actor를 먼저 정리한다.
+	DeactivateRoomRuntime();
+
+	ULevel* Level = DungeonGameState->GetPendingRoomLevel();
+	if (!Level || RoomId.IsNone())
+	{
+		OutError = TEXT("pending room level not visible");
+		return false;
+	}
+
+	// 활성화 성공 통지(HandleRoomCombatStateChanged)가 이 Level의 Exit에 잠금을 반영할 수 있도록 먼저 지정한다.
+	RuntimeRoomLevel = Level;
+	if (!Manager->ActivateRoom(RoomId, Level))
+	{
+		// Manager가 이번 시도의 Actor를 롤백한다. 남은 활성 참조도 정리한다.
+		DeactivateRoomRuntime();
+		OutError = TEXT("ActivateRoom failed (markers or spawn)");
+		return false;
+	}
+
+	const bool bLocked = Manager->HasLivingMonsters();
+	ApplyRoomExitLock(Level, bLocked);
+	UE_LOG(LogLB, Log, TEXT("Room runtime activated: %s (living monsters %d, exits %s)."),
+		*RoomId.ToString(), Manager->GetLivingMonsterCount(), bLocked ? TEXT("locked") : TEXT("open"));
+	return true;
+}
+
+void ALB_GameMode::ApplyRoomExitLock(ULevel* Level, bool bLocked)
+{
+	if (!Level)
+	{
+		return;
+	}
+	TArray<ALB_DungeonExit*> Exits;
+	for (AActor* Actor : Level->Actors)
+	{
+		if (ALB_DungeonExit* Exit = Cast<ALB_DungeonExit>(Actor); IsValid(Exit))
+		{
+			Exits.Add(Exit);
+		}
+	}
+
+	TGuardValue<bool> Guard(bApplyingExitLock, true);
+	for (ALB_DungeonExit* Exit : Exits)
+	{
+		if (IsValid(Exit))
+		{
+			Exit->SetExitEnabled(!bLocked);
+		}
+	}
+}
+
+void ALB_GameMode::HandleRoomCombatStateChanged(FName RoomId, int32 LivingMonsterCount)
+{
+	const ALB_DungeonRoomRuntimeManager* Manager = RoomRuntimeManager.Get();
+	if (!IsValid(Manager) || RoomId.IsNone() || Manager->GetActiveRoomId() != RoomId)
+	{
+		return;
+	}
+	ULevel* Level = RuntimeRoomLevel.Get();
+	if (!Level)
+	{
+		return;
+	}
+
+	const bool bLocked = LivingMonsterCount > 0;
+	ApplyRoomExitLock(Level, bLocked);
+	if (bLocked)
+	{
+		return;
+	}
+
+	UE_LOG(LogLB, Log, TEXT("Room %s cleared: exits unlocked."), *RoomId.ToString());
+	// 전환 잠금 중에는 CanEvaluateExits가 막아 목적지·Barrier를 바꾸지 않는다.
+	// 안정 상태라면 이미 영역 안에 있던 Pawn을 포함해 Exit별 과반수 평가를 재개한다.
+	EvaluateAllExits();
+}
+
+bool ALB_GameMode::HasLivingRoomMonsters() const
+{
+	const ALB_DungeonRoomRuntimeManager* Manager = RoomRuntimeManager.Get();
+	return IsValid(Manager) && Manager->IsRoomActive() && Manager->HasLivingMonsters();
 }
