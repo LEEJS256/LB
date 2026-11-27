@@ -1,6 +1,7 @@
 // LB_HUD.cpp
 #include "LB_HUD.h"
 
+#include "LB_ChatPanel.h"
 #include "LB_InventoryPanel.h"
 #include "LB_PlayerStatus.h"
 #include "LB_SkillStatPanel.h"
@@ -10,8 +11,10 @@ ULB_PlayerStatus* ULB_HUD::GetPlayerStatus(int32 SlotIndex) const
 {
 	switch (SlotIndex)
 	{
-	case 0: return PlayerStatus_P1;
-	case 1: return PlayerStatus_P2;
+		case 0:
+		return PlayerStatus_P1;
+		case 1:
+		return PlayerStatus_P2;
 	default: return nullptr;
 	}
 }
@@ -19,6 +22,11 @@ ULB_PlayerStatus* ULB_HUD::GetPlayerStatus(int32 SlotIndex) const
 ULB_PlayerStatus* ULB_HUD::GetLocalPlayerStatus() const
 {
 	return PlayerStatus_P1;
+}
+
+bool ULB_HUD::IsChatInputOpen() const
+{
+	return BP_ChatPanel && BP_ChatPanel->IsInputOpen();
 }
 
 void ULB_HUD::ToggleInventory()

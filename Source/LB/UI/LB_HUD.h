@@ -10,6 +10,7 @@ class ULB_PlayerStatus;
 class ULB_InventoryPanel;
 class ULB_QuickSlotPanel;
 class ULB_SkillStatPanel;
+class ULB_ChatPanel;
 UCLASS()
 class LB_API ULB_HUD : public UUserWidget
 {
@@ -21,6 +22,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	ULB_PlayerStatus* GetLocalPlayerStatus() const;
+
+	ULB_ChatPanel* GetChatPanel() const { return BP_ChatPanel; }
+	bool IsChatInputOpen() const;
 	
 	UFUNCTION(BlueprintCallable, Category = "HUD")
 	void ToggleInventory();
@@ -59,4 +63,7 @@ protected:
 	
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<ULB_QuickSlotPanel> BP_QuickSlot;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<ULB_ChatPanel> BP_ChatPanel;
 };
