@@ -15,6 +15,7 @@ class ULB_HUD;
 class ULB_DMGFontManager;
 class ALB_GameState;
 class AGameStateBase;
+class ULB_ChatComponent;
 /**
  *
  */
@@ -28,6 +29,9 @@ public:
 	void CloseInventory();
 	void CloseSkillStat();
 
+	UFUNCTION(BlueprintCallable, Category = "LB|Component")
+	ULB_ChatComponent* Get_ChatComponent() const { return ChatComponent; }
+	
 	UFUNCTION(BlueprintCallable, Category = "LB|Component")
 	class ULB_DMGFontManager* Get_DMGFontMgr() const;
 
@@ -80,6 +84,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
 	TObjectPtr<UInputAction> DashAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> ChatAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LB|Input")
+	TObjectPtr<UInputAction> TabChatAction;
+	
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TArray<TObjectPtr<UInputAction>> SkillSlotActions; // A S D F (4개)
 
@@ -121,8 +131,17 @@ private:
 	UPROPERTY()
 	ULB_HUD* HUDWidget;
 
+	UPROPERTY(VisibleAnywhere, Category = "LB|Component")
+	TObjectPtr<ULB_ChatComponent> ChatComponent;
+
 	void InitUI();
 	void BindHUD();
+
+	void OpenChat(const FInputActionValue& Value);
+	void TabChat(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void HandleChatInputToggled(bool bOpen);
 #pragma endregion
 
 #pragma  region Action

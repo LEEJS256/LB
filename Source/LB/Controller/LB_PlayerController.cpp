@@ -8,8 +8,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Character/LB_PlayerCharacter.h"
 #include "Component/LB_BattleComponent.h"
+#include "Component/LB_ChatComponent.h"
 #include "Controller/LB_MonsterAIController.h"
 #include "Subsystem/LB_DMGFontManager.h"
 #include "UI/LB_PlayerStatus.h"
@@ -18,11 +20,14 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Component/LB_QuickSlotComponent.h"
 #include "Engine/World.h"
+#include "UI/LB_ChatPanel.h"
 
 
 ALB_PlayerController::ALB_PlayerController()
 {
 	DamageNumberManager = CreateDefaultSubobject<ULB_DMGFontManager>(TEXT("DMGFontManager"));
+
+	ChatComponent= CreateDefaultSubobject<ULB_ChatComponent>(TEXT("ChatComponent"));
 }
 
 void ALB_PlayerController::CloseInventory()
@@ -85,6 +90,11 @@ void ALB_PlayerController::SetupInputComponent()
 			                                   &ALB_PlayerController::StartSprint);
 			EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Completed, this,
 			                                   &ALB_PlayerController::StopSprint);
+		}
+		if (ChatAction)
+		{
+			EnhancedInputComponent->BindAction(ChatAction, ETriggerEvent::Started, this,
+											   &ALB_PlayerController::OpenChat);
 		}
 		if (DodgeAction)
 		{
@@ -431,6 +441,10 @@ void ALB_PlayerController::InitUI()
 	if (HUDWidget)
 	{
 		HUDWidget->AddToViewport();
+
+		if (ULB_ChatPanel* Chat = HUDWidget->GetChatPanel())
+			Chat->OnInputToggled.AddUniqueDynamic(this, &ALB_PlayerController::HandleChatInputToggled);
+
 	}
 }
 
@@ -452,6 +466,37 @@ void ALB_PlayerController::BindHUD()
 	{
 		Status->BindToASC(ASC);
 	}
+}
+
+void ALB_PlayerController::OpenChat(const FInputActionValue& Value)
+{
+	if (!IsLocalController() || !HUDWidget)
+		return;
+
+	ULB_ChatPanel* Chat = HUDWidget->GetChatPanel();
+	if (!Chat || Chat->IsInputOpen())
+		return;
+
+	Chat->OpenInput();
+}
+
+void ALB_PlayerController::TabChat(const FInputActionValue& Value)
+{
+}
+
+void ALB_PlayerController::HandleChatInputToggled(bool bOpen)
+{
+	// 홀드형 GA는 키를 떼는 이벤트를 텍스트박스가 가져가니까 미리 끈다
+	if (bOpen)
+	{
+		ALB_PlayerState* PS = GetPlayerState<ALB_PlayerState>();
+		if (UAbilitySystemComponent* ASC = PS ? PS->GetAbilitySystemComponent() : nullptr)
+		{
+			ASC->CancelAbilities(&SprintTagContainer);
+			ASC->CancelAbilities(&JumpTagContainer);
+		}
+	}
+	RefreshUIInputMode();
 }
 
 void ALB_PlayerController::Jump(const FInputActionValue& Value)
@@ -599,20 +644,39 @@ void ALB_PlayerController::Set_IATag()
 
 void ALB_PlayerController::RefreshUIInputMode()
 {
-	const bool bAnyOpen = HUDWidget && (HUDWidget->IsInventoryVisible() || HUDWidget->IsSkillStatVisible());
-	if (bAnyOpen)
-	{
-		FInputModeGameAndUI Mode;
-		Mode.SetHideCursorDuringCapture(false);
-		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		SetInputMode(Mode);
-		bShowMouseCursor = true;
-		SetIgnoreLookInput(true);
-	}
-	else
-	{
-		SetInputMode(FInputModeGameOnly());
-		bShowMouseCursor = false;
-		SetIgnoreLookInput(false);
-	}
+	const bool bAnyOpen = HUDWidget && (HUDWidget->IsInventoryVisible()
+								 || HUDWidget->IsSkillStatVisible()
+								 || HUDWidget->IsChatInputOpen());
+
+	// 커서 항상 표시 + 화면 위젯 클릭 항상 가능
+	FInputModeGameAndUI Mode;
+	Mode.SetHideCursorDuringCapture(false);
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+	SetIgnoreLookInput(bAnyOpen);
+
+	// 열린 UI가 없으면 키보드 포커스를 게임으로 돌려서 이동/스킬 키가 먹게
+	if (!bAnyOpen)
+		UWidgetBlueprintLibrary::SetFocusToGameViewport();
+	
+	// const bool bAnyOpen = HUDWidget && (
+	// 	HUDWidget->IsChatInputOpen() ||
+	// 	HUDWidget->IsInventoryVisible() ||
+	// 	HUDWidget->IsSkillStatVisible());
+	// if (bAnyOpen)
+	// {
+	// 	FInputModeGameAndUI Mode;
+	// 	Mode.SetHideCursorDuringCapture(false);
+	// 	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	// 	SetInputMode(Mode);
+	// 	bShowMouseCursor = true;
+	// 	SetIgnoreLookInput(true);
+	// }
+	// else
+	// {
+	// 	SetInputMode(FInputModeGameOnly());
+	// 	bShowMouseCursor = false;
+	// 	SetIgnoreLookInput(false);
+	// }
 }
