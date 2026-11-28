@@ -157,7 +157,9 @@ void ALB_PlayerState::ApplyDefaultAttributes(const ULB_PlayerDataAsset* Data)
 
 	AttributeSet->SetAttack(Data->Attack);
 	AttributeSet->SetArmor(Data->Armor);
-
+	
+	AttributeSet->SetExp(Data->Exp);       
+	AttributeSet->SetLevel(Data->Level);   
 	AttributeSet->SetSpeed(Data->Speed);
 	AttributeSet->SetDashDistance(Data->DashDistance);
 	AttributeSet->SetDashDuration(Data->DashDuration);
