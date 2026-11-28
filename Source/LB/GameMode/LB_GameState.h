@@ -13,6 +13,7 @@ class ULevel;
 
 // UI용: 복제/갱신된 전환 상태 알림. 정책은 소유하지 않는다.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLB_OnDungeonTransitionChanged, const FLB_DungeonTransitionSnapshot&, Snapshot);
+DECLARE_MULTICAST_DELEGATE(FLB_OnPlayerArrayChanged);
 
 // 서버 World의 Pending 방 표시 완료(RoomId, TransitionSerial).
 DECLARE_MULTICAST_DELEGATE_TwoParams(FLB_OnServerPendingRoomReady, FName /*RoomId*/, int32 /*TransitionSerial*/);
@@ -37,8 +38,11 @@ class LB_API ALB_GameState : public AGameState
 	GENERATED_BODY()
 
 public:
+	FLB_OnPlayerArrayChanged OnPlayerArrayChanged;
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
+	virtual void AddPlayerState(APlayerState* PlayerState) override;
+	virtual void RemovePlayerState(APlayerState* PlayerState) override;
 	// ---- 서버 전용 ----
 
 	// Route를 한 번만 게시한다(InstanceKey가 None일 때만, Validate 통과 필요).

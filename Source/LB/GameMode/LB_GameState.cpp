@@ -17,6 +17,18 @@ void ALB_GameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(ALB_GameState, TransitionSnapshot);
 }
 
+void ALB_GameState::AddPlayerState(APlayerState* PlayerState)
+{
+	Super::AddPlayerState(PlayerState);
+	OnPlayerArrayChanged.Broadcast();
+}
+
+void ALB_GameState::RemovePlayerState(APlayerState* PlayerState)
+{
+	Super::RemovePlayerState(PlayerState);
+	OnPlayerArrayChanged.Broadcast();
+}
+
 void ALB_GameState::BeginPlay()
 {
 	Super::BeginPlay();
