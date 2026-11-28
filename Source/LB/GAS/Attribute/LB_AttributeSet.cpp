@@ -23,6 +23,9 @@ ULB_AttributeSet::ULB_AttributeSet()
 	InitSprintWeight(1.3f);
 	InitDashDistance(100.f);
 	InitDashDuration(0.3f);
+	InitExp(10.f);
+	InitMaxExp(100.f);     
+	InitLevel(1.f);
 }
 
 void ULB_AttributeSet::Set_PlayerName(FName ArgName)
@@ -49,6 +52,9 @@ void ULB_AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, SprintWeight, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, DashDistance, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, DashDuration, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, Exp, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, MaxExp, COND_None, REPNOTIFY_Always);   
+	DOREPLIFETIME_CONDITION_NOTIFY(ULB_AttributeSet, Level, COND_None, REPNOTIFY_Always);
 }
 
 void ULB_AttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const
