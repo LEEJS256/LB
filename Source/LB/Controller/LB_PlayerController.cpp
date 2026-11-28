@@ -141,6 +141,7 @@ void ALB_PlayerController::BeginPlay()
 	Set_IATag();
 	InitUI();
 	BindHUD();
+	RefreshTeamHUD();
 	TryBindDungeonGameState();
 }
 
@@ -149,6 +150,7 @@ void ALB_PlayerController::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 	InitUI();
 	BindHUD();
+	RefreshTeamHUD();
 	TryBindDungeonGameState();
 }
 
@@ -216,6 +218,9 @@ void ALB_PlayerController::TryBindDungeonGameState()
 	LocalCurrentRoomReadyHandle = GS->OnLocalCurrentRoomReady.AddUObject(this, &ThisClass::HandleLocalCurrentRoomReady);
 	GS->OnDungeonTransitionChanged.AddUniqueDynamic(this, &ThisClass::HandleDungeonTransitionChanged);
 
+	PlayerArrayChangedHandle = GS->OnPlayerArrayChanged.AddUObject(this, &ThisClass::RefreshTeamHUD);
+	RefreshTeamHUD();
+	
 	// 바인딩 이전에 이미 일어난 상태를 따라잡는다.
 	if (GS->HasDungeonRoute())
 	{
@@ -242,10 +247,12 @@ void ALB_PlayerController::UnbindDungeonGameState()
 	{
 		GS->OnLocalPendingRoomReady.Remove(LocalPendingRoomReadyHandle);
 		GS->OnLocalCurrentRoomReady.Remove(LocalCurrentRoomReadyHandle);
+		GS->OnPlayerArrayChanged.Remove(PlayerArrayChangedHandle);
 		GS->OnDungeonTransitionChanged.RemoveDynamic(this, &ThisClass::HandleDungeonTransitionChanged);
 	}
 	LocalPendingRoomReadyHandle.Reset();
 	LocalCurrentRoomReadyHandle.Reset();
+	PlayerArrayChangedHandle.Reset();   
 	BoundDungeonGameState.Reset();
 }
 
@@ -679,4 +686,40 @@ void ALB_PlayerController::RefreshUIInputMode()
 	// 	bShowMouseCursor = false;
 	// 	SetIgnoreLookInput(false);
 	// }
+}
+
+void ALB_PlayerController::RefreshTeamHUD()
+{
+	if (!IsLocalController() || !HUDWidget)
+		return;
+
+	const AGameStateBase* GS = GetWorld() ? GetWorld()->GetGameState() : nullptr;
+	if (!GS)
+		return;
+
+	int32 SlotIndex = 1; // 0번은 나(P1)
+	for (APlayerState* Other : GS->PlayerArray)
+	{
+		if (!Other || Other == PlayerState)
+			continue;
+
+		ULB_PlayerStatus* Status = HUDWidget->GetPlayerStatus(SlotIndex);
+		if (!Status)
+			break;
+
+		if (ALB_PlayerState* OtherPS = Cast<ALB_PlayerState>(Other))
+		{
+			Status->BindToASC(OtherPS->GetAbilitySystemComponent());
+			Status->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		++SlotIndex;
+	}
+
+	// 사람이 없는 슬롯은 숨김
+	while (ULB_PlayerStatus* Empty = HUDWidget->GetPlayerStatus(SlotIndex))
+	{
+		Empty->UnbindFromASC();
+		Empty->SetVisibility(ESlateVisibility::Collapsed);
+		++SlotIndex;
+	}
 }

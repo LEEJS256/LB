@@ -168,6 +168,9 @@ private:
 
 
 	void RefreshUIInputMode();
+
+	void RefreshTeamHUD();
+	FDelegateHandle PlayerArrayChangedHandle;
 #pragma region Dungeon
 	// GameState 도착 여부와 무관하게 여러 지점에서 호출해도 안전하다(중복 바인딩 없음).
 	void TryBindDungeonGameState();
