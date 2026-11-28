@@ -2,10 +2,11 @@
 #include "LB_PlayerStatus.h"
 
 #include "AbilitySystemComponent.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "GAS/Attribute/LB_AttributeSet.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "UI/SlateWidget/LB_NeonProgressBar.h"
-#include "UI/SlateWidget/LB_InfoText.h"
 
 void ULB_PlayerStatus::SetPlayerName(const FText& InName)
 {
@@ -14,17 +15,51 @@ void ULB_PlayerStatus::SetPlayerName(const FText& InName)
 
 void ULB_PlayerStatus::SetHealth(float Current, float Max)
 {
-	if (HealthBar) HealthBar->SetPercent(Max > 0.f ? Current / Max : 0.f);
+	const float Ratio = Max > 0.f ? Current / Max : 0.f;
+
+	if (HealthBar)
+		HealthBar->SetPercent(Ratio);
+
+	if (!HPText)
+		return;
+
+	HPText->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), FMath::CeilToInt(Current), FMath::RoundToInt(Max))));
+	HPText->SetColorAndOpacity(Ratio <= LowHealthRatio ? LowHPTextColor : NormalHPTextColor);
 }
 
 void ULB_PlayerStatus::SetStamina(float Current, float Max)
 {
-	if (StaminaBar) StaminaBar->SetPercent(Max > 0.f ? Current / Max : 0.f);
+	if (StaminaBar)
+		StaminaBar->SetPercent(Max > 0.f ? Current / Max : 0.f);
+
+	if (!StaminaText)
+		return;
+
+	StaminaText->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), FMath::FloorToInt(Current), FMath::RoundToInt(Max))));
 }
 
-void ULB_PlayerStatus::SetSpeed(float InSpeed)
+
+void ULB_PlayerStatus::SetExp(float Current, float Max)
 {
-	if (SpeedText) SpeedText->SetValueInt(FMath::RoundToInt(InSpeed));
+	if (!ExpRing)
+		return;
+
+	if (!ExpRingMID)
+		ExpRingMID = ExpRing->GetDynamicMaterial();
+
+	if (!ExpRingMID)
+		return;
+
+	const float Ratio = Max > 0.f ? FMath::Clamp(Current / Max, 0.f, 1.f) : 0.f;
+	ExpRingMID->SetScalarParameterValue(ExpPercentParam, Ratio);
+}
+
+void ULB_PlayerStatus::SetLevel(int32 InLevel)
+{
+	if (!LevelText)
+		return;
+
+	LevelText->SetText(FText::AsNumber(InLevel));
 }
 
 void ULB_PlayerStatus::BindToASC(UAbilitySystemComponent* InASC)
@@ -46,13 +81,19 @@ void ULB_PlayerStatus::BindToASC(UAbilitySystemComponent* InASC)
 		this, &ThisClass::OnStaminaChanged);
 	MaxStaminaHandle = InASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetMaxStaminaAttribute()).
 	                          AddUObject(this, &ThisClass::OnStaminaChanged);
-	SpeedHandle = InASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetSpeedAttribute()).AddUObject(
-		this, &ThisClass::OnSpeedChanged);
+	ExpHandle = InASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetExpAttribute()).AddUObject(
+		this, &ThisClass::OnExpChanged);
+	MaxExpHandle = InASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetMaxExpAttribute()).AddUObject(
+		this, &ThisClass::OnExpChanged);
+	LevelHandle = InASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetLevelAttribute()).AddUObject(
+		this, &ThisClass::OnLevelChanged);
+
 
 	// 델리게이트는 변경될 때만
+	RefreshExp();
+	RefreshLevel();
 	RefreshHealth();
 	RefreshStamina();
-	RefreshSpeed();
 }
 
 void ULB_PlayerStatus::UnbindFromASC()
@@ -64,7 +105,9 @@ void ULB_PlayerStatus::UnbindFromASC()
 		ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetStaminaAttribute()).Remove(StaminaHandle);
 		ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetMaxStaminaAttribute()).Remove(
 			MaxStaminaHandle);
-		ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetSpeedAttribute()).Remove(SpeedHandle);
+		ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetExpAttribute()).Remove(ExpHandle);
+		ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetMaxExpAttribute()).Remove(MaxExpHandle);
+		ASC->GetGameplayAttributeValueChangeDelegate(ULB_AttributeSet::GetLevelAttribute()).Remove(LevelHandle);
 	}
 	BoundASC.Reset();
 	BoundSet.Reset();
@@ -74,6 +117,18 @@ void ULB_PlayerStatus::NativeDestruct()
 {
 	UnbindFromASC();
 	Super::NativeDestruct();
+}
+
+void ULB_PlayerStatus::RefreshExp()
+{
+	if (const ULB_AttributeSet* Set = BoundSet.Get())
+		SetExp(Set->GetExp(), Set->GetMaxExp());
+}
+
+void ULB_PlayerStatus::RefreshLevel()
+{
+	if (const ULB_AttributeSet* Set = BoundSet.Get())
+		SetLevel(FMath::RoundToInt(Set->GetLevel()));
 }
 
 void ULB_PlayerStatus::RefreshHealth()
@@ -86,10 +141,4 @@ void ULB_PlayerStatus::RefreshStamina()
 {
 	if (const ULB_AttributeSet* Set = BoundSet.Get())
 		SetStamina(Set->GetStamina(), Set->GetMaxStamina());
-}
-
-void ULB_PlayerStatus::RefreshSpeed()
-{
-	if (const ULB_AttributeSet* Set = BoundSet.Get())
-		SetSpeed(Set->GetSpeed());
 }

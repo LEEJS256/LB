@@ -8,10 +8,11 @@
 #include "LB_PlayerStatus.generated.h"
 
 class ULB_NeonProgressBar;
-class ULB_InfoText;
 class UTextBlock;
 class UAbilitySystemComponent;
 class ULB_AttributeSet;
+class UImage;
+class UMaterialInstanceDynamic;
 
 /**
  * 
@@ -32,7 +33,10 @@ public:
 	void SetStamina(float Current, float Max);
 
 	UFUNCTION(BlueprintCallable, Category = "Status")
-	void SetSpeed(float InSpeed);
+	void SetExp(float Current, float Max);
+
+	UFUNCTION(BlueprintCallable, Category = "Status")
+	void SetLevel(int32 InLevel);
 
 	void BindToASC(UAbilitySystemComponent* InASC);
 	void UnbindFromASC();
@@ -52,20 +56,48 @@ protected:
 	TObjectPtr<ULB_NeonProgressBar> StaminaBar;
 
 	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<ULB_InfoText> SpeedText;
+	TObjectPtr<UTextBlock> HPText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> StaminaText;
+
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> LevelText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ExpRing;
+
+	UPROPERTY(EditAnywhere, Category = "Status|Exp")
+	FName ExpPercentParam = TEXT("Percent");
+
+	UPROPERTY(EditAnywhere, Category = "Status|HP", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float LowHealthRatio = 0.3f;
+
+	UPROPERTY(EditAnywhere, Category = "Status|HP")
+	FSlateColor NormalHPTextColor = FLinearColor::White;
+
+	UPROPERTY(EditAnywhere, Category = "Status|HP")
+	FSlateColor LowHPTextColor = FLinearColor(1.f, 0.3f, 0.3f);
 
 	void OnHealthChanged(const FOnAttributeChangeData& Data) { RefreshHealth(); }
 	void OnStaminaChanged(const FOnAttributeChangeData& Data) { RefreshStamina(); }
-	void OnSpeedChanged(const FOnAttributeChangeData& Data) { RefreshSpeed(); }
 
+	void OnExpChanged(const FOnAttributeChangeData& Data) { RefreshExp(); }
+	void OnLevelChanged(const FOnAttributeChangeData& Data) { RefreshLevel(); }
+
+	void RefreshExp();
+	void RefreshLevel();
 	void RefreshHealth();
 	void RefreshStamina();
-	void RefreshSpeed();
 
 #pragma endregion
 
 	TWeakObjectPtr<UAbilitySystemComponent> BoundASC;
 	TWeakObjectPtr<const ULB_AttributeSet> BoundSet;
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialInstanceDynamic> ExpRingMID;
 
-	FDelegateHandle HealthHandle, MaxHealthHandle, StaminaHandle, MaxStaminaHandle, SpeedHandle;
+	FDelegateHandle HealthHandle, ExpHandle, MaxExpHandle, LevelHandle, MaxHealthHandle, StaminaHandle,
+	                MaxStaminaHandle;
 };
